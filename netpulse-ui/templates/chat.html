@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+<section class="np-chat">
+  <form id="np-form" onsubmit="event.preventDefault(); npSubmit();">
+    <input id="np-input" type="text" placeholder="Describe a telecom incident..." autofocus>
+    <button type="submit">Investigate</button>
+  </form>
+  <div class="np-examples">
+    {% for q in examples %}
+      <button class="np-chip" type="button" onclick="npFill(this)">{{ q }}</button>
+    {% endfor %}
+  </div>
+
+  <div class="np-pipeline">
+    <article class="np-card" data-agent="classifier">
+      <header><h3>1. Classifier</h3><span class="np-status">waiting</span></header>
+      <div class="np-card-source">
+        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+        <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
+      </div>
+      <ul class="np-tools"></ul>
+      <pre class="np-text"></pre>
+    </article>
+
+    <div class="np-flow">
+      <div class="np-flow-arrow">&#9660;</div>
+      <div class="np-flow-label">
+        <span class="np-flow-title">carry-over to next agent</span>
+        <code>category</code><code>region</code>
+      </div>
+    </div>
+
+    <article class="np-card" data-agent="network_investigator">
+      <header><h3>2. Network Investigator</h3><span class="np-status">waiting</span></header>
+      <div class="np-card-source">
+        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+        <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
+        <span class="np-source-tag bq">BIGQUERY</span>
+        <code>plated-complex-491512-n6.telecom_network.network_events</code>
+      </div>
+      <ul class="np-tools"></ul>
+      <pre class="np-text"></pre>
+    </article>
+
+    <div class="np-flow">
+      <div class="np-flow-arrow">&#9660;</div>
+      <div class="np-flow-label">
+        <span class="np-flow-title">carry-over to next agent</span>
+        <code>category</code><code>region</code><code>network_findings</code>
+      </div>
+    </div>
+
+    <article class="np-card" data-agent="cdr_analyzer">
+      <header><h3>3. CDR Analyzer</h3><span class="np-status">waiting</span></header>
+      <div class="np-card-source">
+        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+        <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+        <code>SELECT</code> from <code>call_records</code>
+      </div>
+      <ul class="np-tools"></ul>
+      <pre class="np-text"></pre>
+    </article>
+
+    <div class="np-flow">
+      <div class="np-flow-arrow">&#9660;</div>
+      <div class="np-flow-label">
+        <span class="np-flow-title">carry-over to next agent</span>
+        <code>classification</code><code>category</code><code>region</code><code>network_findings</code><code>cdr_findings</code>
+      </div>
+    </div>
+
+    <article class="np-card" data-agent="response_formatter">
+      <header><h3>4. Response Formatter</h3><span class="np-status">waiting</span></header>
+      <div class="np-card-source">
+        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+        <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+        <code>INSERT</code> into <code>incident_tickets</code>
+      </div>
+      <ul class="np-tools"></ul>
+      <pre class="np-text"></pre>
+    </article>
+  </div>
+
+  <article class="np-final" hidden>
+    <h2>Incident Report</h2>
+    <div class="np-ticket"></div>
+    <pre class="np-final-text"></pre>
+  </article>
+</section>
+
+<script>
+function npFill(btn) {
+  document.getElementById('np-input').value = btn.textContent;
+}
+
+function npClearList(ul) {
+  while (ul.firstChild) ul.removeChild(ul.firstChild);
+}
+
+// Map a tool name to its backend label. Labels match the card subtitle pills
+// so the same backend always reads identically across the UI (subtitle pill,
+// nav pill, banner pill, inline tool-call tag).
+function npToolBackend(toolName) {
+  if (!toolName) return {label: '', cls: ''};
+  if (toolName === 'classify_issue') return {label: 'NATIVE PYTHON TOOL', cls: 'local'};
+  if (toolName === 'query_cdr') return {label: 'ALLOYDB READ', cls: 'alloydb'};
+  if (toolName === 'save_incident_ticket') return {label: 'ALLOYDB WRITE', cls: 'alloydb-write'};
+  if (toolName.indexOf('query_') === 0) return {label: 'MCP TOOLBOX', cls: 'mcp'};
+  return {label: '', cls: ''};
+}
+
+function npAppendToolLine(ul, kind, ev) {
+  // Build: [BACKEND] arrow toolName(jsonPayload)
+  var li = document.createElement('li');
+  li.className = (kind === 'call') ? 'np-tool-call' : 'np-tool-resp';
+  var backend = npToolBackend(ev.tool);
+  if (backend.label) {
+    var tag = document.createElement('span');
+    tag.className = 'np-tool-tag ' + backend.cls;
+    tag.textContent = backend.label;
+    li.appendChild(tag);
+  }
+  var arrow = (kind === 'call') ? ' \u2192 ' : ' \u2190 ';
+  var payload = (kind === 'call')
+    ? ev.tool + '(' + JSON.stringify(ev.args || {}) + ')'
+    : ev.tool + ': ' + JSON.stringify(ev.result || {}).slice(0, 200);
+  li.appendChild(document.createTextNode(arrow + payload));
+  ul.appendChild(li);
+}
+
+function npReset() {
+  document.querySelectorAll('.np-card').forEach(function (c) {
+    c.querySelector('.np-status').textContent = 'waiting';
+    npClearList(c.querySelector('.np-tools'));
+    c.querySelector('.np-text').textContent = '';
+    c.classList.remove('running', 'done', 'error');
+  });
+  var f = document.querySelector('.np-final');
+  f.hidden = true;
+  f.querySelector('.np-ticket').textContent = '';
+  f.querySelector('.np-final-text').textContent = '';
+}
+
+async function npSubmit() {
+  var query = document.getElementById('np-input').value.trim();
+  if (!query) return;
+  npReset();
+  var res = await fetch('/api/query', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({query: query})
+  });
+  var reader = res.body.getReader();
+  var decoder = new TextDecoder();
+  var buf = '';
+  while (true) {
+    var chunkRead = await reader.read();
+    if (chunkRead.done) break;
+    buf += decoder.decode(chunkRead.value, {stream: true});
+    var idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
+      var chunk = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      var line = chunk.split('\n').find(function (l) { return l.startsWith('data: '); });
+      if (!line) continue;
+      try {
+        npHandle(JSON.parse(line.slice(6)));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+}
+
+function npHandle(ev) {
+  if (ev.type === 'error') {
+    var f = document.querySelector('.np-final');
+    f.hidden = false;
+    f.querySelector('.np-final-text').textContent = 'ERROR: ' + (ev.message || '');
+    return;
+  }
+  if (ev.type === 'complete') {
+    var fc = document.querySelector('.np-final');
+    fc.hidden = false;
+    fc.querySelector('.np-ticket').textContent =
+      ev.ticket_id ? ('Ticket #' + ev.ticket_id) : '(no ticket)';
+    fc.querySelector('.np-final-text').textContent = ev.final_report || '';
+    return;
+  }
+  var card = document.querySelector('.np-card[data-agent="' + ev.agent + '"]');
+  if (!card) return;
+  if (ev.type === 'agent_start') {
+    card.classList.add('running');
+    card.querySelector('.np-status').textContent = 'running';
+  } else if (ev.type === 'tool_call') {
+    npAppendToolLine(card.querySelector('.np-tools'), 'call', ev);
+  } else if (ev.type === 'tool_response') {
+    npAppendToolLine(card.querySelector('.np-tools'), 'resp', ev);
+  } else if (ev.type === 'text') {
+    var pre = card.querySelector('.np-text');
+    pre.textContent = (pre.textContent ? pre.textContent + '\n' : '') + ev.text;
+    card.classList.remove('running');
+    card.classList.add('done');
+    card.querySelector('.np-status').textContent = 'done';
+  }
+}
+</script>
+{% endblock %}

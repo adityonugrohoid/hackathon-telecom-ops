@@ -1,0 +1,473 @@
+/* ============================================================================
+   NetPulse AI — global theme tokens
+   ----------------------------------------------------------------------------
+   Every theme color lives here. To retheme the whole app, override these
+   tokens (they cascade through the rest of the file via var() and color-mix).
+
+   Examples to drop in below the :root block to try:
+
+     // Dark mode
+     :root {
+       --np-bg: #0f172a; --np-card: #1e293b;
+       --np-text: #e2e8f0; --np-muted: #94a3b8;
+       --c-report-bg: #0b1020; --c-report-fg: #e0e7ff;
+     }
+
+     // Purple brand
+     :root { --np-primary: #7c3aed; --np-primary-dark: #4c1d95; }
+
+     // Repaint AlloyDB pills + banner from green to teal
+     :root {
+       --c-alloydb-bg: #ccfbf1; --c-alloydb-fg: #115e59;
+       --c-alloydb-accent: #0d9488;
+     }
+
+   The banner gradients/borders are derived from --c-*-fg via color-mix(),
+   so adjusting one foreground color retunes the whole variant.
+   ============================================================================ */
+:root {
+  /* Brand */
+  --np-primary:      #1a73e8;
+  --np-primary-dark: #0d47a1;
+  --np-accent:       #00bfa5;
+  --np-error:        #c5221f;
+
+  /* Surfaces */
+  --np-bg:    #f0f4fa;
+  --np-card:  #ffffff;
+  --np-text:  #1f2937;
+  --np-muted: #6b7280;
+
+  /* Backend palettes — pill bg + fg for each backend the agent talks to.
+     Used by card-subtitle pills, nav pills, banner pills, and inline
+     tool-call tags. Change one of these and every appearance retunes. */
+  --c-adk-bg:           #e2e8f0;  --c-adk-fg:           #334155;  /* slate    */
+  --c-local-bg:         #e0e7ff;  --c-local-fg:         #3730a3;  /* indigo   */
+  --c-mcp-bg:           #d1fae5;  --c-mcp-fg:           #065f46;  /* emerald (MCP + BQ chain) */
+  --c-alloydb-bg:       #fef3c7;  --c-alloydb-fg:       #92400e;  /* amber    */
+  --c-alloydb-write-bg: #fde2e2;  --c-alloydb-write-fg: #991b1b;  /* red      */
+
+  /* Banner accents — brighter mid-tone of each backend used as the
+     left-border accent on the data-viewer banners. */
+  --c-mcp-accent:           #059669;  /* emerald-600 */
+  --c-alloydb-accent:       #d97706;  /* amber-600   */
+  --c-alloydb-write-accent: #dc2626;  /* red-600     */
+
+  /* Final report ("console" card) */
+  --c-report-bg: #1e1e1e;
+  --c-report-fg: #d4d4d4;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--np-bg);
+  color: var(--np-text);
+  min-height: 100vh;
+}
+
+/* Header */
+.np-header {
+  background: linear-gradient(135deg, var(--np-primary-dark) 0%, var(--np-primary) 100%);
+  color: #fff;
+  padding: 18px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.np-brand { display: flex; align-items: center; gap: 16px; }
+.np-logo {
+  height: 56px;
+  width: 56px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 4px;
+  object-fit: contain;
+}
+.np-tower { fill: none; stroke: #fff; }
+.np-title h1 { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.np-title p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+.np-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.np-tab {
+  display: inline-flex;
+  flex-direction: column;     /* tab label on top, pill below */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #fff;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.2;
+  opacity: 0.75;
+  transition: all 0.2s;
+}
+.np-tab:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.np-tab.active { opacity: 1; background: rgba(255,255,255,0.18); font-weight: 600; }
+/* Backend pills inside nav tabs sit slightly tighter than card-source pills */
+.np-tab .np-source-tag {
+  font-size: 9px;
+  padding: 2px 6px;
+  letter-spacing: 0.5px;
+}
+
+.np-main { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+
+/* Chat */
+.np-chat #np-form { display: flex; gap: 8px; margin-bottom: 12px; }
+.np-chat #np-input {
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+}
+.np-chat #np-input:focus { outline: none; border-color: var(--np-primary); }
+.np-chat button[type="submit"] {
+  padding: 14px 22px;
+  background: var(--np-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.np-chat button[type="submit"]:hover { background: var(--np-primary-dark); }
+
+.np-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.np-chip {
+  background: #fff;
+  border: 1px solid var(--np-primary);
+  color: var(--np-primary);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.np-chip:hover { background: var(--np-primary); color: #fff; }
+
+/* Pipeline cards — single column, full main width matching .np-final */
+.np-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.np-card {
+  background: var(--np-card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s;
+  /* Fixed total height — inner sections scroll, the card never expands. */
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.np-card.running {
+  box-shadow:
+    0 0 0 3px var(--np-primary),
+    0 4px 14px color-mix(in srgb, var(--np-primary) 25%, transparent);
+}
+.np-card.done { box-shadow: 0 0 0 2px var(--np-accent); }
+
+/* Sequential flow connector with carry-over labels */
+.np-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+.np-flow-arrow {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--np-primary);
+  font-weight: 700;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
+}
+.np-flow-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  background: color-mix(in srgb, var(--np-primary) 7%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--np-primary) 45%, transparent);
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 11px;
+  color: var(--np-muted);
+}
+.np-flow-title {
+  color: var(--np-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+.np-flow-label code {
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--np-primary) 35%, transparent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  color: var(--np-primary);
+  font-family: ui-monospace, monospace;
+}
+
+.np-card > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+.np-card h3 { font-size: 14px; color: var(--np-primary); font-weight: 600; }
+
+/* Always-visible data-source subtitle under each card title */
+.np-card-source {
+  font-size: 11px;
+  color: var(--np-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px dashed #e5e7eb;
+  flex-shrink: 0;
+}
+.np-card-source code {
+  font-family: ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--np-text);
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Backend tag pills — shared by card source, nav, banner, and inline tool calls.
+   Per-variant colors live at :root in the --c-* tokens above. */
+.np-source-tag,
+.np-tool-tag {
+  display: inline-block;
+  font-family: ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.np-source-tag.adk,           .np-tool-tag.adk           { background: var(--c-adk-bg);            color: var(--c-adk-fg); }
+.np-source-tag.local,         .np-tool-tag.local         { background: var(--c-local-bg);          color: var(--c-local-fg); }
+.np-source-tag.mcp,           .np-tool-tag.mcp           { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
+.np-source-tag.bq,            .np-tool-tag.bq            { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
+.np-source-tag.alloydb,       .np-tool-tag.alloydb       { background: var(--c-alloydb-bg);        color: var(--c-alloydb-fg); }
+.np-source-tag.alloydb-write,
+.np-tool-tag.alloydb-write    { background: var(--c-alloydb-write-bg);  color: var(--c-alloydb-write-fg); }
+
+.np-tool-tag { margin-right: 4px; }
+.np-status {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: #eef;
+  color: var(--np-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.np-card.running .np-status {
+  background: var(--np-primary);
+  color: #fff;
+  animation: np-pulse 1.4s infinite;
+}
+.np-card.done .np-status { background: var(--np-accent); color: #fff; }
+@keyframes np-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+.np-tools {
+  list-style: none;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  max-height: 96px;        /* fixed area for tool calls */
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 4px 6px;
+  background: #fafbfc;
+  border-radius: 6px;
+}
+.np-tools:empty { display: none; }
+.np-tools li { padding: 2px 0; color: var(--np-muted); word-break: break-all; }
+.np-tool-call { color: var(--np-primary); }
+.np-tool-resp { color: #555; }
+.np-text {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  flex: 1 1 auto;          /* take remaining space inside fixed-height card */
+  min-height: 0;           /* allow flex child to shrink so overflow can scroll */
+  overflow-y: auto;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+.np-text:empty {
+  background: transparent;
+}
+
+/* Final report */
+.np-final {
+  background: var(--c-report-bg);
+  color: var(--c-report-fg);
+  padding: 24px;
+  border-radius: 12px;
+}
+.np-final h2 { color: #fff; margin-bottom: 8px; font-size: 18px; }
+.np-ticket { color: var(--np-accent); font-size: 14px; margin-bottom: 12px; font-weight: 600; }
+.np-final-text {
+  white-space: pre-wrap;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+
+/* "Reading live from..." banner on each data viewer tab.
+   The base rule defines the alpha-derived background and border via
+   color-mix() against --np-primary; each modifier just swaps the source
+   token (--c-mcp-fg / --c-alloydb-fg / --c-alloydb-write-fg) and accent. */
+.np-source-banner {
+  --bn-bg-from: color-mix(in srgb, var(--np-primary) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--np-primary)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--np-primary) 30%, transparent);
+  --bn-accent:  var(--np-primary);
+  --bn-strong:  var(--np-primary-dark);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: linear-gradient(90deg, var(--bn-bg-from) 0%, var(--bn-bg-to) 100%);
+  border: 1px solid var(--bn-border);
+  border-left: 4px solid var(--bn-accent);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--np-text);
+  margin-bottom: 16px;
+}
+.np-source-banner code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid var(--bn-border);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--bn-strong);
+}
+.np-source-banner strong { color: var(--bn-strong); }
+
+/* BigQuery / MCP — derived from --c-mcp-fg */
+.np-source-banner.bq {
+  --bn-bg-from: color-mix(in srgb, var(--c-mcp-fg) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--c-mcp-fg)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--c-mcp-fg) 30%, transparent);
+  --bn-accent:  var(--c-mcp-accent);
+  --bn-strong:  var(--c-mcp-fg);
+}
+
+/* AlloyDB read — derived from --c-alloydb-fg */
+.np-source-banner.alloydb {
+  --bn-bg-from: color-mix(in srgb, var(--c-alloydb-fg) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--c-alloydb-fg)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--c-alloydb-fg) 30%, transparent);
+  --bn-accent:  var(--c-alloydb-accent);
+  --bn-strong:  var(--c-alloydb-fg);
+}
+
+/* AlloyDB write — derived from --c-alloydb-write-fg */
+.np-source-banner.alloydb-write {
+  --bn-bg-from: color-mix(in srgb, var(--c-alloydb-write-fg) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--c-alloydb-write-fg)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--c-alloydb-write-fg) 30%, transparent);
+  --bn-accent:  var(--c-alloydb-write-accent);
+  --bn-strong:  var(--c-alloydb-write-fg);
+}
+
+/* Filters + tables */
+.np-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.np-filter select,
+.np-filter button {
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+.np-filter button {
+  background: var(--np-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.np-filter button:hover { background: var(--np-primary-dark); }
+
+.np-rowcount {
+  color: var(--np-muted);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.np-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.np-table th {
+  background: var(--np-primary);
+  color: #fff;
+  padding: 10px;
+  font-size: 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.np-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+}
+.np-table tr:hover td { background: #f8f9fa; }
+
+.np-error {
+  background: color-mix(in srgb, var(--np-error) 12%, transparent);
+  color: var(--np-error);
+  padding: 16px;
+  border-radius: 8px;
+}
+.np-empty {
+  color: var(--np-muted);
+  padding: 16px;
+}

@@ -1,0 +1,13 @@
+.git/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.scratch/
+docs/
+devrel-demos/
+*.md
+.gitignore
+setup_alloydb.py
+netpulse-ui/__pycache__/
+telecom_ops/__pycache__/
