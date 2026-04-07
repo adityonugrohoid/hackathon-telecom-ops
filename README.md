@@ -181,16 +181,17 @@ flowchart TB
 
     classDef user fill:#0d47a1,stroke:#0d47a1,color:#ffffff,font-weight:600
     classDef fe fill:#1a73e8,stroke:#0d47a1,color:#ffffff,font-weight:600
-    classDef adk fill:#e2e8f0,stroke:#334155,color:#334155,font-weight:600
-    classDef local fill:#e0e7ff,stroke:#3730a3,color:#3730a3,font-weight:600
-    classDef mcp fill:#d1fae5,stroke:#065f46,color:#065f46,font-weight:600
-    classDef alloydb fill:#fef3c7,stroke:#92400e,color:#92400e,font-weight:600
-    classDef alloydbWrite fill:#fde2e2,stroke:#991b1b,color:#991b1b,font-weight:600
-    classDef vertex fill:#fff7e6,stroke:#d97706,color:#92400e,font-weight:600
+    classDef runner fill:#4338ca,stroke:#312e81,color:#ffffff,font-weight:600
+    classDef adk fill:#ede9fe,stroke:#7c3aed,color:#4c1d95,font-weight:600
+    classDef local fill:#ccfbf1,stroke:#0f766e,color:#134e4a,font-weight:600
+    classDef mcp fill:#a7f3d0,stroke:#065f46,color:#065f46,font-weight:600
+    classDef alloydb fill:#fde68a,stroke:#92400e,color:#92400e,font-weight:600
+    classDef alloydbWrite fill:#fca5a5,stroke:#991b1b,color:#7f1d1d,font-weight:600
+    classDef vertex fill:#fbcfe8,stroke:#be185d,color:#831843,font-weight:600
 
     class User user
     class UI,ADK fe
-    class Runner adk
+    class Runner runner
     class A1,A2,A3,A4 adk
     class T1 local
     class T2 mcp
@@ -203,9 +204,11 @@ flowchart TB
     class Vertex vertex
 
     style FE         fill:#f0f4fa,stroke:#1a73e8,stroke-width:2px
-    style ORCH       fill:#f8fafc,stroke:#334155,stroke-width:2px
+    style ORCH       fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px
     style TOOLS      fill:#fafafa,stroke:#9ca3af,stroke-width:2px
     style BACKENDS   fill:#f9fafb,stroke:#9ca3af,stroke-width:2px
+
+    linkStyle 17,18,19,20 stroke:#ec4899,stroke-width:2px
 ```
 
 ## How It Works
