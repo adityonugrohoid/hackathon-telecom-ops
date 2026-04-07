@@ -8,7 +8,9 @@
 [![Cloud Run](https://img.shields.io/badge/Cloud%20Run-deployed-blue.svg)](https://cloud.google.com/run)
 [![Status](https://img.shields.io/badge/status-submitted-success.svg)](#)
 
-**A multi-agent AI assistant that automates the first-response workflow for telecom Network Operations Center (NOC) teams. One natural-language complaint in, one structured incident ticket out — in 25-30 seconds.**
+**A multi-agent AI assistant that automates the first-response workflow for telecom Network Operations Center (NOC) teams. One natural-language complaint in, one structured incident ticket out, all in 25-30 seconds.**
+
+**Try it live:** [NetPulse UI](https://netpulse-ui-486319900424.us-central1.run.app) (primary) · [Telecom Ops Assistant](https://telecom-ops-assistant-486319900424.us-central1.run.app) (fallback)
 
 [Demo](#demo) · [Architecture](#architecture) · [How It Works](#how-it-works) · [Getting Started](#getting-started) · [Deployment](#deployment)
 
@@ -39,7 +41,7 @@
 
 NetPulse AI was built for the **Gen AI Academy APAC Edition 2026** hackathon as a working prototype of how multi-agent orchestration can replace the manual cross-system lookups NOC engineers do dozens of times a day.
 
-When a customer reports something like *"Major dropped calls in Surabaya"*, a NOC operator today has to query at least three independent systems — a network event database, a call detail records (CDR) database, and a ticketing system — and manually correlate the results. NetPulse AI does all of that in a single natural-language step:
+When a customer reports something like *"Major dropped calls in Surabaya"*, a NOC operator today has to query at least three independent systems, namely a network event database, a call detail records (CDR) database, and a ticketing system, and manually correlate the results. NetPulse AI does all of that in a single natural-language step:
 
 1. **Classifies** the complaint into a category (network / billing / hardware / service / general) and a region.
 2. **Investigates** live network events from BigQuery via MCP Toolbox.
@@ -50,7 +52,16 @@ The whole workflow runs as a Google ADK `SequentialAgent` orchestrating four `Ll
 
 ## Demo
 
-### NetPulse UI — custom Flask chat interface
+### Live deployments
+
+Both services are running on Cloud Run:
+
+| Service | Role | URL |
+|---|---|---|
+| **NetPulse UI** | Hackathon primary, custom branded chat experience | https://netpulse-ui-486319900424.us-central1.run.app |
+| **Telecom Ops Assistant** | Fallback, ADK Dev UI with `/events` and `/trace` observability tabs | https://telecom-ops-assistant-486319900424.us-central1.run.app |
+
+### NetPulse UI: custom Flask chat interface
 
 The primary demo surface. A free-text complaint at the top, four pipeline cards below showing each sub-agent in real time (status, tool calls, output text), carry-over labels showing exactly which session-state keys flow forward to the next agent, and a final dark Incident Report card at the bottom. Streamed via Server-Sent Events.
 
@@ -62,13 +73,13 @@ The end-to-end workflow from operator complaint to persisted incident ticket.
 
 ![Use case diagram](docs/screenshots/telecom-ops-assistant_use_case_diagram.png)
 
-### ADK Dev UI — Trace tab
+### ADK Dev UI: Trace tab
 
 Built-in observability that comes with `adk deploy cloud_run --with_ui`. Every LLM call, tool invocation, prompt, and response is captured as a span with millisecond timing.
 
 ![ADK Trace tab](docs/screenshots/telecom-ops-assistant_trace_tab_tools_invocation.png)
 
-### ADK Dev UI — Events tab
+### ADK Dev UI: Events tab
 
 Streaming sub-agent conversation showing each `LlmAgent` taking its turn, calling its tool, and producing its `output_key` for the next agent.
 
@@ -76,19 +87,19 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 
 ## Features
 
-- **Multi-agent orchestration** — Google ADK 1.14 `SequentialAgent` chaining four `LlmAgent` sub-agents with explicit session-state hand-off via `output_key`. Not multi-tool inside one big agent — four specialized agents each owning one responsibility.
-- **Cross-source evidence correlation** — Automatically links BigQuery network events with AlloyDB CDR rows to surface root causes (e.g., a dropped call from cell tower JKT-002 correlated with the major fiber cut event EVT001).
-- **Persistent structured output** — Every run inserts an auditable row in AlloyDB `incident_tickets` with category, region, related events, CDR findings, and a NOC recommendation. Queryable, joinable, archivable — not a transient chat response.
-- **Two frontends, one engine** — A custom NetPulse UI (Flask + Server-Sent Events) for branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
-- **APAC-optimized inference** — Vertex AI Gemini 2.5 Flash on `asia-southeast1` (Singapore) for lowest APAC latency *and* to avoid the Dynamic Shared Quota contention that hits `us-central1` during APAC hackathons.
-- **Boot-resilient by design** — MCP Toolbox client wrapped in `try/except`, AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive idle-connection reaping, agent runner is lazy-loaded so frontend tabs that don't need the agent stay functional even if the toolbox is cold.
-- **Validated end-to-end** — 32 incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission stress testing. Zero `429 RESOURCE_EXHAUSTED` errors after the asia-southeast1 region switch.
+- **Multi-agent orchestration.** Google ADK 1.14 `SequentialAgent` chaining four `LlmAgent` sub-agents with explicit session-state hand-off via `output_key`. Not multi-tool inside one big agent, but four specialized agents each owning one responsibility.
+- **Cross-source evidence correlation.** Automatically links BigQuery network events with AlloyDB CDR rows to surface root causes (e.g., a dropped call from cell tower JKT-002 correlated with the major fiber cut event EVT001).
+- **Persistent structured output.** Every run inserts an auditable row in AlloyDB `incident_tickets` with category, region, related events, CDR findings, and a NOC recommendation. Queryable, joinable, archivable, not a transient chat response.
+- **Two frontends, one engine.** A custom NetPulse UI (Flask + Server-Sent Events) for branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
+- **APAC-optimized inference.** Vertex AI Gemini 2.5 Flash on `asia-southeast1` (Singapore) for lowest APAC latency *and* to avoid the Dynamic Shared Quota contention that hits `us-central1` during APAC hackathons.
+- **Boot-resilient by design.** MCP Toolbox client wrapped in `try/except`, AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive idle-connection reaping, agent runner is lazy-loaded so frontend tabs that don't need the agent stay functional even if the toolbox is cold.
+- **Validated end-to-end.** 32 incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission stress testing. Zero `429 RESOURCE_EXHAUSTED` errors after the asia-southeast1 region switch.
 
 ## Tech Stack
 
 | Component | Technology | Why |
 |---|---|---|
-| Agent framework | **Google ADK 1.14.0** | `SequentialAgent` + `LlmAgent` give built-in state management, `output_key` chaining, native function-calling tool protocol — zero glue code |
+| Agent framework | **Google ADK 1.14.0** | `SequentialAgent` + `LlmAgent` give built-in state management, `output_key` chaining, and the native function-calling tool protocol, all with zero glue code |
 | LLM | **Gemini 2.5 Flash on Vertex AI** | Best latency/cost for APAC; Vertex AI bypasses Google AI Studio rate limits |
 | Inference region | **`asia-southeast1` (Singapore)** | Closest physical region to Indonesia; avoids the heavily contested `us-central1` DSQ pool during APAC hackathons |
 | Tool gateway | **MCP Toolbox for Databases** (Cloud Run) | Direct BigQuery MCP returns 403 on Cloud Run; Toolbox is the proven ADK-compatible bridge |
@@ -278,7 +289,7 @@ pip install flask gunicorn google-cloud-bigquery
 python setup_alloydb.py
 ```
 
-This creates the `incident_tickets` table (idempotent — safe to re-run).
+This creates the `incident_tickets` table (idempotent, safe to re-run).
 
 ### Run the ADK Dev UI locally
 
@@ -346,7 +357,7 @@ hackathon-telecom-ops/
 
 ## Deployment
 
-### ADK service (telecom_ops) — already deployed
+### ADK service (telecom_ops): deployed
 
 ```bash
 gcloud config configurations activate gcp-personal   # personal account owns the project
@@ -379,9 +390,18 @@ gcloud run services add-iam-policy-binding telecom-ops-assistant \
 | Service account | `lab2-cr-service@plated-complex-491512-n6.iam.gserviceaccount.com` |
 | Public access | `allUsers` → `roles/run.invoker` |
 
-### NetPulse UI service — pending deploy
+### NetPulse UI service: deployed
 
-The custom Flask UI lives in `netpulse-ui/` and is locally validated. Cloud Run deployment requires (a) a build step that copies `telecom_ops/` next to `app.py` so the `from telecom_ops.agent import root_agent` import resolves inside the container, and (b) `--network=easy-alloydb-vpc --subnet=easy-alloydb-subnet --vpc-egress=all-traffic` flags to reach AlloyDB's private IP.
+The custom Flask UI deploys from the parent directory so the build context can include both `netpulse-ui/` and `telecom_ops/`. The parent-level `Dockerfile` copies both packages into the image, and `.gcloudignore` filters the build context to skip the venv, scratch directories, and the submission deck. VPC connector flags route the container to AlloyDB through the private IP.
+
+| Resource | Value |
+|---|---|
+| Service | `netpulse-ui` |
+| Cloud Run region | `us-central1` |
+| Vertex AI region | `asia-southeast1` |
+| URL | `https://netpulse-ui-486319900424.us-central1.run.app` |
+| VPC | `easy-alloydb-vpc` / `easy-alloydb-subnet` |
+| Public access | `allUsers` → `roles/run.invoker` |
 
 ## Configuration
 
@@ -401,8 +421,8 @@ For local development, use the AlloyDB instance's public IP. For Cloud Run, over
 
 Two free observability surfaces come with the ADK deployment:
 
-- **`/events`** — streaming sub-agent conversation (every `LlmAgent` turn, every tool call, every state mutation)
-- **`/trace`** — full timeline view with span timing for every LLM call and tool invocation
+- **`/events`** streams the sub-agent conversation, including every `LlmAgent` turn, every tool call, and every state mutation
+- **`/trace`** is a full timeline view with span timing for every LLM call and tool invocation
 
 The custom NetPulse UI also exposes the SSE event stream at `POST /api/query` if you want to drive it programmatically. Each event is JSON-encoded with shape:
 
@@ -419,12 +439,12 @@ data: {"type": "complete", "ticket_id": 32, "final_report": "INCIDENT REPORT..."
 
 A handful of non-obvious decisions worth surfacing:
 
-- **MCP Toolbox vs direct BigQuery MCP** — `https://bigquery.googleapis.com/mcp` returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent. The MCP Toolbox for Databases (a small Cloud Run service that wraps a `tools.yaml` of parameterized SQL queries) is the proven workaround. We use 8 toolset entries — five per-region `query_events_<city>` tools plus `query_critical_outages`, `query_affected_customers_summary`, and `query_network_events`.
-- **Vertex AI region matters for APAC** — `us-central1` is the default Vertex AI region, but it's also the most contested Dynamic Shared Quota (DSQ) pool. During the APAC hackathon, a baseline query that worked at 3 a.m. would 429 at 9 a.m. local time as US developers came online. Switching to `asia-southeast1` eliminated 429s entirely across 32 sequential test queries.
-- **Async ADK Runner ↔ sync Flask** — `runner.run_async()` is async-only, but Flask is sync. The naive `asyncio.run()` wrapper buffers all events into a list before yielding the first byte, breaking the chat-card animation. The fix in `netpulse-ui/agent_runner.py` is a per-request worker thread running its own asyncio loop and pushing converted events onto a `queue.Queue` that the SSE generator drains in real time.
-- **Eager-init singletons** — The agent's `tools.py` instantiates the MCP Toolbox client and the AlloyDB engine at module import. The toolbox client is wrapped in `try/except` (so the agent boots even if the toolbox is cold). The AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive connection-pool staleness when the dev box goes idle for 30+ minutes between demos.
-- **Defensive prompt substitution** — All cross-agent state references in `prompts.py` use ADK's `{key?}` optional syntax. If an upstream agent fails before populating its `output_key`, downstream agents still get a graceful empty string instead of crashing on a `KeyError` during instruction formatting.
-- **Two frontends, one engine** — The ADK Dev UI gives free `/events` and `/trace` tabs. Building a custom UI doesn't replace it; it complements it. The NetPulse UI is the *demo* surface (branded, animated, narrated); the ADK Dev UI is the *debug* surface (every span, every value).
+- **MCP Toolbox vs direct BigQuery MCP.** The endpoint `https://bigquery.googleapis.com/mcp` returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent. The MCP Toolbox for Databases (a small Cloud Run service that wraps a `tools.yaml` of parameterized SQL queries) is the proven workaround. We use 8 toolset entries: five per-region `query_events_<city>` tools plus `query_critical_outages`, `query_affected_customers_summary`, and `query_network_events`.
+- **Vertex AI region matters for APAC.** `us-central1` is the default Vertex AI region, but it's also the most contested Dynamic Shared Quota (DSQ) pool. During the APAC hackathon, a baseline query that worked at 3 a.m. would 429 at 9 a.m. local time as US developers came online. Switching to `asia-southeast1` eliminated 429s entirely across 32 sequential test queries.
+- **Async ADK Runner ↔ sync Flask.** `runner.run_async()` is async-only, but Flask is sync. The naive `asyncio.run()` wrapper buffers all events into a list before yielding the first byte, breaking the chat-card animation. The fix in `netpulse-ui/agent_runner.py` is a per-request worker thread running its own asyncio loop and pushing converted events onto a `queue.Queue` that the SSE generator drains in real time.
+- **Eager-init singletons.** The agent's `tools.py` instantiates the MCP Toolbox client and the AlloyDB engine at module import. The toolbox client is wrapped in `try/except` (so the agent boots even if the toolbox is cold). The AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive connection-pool staleness when the dev box goes idle for 30+ minutes between demos.
+- **Defensive prompt substitution.** All cross-agent state references in `prompts.py` use ADK's `{key?}` optional syntax. If an upstream agent fails before populating its `output_key`, downstream agents still get a graceful empty string instead of crashing on a `KeyError` during instruction formatting.
+- **Two frontends, one engine.** The ADK Dev UI gives free `/events` and `/trace` tabs. Building a custom UI doesn't replace it; it complements it. The NetPulse UI is the *demo* surface (branded, animated, narrated); the ADK Dev UI is the *debug* surface (every span, every value).
 
 ## Author
 
@@ -434,7 +454,7 @@ Built for the **Gen AI Academy APAC Edition 2026** hackathon.
 
 ## Acknowledgments
 
-- [Google Agent Development Kit](https://google.github.io/adk-docs/) — the orchestration framework that made the four-agent chain expressible in ~50 lines of Python
-- [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/) — the bridge that makes BigQuery callable from ADK agents on Cloud Run
-- [Vertex AI Gemini 2.5 Flash](https://cloud.google.com/vertex-ai) — fast, cheap, available in `asia-southeast1`
-- [AlloyDB for PostgreSQL](https://cloud.google.com/alloydb) — wire-compatible Postgres with managed scaling, queryable from local dev via public IP and from Cloud Run via VPC connector
+- [Google Agent Development Kit](https://google.github.io/adk-docs/), the orchestration framework that made the four-agent chain expressible in ~50 lines of Python
+- [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/), the bridge that makes BigQuery callable from ADK agents on Cloud Run
+- [Vertex AI Gemini 2.5 Flash](https://cloud.google.com/vertex-ai), fast, cheap, available in `asia-southeast1`
+- [AlloyDB for PostgreSQL](https://cloud.google.com/alloydb), wire-compatible Postgres with managed scaling, queryable from local dev via public IP and from Cloud Run via VPC connector
