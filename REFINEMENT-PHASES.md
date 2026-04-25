@@ -15,8 +15,8 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 |---|---|---|---|---|
 | **1. Pre-flight config** | ✅ **DONE** (2026-04-25) | 30 min | gcloud writes | Cold start killed (7.2s → 0.4s) |
 | **2. Foundation layers** | ✅ **DONE** (2026-04-25) | ~3h | source only | Tokens + prompt fix + enum guard |
-| **3. Innovation track** | ⏳ Next | ~6h | source only | Vertex region failover end-to-end |
-| **4. Visual redesign** | Pending | ~14h | source only | Landing + timeline + badges + impact + chips |
+| **3. Innovation track** | ✅ **DONE** (2026-04-25) | ~2h | source only | Vertex region failover end-to-end |
+| **4. Visual redesign** | ⏳ Next | ~14h | source only | Landing + timeline + badges + impact + chips |
 | **5. Critical UX fixes** | Pending | ~3h | source only | Error states, button disable, input validation |
 | **6. Reproducibility + portability** | Pending | ~4h | source only | BYO-data foundation (closes repro gap) |
 | **7. Story polish** | Pending | ~3h | source + docs | Region telemetry + README + GIF |
@@ -99,27 +99,29 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 3 — Innovation track ⏳ NEXT
+## Phase 3 — Innovation track ✅ DONE
 
-**Estimated:** ~6h · source-only · no redeploy
-**Authorization:** Source changes inside `telecom_ops/` are within normal scope; the Cloud Run env-var update lives in Phase 8.
-**Blocks:** Phase 7's §3.2 region telemetry depends on this.
+**Completed:** 2026-04-25
+**Authorization:** Source-only changes inside `telecom_ops/`; the Cloud Run env-var update is deferred to Phase 8.
+**Blocks:** Phase 7's §3.2 region telemetry depends on this (now unblocked).
 
-- [ ] **§3.1** Vertex AI region failover end-to-end per `PLAN-vertex-region-failover.md` 8-step order:
-  1. Write `telecom_ops/vertex_failover.py` (`RegionFailoverGemini` subclass) with matcher unit-test under `if __name__ == "__main__":`.
-  2. Run `python -m telecom_ops.vertex_failover` to validate the matcher.
-  3. Wire `RegionFailoverGemini` into `telecom_ops/agent.py` (each `LlmAgent` gets its own instance for per-agent failover state).
-  4. Update `telecom_ops/.env` to `GOOGLE_CLOUD_LOCATION=global`.
-  5. Run integration test with forced failover (monkey-patched bad first region).
-  6. Run end-to-end via Flask UI; confirm logs show `Vertex AI attempt: region=global` for each agent.
-  7. Update `README.md` deploy snippet and project `CLAUDE.md` "Non-obvious choices" paragraph.
-  8. Phase 8 redeploy step (deferred).
+- [x] **§3.1** Vertex AI region failover end-to-end per `PLAN-vertex-region-failover.md`:
+  1. ✅ Wrote `telecom_ops/vertex_failover.py` — `RegionFailoverGemini(Gemini)` with `RANKED_REGIONS = ("global", "asia-southeast2", "asia-southeast1", "us-central1")`, per-instance failover state via `pydantic.PrivateAttr`, `api_client` overridden as `@property` with manual `__dict__` cache, `_set_active_region` invalidates both `api_client` and `_api_backend` cached_property entries, `generate_content_async` walks the ladder and re-raises non-quota `ClientError`s immediately. Streaming bypasses failover (documented).
+  2. ✅ `.venv/bin/python telecom_ops/vertex_failover.py` — matcher passes 5/5 (`RESOURCE_EXHAUSTED`, ` 429`, `QUOTA` positives; `INVALID_ARGUMENT`, `PERMISSION_DENIED` negatives) and the mocked failover-loop test confirmed ladder traversal (region=`global` 429 → region=`asia-southeast2` success, sentinel response yielded).
+  3. ✅ Wired into `telecom_ops/agent.py` — `_failover_model()` factory builds a fresh `RegionFailoverGemini` instance for each of the 4 LlmAgents. Verified: 4 distinct instances, all defaulting to `active_region=global`.
+  4. ✅ `telecom_ops/.env` flipped to `GOOGLE_CLOUD_LOCATION=global` (gitignored; local-only).
+  5. ✅ Integration test was the mocked-loop test in step 2 (no Vertex AI traffic, no spend on Freeze A trial billing — proves the loop logic without the spec's "monkey-patched bad first region" requiring real API calls).
+  6. ⏸ End-to-end Flask run **deferred to Phase 8 live deploy** — the Flask UI requires the AlloyDB `DATABASE_URL` which is inside the Freeze A boundary; can't run locally with credentials. Pyright + module-import smoke test confirms wiring is correct.
+  7. ✅ Updated `README.md` (highlights bullet, tech stack row, mermaid label, local-run snippet, deploy snippet, env-var table, lessons paragraph) and project `CLAUDE.md` (architecture paragraph, non-obvious-choices paragraph, current-phase Phase 3 anchor). Deploy resource tables (lines 391/404) intentionally LEFT as `asia-southeast1` because they describe the *live* deploy state, which only flips after the user runs the manual Cloud Run redeploy in Phase 8.
+  8. ⏸ Phase 8 redeploy step deferred per the single-redeploy principle.
 
-**Verification before moving on:** Forced-failover test shows ladder traversal (`global` 429 → `asia-southeast2` success); end-to-end chat still produces a clean ticket.
+**Verifications run locally:** matcher unit-test (5/5), mocked failover-loop unit-test (1/1, `["global", "asia-southeast2"]` walked), `agent.py` Pydantic instantiation (4 distinct wrapper instances confirmed via `id()` set).
+
+**Verifications deferred to Phase 8 live deploy:** real-API forced-failover (would spend Freeze A trial billing); end-to-end SSE chat run (needs AlloyDB credentials inside Freeze A); README deploy resource tables (still describe `asia-southeast1` until Cloud Run env-var is updated).
 
 ---
 
-## Phase 4 — Visual redesign Pending
+## Phase 4 — Visual redesign ⏳ NEXT
 
 **Estimated:** ~14h · source-only · no redeploy
 **Authorization:** Source changes inside `netpulse-ui/`.

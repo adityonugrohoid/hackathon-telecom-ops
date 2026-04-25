@@ -21,11 +21,13 @@ NetPulse AI was selected into the **Top 100** of the APAC GenAI Academy
 
 Until the deadline, refinement is the priority workstream. Anchor items:
 
-1. **Vertex AI region failover** — switch default to `global` and fail
-   over through `asia-southeast2` → `asia-southeast1` → `us-central1` on
-   `RESOURCE_EXHAUSTED`. Drafted in `PLAN-vertex-region-failover.md`;
-   not implemented yet. Will replace the `asia-southeast1` static pin
-   noted in § "Non-obvious choices to preserve" once authorized.
+1. **Vertex AI region failover** — implemented in
+   `telecom_ops/vertex_failover.py`. Default region is `global`; on
+   `RESOURCE_EXHAUSTED`, each `LlmAgent` independently walks
+   `asia-southeast2` → `asia-southeast1` → `us-central1`. Source landed;
+   the live deploy state still has the `asia-southeast1` static pin until
+   the user runs the manual Cloud Run redeploy with the updated
+   `--set-env-vars` flag (see `README.md` § Deployment).
 2. **Brainstorming queue** — further refinement candidates (architecture,
    performance, deeper Gen AI usage) to be scoped with the user before
    any code changes.
@@ -43,7 +45,10 @@ four `LlmAgent` sub-agents in order: classifier, network investigator
 (writes the final ticket back to AlloyDB). The sibling Flask service
 `netpulse-ui/` wraps the same `root_agent` in a custom chat UI with three
 read-only data viewer tabs and Server-Sent-Events streaming. Both deploy
-to Cloud Run; both target Vertex AI Gemini 2.5 Flash in `asia-southeast1`.
+to Cloud Run; both target Vertex AI Gemini 2.5 Flash through the
+`RegionFailoverGemini` wrapper in `telecom_ops/vertex_failover.py`, which
+defaults to `global` and fails over through ranked APAC + US regions on
+`RESOURCE_EXHAUSTED`.
 
 ## Non-obvious choices to preserve
 
@@ -63,11 +68,20 @@ These look optional but each one is load-bearing for a reason:
   forever waiting on a half-dead socket. We hit this during a demo gap.
   Both `telecom_ops/tools.py` and `netpulse-ui/data_queries.py` set it.
 
-- **Vertex AI region pinned to `asia-southeast1`** via
-  `GOOGLE_CLOUD_LOCATION`. Vertex's Dynamic Shared Quota on the Gemini 2.5
-  GA models triggered `RESOURCE_EXHAUSTED` 429s in `us-central1` for APAC
-  traffic during the hackathon window. APAC region was the verified fix.
-  Don't switch back without checking quota state.
+- **Vertex AI region failover via `RegionFailoverGemini`** in
+  `telecom_ops/vertex_failover.py`. Default region is `global` (Google's
+  multi-region routing pool); on `RESOURCE_EXHAUSTED`, each `LlmAgent`
+  independently rebuilds its `genai.Client` against the next region in
+  `RANKED_REGIONS` (`asia-southeast2` → `asia-southeast1` →
+  `us-central1`). `agent.py` builds a fresh wrapper per `LlmAgent` so the
+  four agents own independent failover state. Do NOT replace with a
+  single static `GOOGLE_CLOUD_LOCATION=us-central1` pin — that's the
+  verified failure mode (DSQ contention from APAC traffic). The single-
+  region `asia-southeast1` pin worked too but had no headroom on a
+  trial-billing project; the failover ladder converts a quota miss into
+  one extra hop instead of a hard 500. Streaming (`stream=True`) bypasses
+  failover because partial yields cannot be safely replayed; NetPulse
+  uses `stream=False` so this is not a hot-path concern.
 
 - **MCP Toolbox in front of BigQuery**, not the direct BigQuery MCP
   endpoint. The direct endpoint returns 403 / Connection-closed on

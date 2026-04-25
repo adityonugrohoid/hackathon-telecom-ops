@@ -91,7 +91,7 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 - **Cross-source evidence correlation.** Automatically links BigQuery network events with AlloyDB CDR rows to surface root causes (e.g., a dropped call from cell tower JKT-002 correlated with the major fiber cut event EVT001).
 - **Persistent structured output.** Every run inserts an auditable row in AlloyDB `incident_tickets` with category, region, related events, CDR findings, and a NOC recommendation. Queryable, joinable, archivable, not a transient chat response.
 - **Two frontends, one engine.** A custom NetPulse UI (Flask + Server-Sent Events) for branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
-- **APAC-optimized inference.** Vertex AI Gemini 2.5 Flash on `asia-southeast1` (Singapore) for lowest APAC latency *and* to avoid the Dynamic Shared Quota contention that hits `us-central1` during APAC hackathons.
+- **APAC-optimized inference with region failover.** Vertex AI Gemini 2.5 Flash defaults to the `global` multi-region pool, then fails over per-LlmAgent through `asia-southeast2` → `asia-southeast1` → `us-central1` on `RESOURCE_EXHAUSTED`. Each agent walks the ladder independently, so one agent's quota miss does not bind the others. Implementation in `telecom_ops/vertex_failover.py`.
 - **Boot-resilient by design.** MCP Toolbox client wrapped in `try/except`, AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive idle-connection reaping, agent runner is lazy-loaded so frontend tabs that don't need the agent stay functional even if the toolbox is cold.
 - **Validated end-to-end.** 32 incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission stress testing. Zero `429 RESOURCE_EXHAUSTED` errors after the asia-southeast1 region switch.
 
@@ -101,7 +101,7 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 |---|---|---|
 | Agent framework | **Google ADK 1.14.0** | `SequentialAgent` + `LlmAgent` give built-in state management, `output_key` chaining, and the native function-calling tool protocol, all with zero glue code |
 | LLM | **Gemini 2.5 Flash on Vertex AI** | Best latency/cost for APAC; Vertex AI bypasses Google AI Studio rate limits |
-| Inference region | **`asia-southeast1` (Singapore)** | Closest physical region to Indonesia; avoids the heavily contested `us-central1` DSQ pool during APAC hackathons |
+| Inference region | **`global` with ranked failover** | Default to Google's multi-region pool (`global`); on `RESOURCE_EXHAUSTED`, fail over through `asia-southeast2` → `asia-southeast1` → `us-central1`. Per-LlmAgent failover state in `telecom_ops/vertex_failover.py`. |
 | Tool gateway | **MCP Toolbox for Databases** (Cloud Run) | Direct BigQuery MCP returns 403 on Cloud Run; Toolbox is the proven ADK-compatible bridge |
 | Analytical store | **BigQuery** (`telecom_network.network_events`) | 30-row dataset of outages, maintenance, degradations, restorations across 5 Indonesian cities |
 | Operational store | **AlloyDB for PostgreSQL 17** | Hosts `call_records` (50 rows of CDR data) and `incident_tickets` (persistent agent output) |
@@ -156,7 +156,7 @@ flowchart TB
         ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>incident_tickets</span>")]
     end
 
-    Vertex["Vertex AI Gemini 2.5 Flash<br/><span style='font-size:11px;font-weight:400'>asia-southeast1</span>"]
+    Vertex["Vertex AI Gemini 2.5 Flash<br/><span style='font-size:11px;font-weight:400'>global → asia-southeast2 → asia-southeast1 → us-central1</span>"]
 
     User --> UI
     User --> ADK
@@ -309,7 +309,7 @@ Browse to `http://localhost:8000`, select `telecom_ops`, send a query.
 cd netpulse-ui
 export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/legacy_credentials/<your-account>/adc.json
 export GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6
-export GOOGLE_CLOUD_LOCATION=asia-southeast1
+export GOOGLE_CLOUD_LOCATION=global
 export GOOGLE_GENAI_USE_VERTEXAI=TRUE
 export DATABASE_URL='postgresql+pg8000://postgres:<password>@<alloydb-public-ip>:5432/postgres'
 
@@ -374,7 +374,7 @@ adk deploy cloud_run \
   telecom_ops \
   -- \
   --service-account=lab2-cr-service@plated-complex-491512-n6.iam.gserviceaccount.com \
-  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6,GOOGLE_CLOUD_LOCATION=asia-southeast1"
+  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6,GOOGLE_CLOUD_LOCATION=global"
 
 # Background-run deploys silently answer N to the "allow unauthenticated" prompt; fix:
 gcloud run services add-iam-policy-binding telecom-ops-assistant \
@@ -413,7 +413,7 @@ All configuration is via environment variables (no `python-dotenv`; the agent pa
 | Variable | Purpose | Default / example |
 |---|---|---|
 | `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI + BQ + AlloyDB | `plated-complex-491512-n6` |
-| `GOOGLE_CLOUD_LOCATION` | Vertex AI inference region | `asia-southeast1` |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI inference region (initial — failover ladder kicks in on 429) | `global` |
 | `GOOGLE_GENAI_USE_VERTEXAI` | Force Vertex AI (vs Google AI Studio API key) | `TRUE` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to ADC JSON for local runs | `~/.config/gcloud/legacy_credentials/<account>/adc.json` |
 | `DATABASE_URL` | AlloyDB SQLAlchemy URL | `postgresql+pg8000://postgres:<pwd>@<ip>:5432/postgres` |
@@ -443,7 +443,7 @@ data: {"type": "complete", "ticket_id": 32, "final_report": "INCIDENT REPORT..."
 A handful of non-obvious decisions worth surfacing:
 
 - **MCP Toolbox vs direct BigQuery MCP.** The endpoint `https://bigquery.googleapis.com/mcp` returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent. The MCP Toolbox for Databases (a small Cloud Run service that wraps a `tools.yaml` of parameterized SQL queries) is the proven workaround. We use 8 toolset entries: five per-region `query_events_<city>` tools plus `query_critical_outages`, `query_affected_customers_summary`, and `query_network_events`.
-- **Vertex AI region matters for APAC.** `us-central1` is the default Vertex AI region, but it's also the most contested Dynamic Shared Quota (DSQ) pool. During the APAC hackathon, a baseline query that worked at 3 a.m. would 429 at 9 a.m. local time as US developers came online. Switching to `asia-southeast1` eliminated 429s entirely across 32 sequential test queries.
+- **Vertex AI region matters for APAC, and a single pinned region is fragile.** `us-central1` is the default Vertex AI region, but it's also the most contested Dynamic Shared Quota (DSQ) pool. During the APAC hackathon, a baseline query that worked at 3 a.m. would 429 at 9 a.m. local time as US developers came online. Switching to `asia-southeast1` eliminated 429s entirely across 32 sequential test queries — but a single trial-billing project on a single region has no headroom if that region ever spikes. The refinement-phase fix replaces the static pin with a `global` default plus a ranked failover ladder (`asia-southeast2` → `asia-southeast1` → `us-central1`); each `LlmAgent` walks the ladder independently, so failure becomes one extra hop instead of a hard 500. See `telecom_ops/vertex_failover.py`.
 - **Async ADK Runner ↔ sync Flask.** `runner.run_async()` is async-only, but Flask is sync. The naive `asyncio.run()` wrapper buffers all events into a list before yielding the first byte, breaking the chat-card animation. The fix in `netpulse-ui/agent_runner.py` is a per-request worker thread running its own asyncio loop and pushing converted events onto a `queue.Queue` that the SSE generator drains in real time.
 - **Eager-init singletons.** The agent's `tools.py` instantiates the MCP Toolbox client and the AlloyDB engine at module import. The toolbox client is wrapped in `try/except` (so the agent boots even if the toolbox is cold). The AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive connection-pool staleness when the dev box goes idle for 30+ minutes between demos.
 - **Defensive prompt substitution.** All cross-agent state references in `prompts.py` use ADK's `{key?}` optional syntax. If an upstream agent fails before populating its `output_key`, downstream agents still get a graceful empty string instead of crashing on a `KeyError` during instruction formatting.
