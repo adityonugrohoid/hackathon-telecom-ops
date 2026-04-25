@@ -101,6 +101,55 @@ body {
 }
 .np-chat button[type="submit"]:hover { background: var(--np-primary-dark); }
 
+/* §1.2 — busy + disabled states for the submit button + input.
+   While a request is in flight, the submit button shows a CSS-only spinner
+   (::before pseudo) and the textbox locks out further input. The disabled
+   tones use neutral tokens so the affordance reads "not now" without alarm. */
+.np-chat #np-input:disabled {
+  background: var(--np-neutral-100);
+  color: var(--np-neutral-650);
+  cursor: not-allowed;
+}
+.np-chat button[type="submit"]:disabled {
+  background: var(--np-neutral-300);
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.92;
+}
+.np-chat button.np-busy {
+  position: relative;
+  padding-left: 44px;
+  background: var(--np-primary-dark);
+}
+.np-chat button.np-busy::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: np-spin 0.8s linear infinite;
+}
+@keyframes np-spin { to { transform: rotate(360deg); } }
+
+/* §1.3 — visible inline hint shown next to the input when the user submits an
+   empty / whitespace-only query. The hint hides itself on the next keystroke. */
+.np-input-hint {
+  margin: calc(var(--space-3) * -1) 0 var(--space-3) 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--np-error) 12%, transparent);
+  color: var(--np-error);
+  border: 1px solid color-mix(in srgb, var(--np-error) 30%, transparent);
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+}
+.np-input-hint[hidden] { display: none; }
+
 .np-examples {
   display: flex;
   flex-wrap: wrap;
@@ -185,6 +234,11 @@ body {
   background: var(--np-accent);
   box-shadow: 0 0 0 2px var(--np-accent);
 }
+.np-timeline-entry.error .np-timeline-dot {
+  background: var(--np-error);
+  box-shadow: 0 0 0 2px var(--np-error);
+  animation: none;
+}
 @keyframes np-dot-pulse {
   0%, 100% { box-shadow: 0 0 0 2px var(--np-primary), 0 0 0 6px color-mix(in srgb, var(--np-primary) 25%, transparent); }
   50% { box-shadow: 0 0 0 2px var(--np-primary), 0 0 0 10px color-mix(in srgb, var(--np-primary) 8%, transparent); }
@@ -207,6 +261,11 @@ body {
 }
 .np-timeline-entry.done .np-timeline-content {
   border-left-color: var(--np-accent);
+}
+.np-timeline-entry.error .np-timeline-content {
+  border-left-color: var(--np-error);
+  box-shadow: var(--np-shadow-card),
+              0 0 0 1px color-mix(in srgb, var(--np-error) 25%, transparent);
 }
 .np-timeline-content > header {
   display: flex;
@@ -327,7 +386,36 @@ body {
   animation: np-pulse 1.4s infinite;
 }
 .np-timeline-entry.done .np-status { background: var(--np-accent); color: #fff; }
+.np-timeline-entry.error .np-status {
+  background: var(--np-error);
+  color: #fff;
+  animation: none;
+}
 @keyframes np-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* §1.1 — agent-scoped tool-error message lives inside the timeline content
+   panel, just above the handoff footer. Tinted from --np-error so the badge,
+   border-left, dot, and message all read as one error story. */
+.np-error-msg {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--np-error) 10%, transparent);
+  color: var(--np-error);
+  border: 1px solid color-mix(in srgb, var(--np-error) 28%, transparent);
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Catastrophic top-level errors (no agent attached) keep using the .np-final
+   card but tinted toward error — distinguishes a hard failure from a normal
+   incident report. */
+.np-final.np-final-error {
+  background: color-mix(in srgb, var(--np-error) 25%, var(--c-report-bg));
+  border-left: 4px solid var(--np-error);
+}
 
 .np-tools {
   list-style: none;

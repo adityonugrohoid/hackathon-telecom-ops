@@ -17,8 +17,8 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **2. Foundation layers** | ✅ **DONE** (2026-04-25) | ~3h | source only | Tokens + prompt fix + enum guard |
 | **3. Innovation track** | ✅ **DONE** (2026-04-25) | ~2h | source only | Vertex region failover end-to-end |
 | **4. Visual redesign** | ✅ **DONE** (2026-04-25) | ~14h est · ~4h actual | source only | Landing + timeline + badges + impact + chips |
-| **5. Critical UX fixes** | ⏳ Next | ~3h | source only | Error states, button disable, input validation |
-| **6. Reproducibility + portability** | Pending | ~4h | source only | BYO-data foundation (closes repro gap) |
+| **5. Critical UX fixes** | ✅ **DONE** (2026-04-25) | ~3h est · ~1h actual | source only | Error states, button disable, input validation |
+| **6. Reproducibility + portability** | ⏳ Next | ~4h | source only | BYO-data foundation (closes repro gap) |
 | **7. Story polish** | Pending | ~3h | source + docs | Region telemetry + README + GIF |
 | **8. Ship** | Pending | ~1h | Cloud Run deploy | Single consolidated redeploy |
 
@@ -145,21 +145,29 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 5 — Critical UX fixes ⏳ NEXT
+## Phase 5 — Critical UX fixes ✅ DONE
 
-**Estimated:** ~3h · source-only · no redeploy
-**Authorization:** Source-only.
-**Note:** Could be batched into Phase 4 if convenient — they touch overlapping files (`chat.html`, `agent_runner.py`).
+**Completed:** 2026-04-25
+**Authorization:** Source changes inside `netpulse-ui/`.
+**Outcome:** Tool errors now surface as agent-scoped sticky red state on the matching timeline entry; the submit button locks + spins while a request is in flight; empty/whitespace submits show an inline hint instead of failing silently.
 
-- [ ] **§1.1** Surface tool errors as chat card error state (`agent_runner.py` emits `error` event; `chat.html` adds `np-error` rendering). *(~2h)*
-- [ ] **§1.2** Disable Investigate button + spinner during request. *(~30 min)*
-- [ ] **§1.3** Empty/whitespace input validation client-side. *(~15 min)*
+- [x] **§1.1** Surface tool errors as agent-scoped chat card error state — new `_extract_tool_error()` helper in `netpulse-ui/agent_runner.py` detects two response shapes (NetPulse-native `{"status":"error","message":...}` like `save_incident_ticket`'s enum guard, and ADK's exception-wrapping `{"error":"<str>"}` shape from uncaught tool exceptions); `_convert_event` emits an additional `AgentEvent(type='error', agent, tool, message)` after the underlying `tool_response`. `chat.html` `npHandle` routes `ev.type==='error'` with an `agent` to `npRenderAgentError()` (red dot, red border-left, error status badge, inline `.np-error-msg` block placed above the handoff footer); `agent`-less catastrophic errors still flow through `npRenderGlobalError()` which now sets a tinted `.np-final-error` modifier on the report card. The `text` event branch was hardened so trailing model commentary on a failed agent does not clobber the sticky `.error` state.
+- [x] **§1.2** Disable Investigate button + spinner during request — new `npSetBusy(on)` helper locks `#np-input` + `#np-submit`, swaps the button label to "Investigating", and toggles a `.np-busy` class that drives a CSS-only `::before` spinner. `npSubmit` wraps the SSE stream loop in `try/finally` so the busy state always clears — including on network errors mid-stream (caught and routed through `npRenderGlobalError`). Disabled tones derive from `--np-neutral-100/300/650`; the busy background uses `--np-primary-dark` so the disabled-but-active affordance reads as "working" not "broken".
+- [x] **§1.3** Empty/whitespace input validation client-side — new persistent `<div id="np-input-hint" hidden>` element next to the form; `npSubmit` calls `npFlashInputHint('Type a complaint first — empty queries are not investigated.')` and bails before the network round-trip when `.trim()` produces an empty string. The hint clears automatically on the next keystroke via an `input` listener wired in `npOnLoad()`. `role="alert"` + `aria-live="polite"` for screen-reader users. The server-side guard in `app.py` (`'empty query'` SSE event) is preserved as a defense-in-depth check.
 
-**Verification:** Force a tool error locally (monkey-patch `query_cdr` to raise) — confirm card shows error state, button re-enables, no UI hang. Empty submit shows immediate feedback, no spurious server roundtrip.
+**Verifications run locally:**
+- AST parse of `agent_runner.py` and a 4-case synthetic `_convert_event` test (NetPulse `status='error'` shape, ADK `{error:str}` shape, success shape, `AgentEvent.to_dict` shape) — all pass.
+- `node -e "new Function(<chat.html script>)"` JS syntax probe + symbol grep for the 9 new identifiers (`npSetBusy`, `npFlashInputHint`, `npClearInputHint`, `npRenderAgentError`, `npRenderGlobalError`, `np-busy`, `np-input-hint`, `np-error-msg`, `np-final-error`) — all present.
+- `flask test_client()` smoke against `/`, `/app`, `/chat` (still 200/200/301), plus `POST /api/query` with empty body confirming the existing server-side guard fires.
+- CSS token sanity scan: 0 unresolved `var(--*)` references introduced by Phase 5 (the 5 pre-existing inline-defined `--c-*-fg` tokens are detection-method false positives, present in tokens.css since Phase 2).
+
+**Verifications deferred to Phase 8 live deploy:**
+- Real-API forced tool error (e.g., monkey-patch `query_cdr` to raise) end-to-end through the SSE stream into the timeline entry — needs AlloyDB credentials + Vertex AI traffic, both inside Freeze A.
+- Visual regression: confirm the spinner, error-tinted timeline entry, and inline input hint all render with the live tokens against the production background.
 
 ---
 
-## Phase 6 — Reproducibility + portability Pending
+## Phase 6 — Reproducibility + portability ⏳ NEXT
 
 **Estimated:** ~4h · source-only · no redeploy
 **Authorization:** Source-only. Seed extraction is read-only against current BQ + AlloyDB (Freeze A allows). Bootstrap scripts only mutate destinations the user explicitly supplies.
