@@ -33,7 +33,14 @@ body {
   gap: var(--space-4);
   box-shadow: var(--np-shadow-header);
 }
-.np-brand { display: flex; align-items: center; gap: var(--space-4); }
+.np-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: inherit;
+  text-decoration: none;
+}
+.np-brand:hover { opacity: 0.92; }
 .np-logo {
   height: 56px;
   width: 56px;
@@ -112,86 +119,152 @@ body {
 }
 .np-chip:hover { background: var(--np-primary); color: #fff; }
 
-/* Pipeline cards — single column, full main width matching .np-final */
-.np-pipeline {
+/* Pipeline-as-timeline (§5.2) — vertical activity stream
+   ----------------------------------------------------------------------------
+   Each agent becomes one <li class="np-timeline-entry"> with a left rail
+   (timestamp + dot) and a right content panel that holds the existing
+   per-agent header, source pills, tool calls, and text. The vertical line
+   between entries is rendered by the rail's ::after pseudo-element. */
+.np-timeline {
+  list-style: none;
+  margin: 0 0 var(--space-5) 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-bottom: var(--space-5);
+  gap: var(--space-2);
+}
+.np-timeline-entry {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-4);
+  align-items: stretch;
 }
 
-.np-card {
+/* Left rail: timestamp on top, dot below, vertical line continuing down. */
+.np-timeline-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 12px;
+}
+.np-timeline-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.np-timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--np-neutral-200);
+  border: 2px solid var(--surface-page);
+  box-shadow: 0 0 0 2px var(--np-neutral-300);
+  z-index: 1;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.np-timeline-rail::after {
+  content: "";
+  position: absolute;
+  top: 36px;
+  bottom: -12px;
+  width: 2px;
+  background: var(--np-neutral-200);
+}
+.np-timeline-entry:last-child .np-timeline-rail::after { display: none; }
+.np-timeline-entry.running .np-timeline-dot {
+  background: var(--np-primary);
+  box-shadow:
+    0 0 0 2px var(--np-primary),
+    0 0 0 6px color-mix(in srgb, var(--np-primary) 25%, transparent);
+  animation: np-dot-pulse 1.4s infinite;
+}
+.np-timeline-entry.done .np-timeline-dot {
+  background: var(--np-accent);
+  box-shadow: 0 0 0 2px var(--np-accent);
+}
+@keyframes np-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--np-primary), 0 0 0 6px color-mix(in srgb, var(--np-primary) 25%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--np-primary), 0 0 0 10px color-mix(in srgb, var(--np-primary) 8%, transparent); }
+}
+
+/* Right content panel — replaces the old fixed-height .np-card */
+.np-timeline-content {
   background: var(--np-card);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   box-shadow: var(--np-shadow-card);
-  transition: box-shadow 0.2s;
-  /* Fixed total height — inner sections scroll, the card never expands. */
-  height: 320px;
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
-.np-card.running {
-  box-shadow:
-    0 0 0 3px var(--np-primary),
-    0 4px 14px color-mix(in srgb, var(--np-primary) 25%, transparent);
+.np-timeline-entry.running .np-timeline-content {
+  border-left-color: var(--np-primary);
 }
-.np-card.done { box-shadow: 0 0 0 2px var(--np-accent); }
-
-/* Sequential flow connector with carry-over labels */
-.np-flow {
+.np-timeline-entry.done .np-timeline-content {
+  border-left-color: var(--np-accent);
+}
+.np-timeline-content > header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin: 2px 0;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  flex-shrink: 0;
 }
-.np-flow-arrow {
-  font-size: 22px;
-  line-height: 1;
+.np-timeline-content h3 {
+  font-size: 15px;
   color: var(--np-primary);
-  font-weight: 700;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
+  font-weight: 600;
+  flex: 1;
 }
-.np-flow-label {
+.np-timeline-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--np-primary) 12%, transparent);
+  color: var(--np-primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Carry-over chips at the bottom of each non-final entry */
+.np-timeline-handoff {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 6px;
-  background: color-mix(in srgb, var(--np-primary) 7%, transparent);
-  border: 1px dashed color-mix(in srgb, var(--np-primary) 45%, transparent);
-  padding: 6px 14px;
-  border-radius: var(--radius-lg);
-  font-size: 11px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed color-mix(in srgb, var(--np-primary) 25%, transparent);
+  font-size: 10.5px;
   color: var(--np-muted);
 }
-.np-flow-title {
+.np-handoff-title {
   color: var(--np-primary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-right: var(--space-1);
 }
-.np-flow-label code {
-  background: #fff;
-  border: 1px solid color-mix(in srgb, var(--np-primary) 35%, transparent);
+.np-timeline-handoff code {
+  background: color-mix(in srgb, var(--np-primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--np-primary) 25%, transparent);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 10.5px;
-  color: var(--np-primary);
+  color: var(--np-primary-dark);
   font-family: var(--font-mono);
 }
 
-.np-card > header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-1);
-  flex-shrink: 0;
+@media (max-width: 640px) {
+  .np-timeline-entry { grid-template-columns: 56px 1fr; gap: var(--space-2); }
 }
-.np-card h3 { font-size: 14px; color: var(--np-primary); font-weight: 600; }
 
 /* Always-visible data-source subtitle under each card title */
 .np-card-source {
@@ -248,12 +321,12 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.np-card.running .np-status {
+.np-timeline-entry.running .np-status {
   background: var(--np-primary);
   color: #fff;
   animation: np-pulse 1.4s infinite;
 }
-.np-card.done .np-status { background: var(--np-accent); color: #fff; }
+.np-timeline-entry.done .np-status { background: var(--np-accent); color: #fff; }
 @keyframes np-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 
 .np-tools {
@@ -294,12 +367,74 @@ body {
   padding: var(--space-5);
   border-radius: var(--radius-md);
 }
-.np-final h2 { color: #fff; margin-bottom: var(--space-2); font-size: 18px; }
-.np-ticket { color: var(--np-accent); font-size: 14px; margin-bottom: var(--space-3); font-weight: 600; }
+.np-final-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.np-final h2 { color: #fff; font-size: 18px; }
+.np-final-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.np-ticket { color: var(--np-accent); font-size: 14px; font-weight: 600; }
+.np-ticket-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.np-ticket-badges:empty { display: none; }
 .np-final-text {
   white-space: pre-wrap;
   font-family: var(--font-mono);
   font-size: 13px;
+}
+
+/* §5.4 — Recommended NOC actions panel (lives inside the dark .np-final).
+   Static category->actions[] map renders as inert pill chips; the visual
+   conveys "this is a workflow trigger" without wiring real ITSM hooks. */
+.np-actions-panel {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.np-actions-title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.78;
+  margin-bottom: var(--space-2);
+}
+.np-actions-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.np-action-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  cursor: default;
+  transition: background 0.15s, border-color 0.15s;
+}
+.np-action-chip:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.32);
 }
 
 /* "Reading live from..." banner on each data viewer tab.
@@ -415,6 +550,135 @@ body {
 }
 .np-table tr:hover td { background: #f8f9fa; }
 
+/* §5.3 — Category + Severity + Status badges
+   ----------------------------------------------------------------------------
+   .np-badge is the shared pill shell; modifiers tint it by mapping the
+   per-category (--np-cat-*) and per-severity (--np-status-*) tokens through
+   color-mix() into matching bg / fg / border triples. */
+.np-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--np-neutral-100);
+  color: var(--np-neutral-650);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* Category badges (saved-ticket category enum) */
+.np-badge-cat-network  { background: color-mix(in srgb, var(--np-cat-network)  12%, transparent); color: var(--np-cat-network);  border-color: color-mix(in srgb, var(--np-cat-network)  35%, transparent); }
+.np-badge-cat-billing  { background: color-mix(in srgb, var(--np-cat-billing)  12%, transparent); color: var(--np-cat-billing);  border-color: color-mix(in srgb, var(--np-cat-billing)  35%, transparent); }
+.np-badge-cat-hardware { background: color-mix(in srgb, var(--np-cat-hardware) 12%, transparent); color: var(--np-cat-hardware); border-color: color-mix(in srgb, var(--np-cat-hardware) 35%, transparent); }
+.np-badge-cat-service  { background: color-mix(in srgb, var(--np-cat-service)  12%, transparent); color: var(--np-cat-service);  border-color: color-mix(in srgb, var(--np-cat-service)  35%, transparent); }
+.np-badge-cat-general  { background: color-mix(in srgb, var(--np-cat-general)  12%, transparent); color: var(--np-cat-general);  border-color: color-mix(in srgb, var(--np-cat-general)  35%, transparent); }
+
+/* Severity badges — covers both audit names (critical/major/minor/info) and
+   the actual BQ network_events vocabulary (critical/high/medium/low). */
+.np-badge-sev-critical { background: color-mix(in srgb, var(--np-status-critical) 14%, transparent); color: var(--np-status-critical); border-color: color-mix(in srgb, var(--np-status-critical) 40%, transparent); }
+.np-badge-sev-high,
+.np-badge-sev-major    { background: color-mix(in srgb, var(--np-status-major)    14%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    40%, transparent); }
+.np-badge-sev-medium,
+.np-badge-sev-minor    { background: color-mix(in srgb, var(--np-status-minor)    14%, transparent); color: var(--np-status-minor);    border-color: color-mix(in srgb, var(--np-status-minor)    40%, transparent); }
+.np-badge-sev-low,
+.np-badge-sev-info     { background: color-mix(in srgb, var(--np-status-info)     14%, transparent); color: var(--np-status-info);     border-color: color-mix(in srgb, var(--np-status-info)     40%, transparent); }
+
+/* Workflow status badges (incident_tickets.status column) */
+.np-badge-status-new          { background: color-mix(in srgb, var(--np-primary)         12%, transparent); color: var(--np-primary-dark);   border-color: color-mix(in srgb, var(--np-primary)         35%, transparent); }
+.np-badge-status-acknowledged { background: color-mix(in srgb, var(--np-status-major)    12%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    35%, transparent); }
+.np-badge-status-resolved     { background: color-mix(in srgb, var(--np-status-resolved) 12%, transparent); color: var(--np-status-resolved); border-color: color-mix(in srgb, var(--np-status-resolved) 35%, transparent); }
+
+/* Region badge — neutral tone, just for visual grouping in the ticket card */
+.np-badge-region {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+/* §5.5 — Customer-impact card
+   ----------------------------------------------------------------------------
+   Renders above the final ticket once network_investigator's tool_response
+   arrives. Aggregates affected_customers, severity counts, and onset elapsed
+   from the BQ rows. */
+.np-impact-card {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--np-status-critical) 8%, var(--surface-raised)) 0%,
+    var(--surface-raised) 60%);
+  border: 1px solid color-mix(in srgb, var(--np-status-critical) 25%, transparent);
+  border-left: 4px solid var(--np-status-critical);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.np-impact-primary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--type-body-sm);
+  color: var(--text-secondary);
+}
+.np-impact-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--np-status-critical);
+  color: #fff;
+  font-weight: var(--weight-bold);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.np-impact-affected,
+.np-impact-elapsed {
+  font-size: var(--type-h2);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+.np-impact-affected-label,
+.np-impact-elapsed-label {
+  color: var(--text-secondary);
+}
+.np-impact-sep {
+  color: var(--text-tertiary);
+  margin: 0 var(--space-2);
+  user-select: none;
+}
+.np-impact-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--type-detail);
+  color: var(--text-secondary);
+}
+.np-impact-events {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.np-impact-sevs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .np-error {
   background: color-mix(in srgb, var(--np-error) 12%, transparent);
   color: var(--np-error);
@@ -424,4 +688,311 @@ body {
 .np-empty {
   color: var(--np-muted);
   padding: var(--space-4);
+}
+
+/* ============================================================================
+   Landing page (§5.11)
+   ----------------------------------------------------------------------------
+   Hero, "How it works" 4-step grid, demo chips, data viewer cards, footer.
+   The base.html nav block is overridden by landing.html with anchor links;
+   .np-tabs-landing tones down the workspace tab styling for that variant.
+   ============================================================================ */
+
+.np-tabs-landing .np-tab {
+  font-weight: 500;
+  padding: 8px 14px;
+}
+.np-tab.np-tab-cta {
+  background: #fff;
+  color: var(--np-primary-dark);
+  font-weight: 700;
+  opacity: 1;
+  padding: 8px 18px;
+}
+.np-tab.np-tab-cta:hover { background: var(--np-neutral-050); }
+
+/* Hero ---------------------------------------------------------------------- */
+.np-hero {
+  text-align: center;
+  padding: var(--space-9) var(--space-4) var(--space-7);
+  max-width: 880px;
+  margin: 0 auto;
+}
+.np-hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--type-detail-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--np-primary-dark);
+  margin-bottom: var(--space-4);
+}
+.np-hero-title {
+  font-size: var(--type-display-hero);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+}
+.np-hero-accent {
+  background: linear-gradient(135deg, var(--np-primary) 0%, var(--np-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.np-hero-sub {
+  font-size: var(--type-body-lg);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto var(--space-7);
+}
+.np-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+}
+.np-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 14px 26px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  transition: transform 0.15s var(--ease-out-quart), box-shadow 0.15s var(--ease-out-quart);
+}
+.np-btn-primary {
+  background: var(--np-primary);
+  color: #fff;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--np-primary) 30%, transparent);
+}
+.np-btn-primary:hover {
+  background: var(--np-primary-dark);
+  transform: translateY(-1px);
+}
+.np-btn-ghost {
+  background: #fff;
+  color: var(--np-primary-dark);
+  border-color: color-mix(in srgb, var(--np-primary) 35%, transparent);
+}
+.np-btn-ghost:hover { background: var(--np-neutral-050); }
+
+.np-tech-strip {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--type-detail);
+  color: var(--text-secondary);
+  padding: 0;
+}
+.np-tech-strip li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.np-tech-strip code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--np-neutral-100);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+}
+.np-tech-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--np-primary);
+  flex-shrink: 0;
+}
+
+/* Sections ------------------------------------------------------------------ */
+.np-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+.np-section-alt {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--np-primary) 4%, transparent) 100%);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-7);
+}
+.np-section-title {
+  font-size: var(--type-h2);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+.np-section-sub {
+  font-size: var(--type-body);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+  max-width: 640px;
+}
+
+/* "How it works" 4-step grid ------------------------------------------------ */
+.np-steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  padding: 0;
+}
+.np-step-card {
+  position: relative;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s var(--ease-out-quart), box-shadow 0.2s var(--ease-out-quart);
+}
+.np-step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+.np-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--np-primary);
+  color: #fff;
+  font-weight: var(--weight-bold);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.np-step-title {
+  font-size: var(--type-h4);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.np-step-body {
+  font-size: var(--type-detail);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+  flex: 1;
+}
+.np-step-body code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--np-neutral-100);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+}
+.np-step-card .np-source-tag { align-self: flex-start; margin-right: var(--space-1); }
+
+/* Demo chips (launch into /app?seed=...) ----------------------------------- */
+.np-try-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+.np-chip-launch {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: var(--type-body-sm);
+  font-weight: var(--weight-medium);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s var(--ease-out-quart);
+}
+.np-chip-launch:hover {
+  border-color: var(--np-primary);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--np-primary) 18%, transparent);
+  transform: translateY(-1px);
+}
+.np-chip-cta {
+  font-size: var(--type-detail-sm);
+  font-weight: var(--weight-bold);
+  color: var(--np-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* Data viewer cards --------------------------------------------------------- */
+.np-viewer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.np-viewer-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s var(--ease-out-quart), box-shadow 0.2s var(--ease-out-quart);
+}
+.np-viewer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+.np-viewer-card .np-source-tag { align-self: flex-start; }
+.np-viewer-title {
+  font-size: var(--type-h4);
+  font-weight: var(--weight-semibold);
+  margin-top: var(--space-1);
+}
+.np-viewer-body {
+  font-size: var(--type-detail);
+  color: var(--text-secondary);
+  line-height: var(--leading-body);
+  flex: 1;
+}
+.np-viewer-cta {
+  font-size: var(--type-detail-sm);
+  font-weight: var(--weight-bold);
+  color: var(--np-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Footer -------------------------------------------------------------------- */
+.np-footer {
+  max-width: 1200px;
+  margin: var(--space-7) auto 0;
+  padding: var(--space-6) var(--space-4);
+  border-top: 1px solid var(--border-default);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--type-detail);
+}
+.np-footer a {
+  color: var(--np-primary-dark);
+  text-decoration: none;
+}
+.np-footer a:hover { text-decoration: underline; }
+.np-footer p + p { margin-top: var(--space-2); }
+
+/* Mobile stacking ----------------------------------------------------------- */
+@media (max-width: 640px) {
+  .np-hero { padding: var(--space-7) var(--space-3) var(--space-5); }
+  .np-hero-cta { flex-direction: column; align-items: stretch; }
+  .np-btn { justify-content: center; }
+  .np-tabs-landing .np-tab:not(.np-tab-cta) { display: none; }
 }

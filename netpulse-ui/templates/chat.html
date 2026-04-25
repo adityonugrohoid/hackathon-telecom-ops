@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Chat{% endblock %}
+{% block title %}Workspace{% endblock %}
 {% block content %}
 <section class="np-chat">
   <form id="np-form" onsubmit="event.preventDefault(); npSubmit();">
     <input id="np-input" type="text" placeholder="Describe a telecom incident..." autofocus>
-    <button type="submit">Investigate</button>
+    <button id="np-submit" type="submit">Investigate</button>
   </form>
   <div class="np-examples">
     {% for q in examples %}
@@ -12,80 +12,132 @@
     {% endfor %}
   </div>
 
-  <div class="np-pipeline">
-    <article class="np-card" data-agent="classifier">
-      <header><h3>1. Classifier</h3><span class="np-status">waiting</span></header>
-      <div class="np-card-source">
-        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
-        <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
+  <ol class="np-timeline">
+    <li class="np-timeline-entry" data-agent="classifier">
+      <div class="np-timeline-rail">
+        <time class="np-timeline-time">--:--:--</time>
+        <span class="np-timeline-dot"></span>
       </div>
-      <ul class="np-tools"></ul>
-      <pre class="np-text"></pre>
-    </article>
+      <div class="np-timeline-content">
+        <header>
+          <span class="np-timeline-step">1</span>
+          <h3>Classifier</h3>
+          <span class="np-status">waiting</span>
+        </header>
+        <div class="np-card-source">
+          <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+          <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
+        </div>
+        <ul class="np-tools"></ul>
+        <pre class="np-text"></pre>
+        <footer class="np-timeline-handoff">
+          <span class="np-handoff-title">passes to next</span>
+          <code>category</code><code>region</code>
+        </footer>
+      </div>
+    </li>
 
-    <div class="np-flow">
-      <div class="np-flow-arrow">&#9660;</div>
-      <div class="np-flow-label">
-        <span class="np-flow-title">carry-over to next agent</span>
-        <code>category</code><code>region</code>
+    <li class="np-timeline-entry" data-agent="network_investigator">
+      <div class="np-timeline-rail">
+        <time class="np-timeline-time">--:--:--</time>
+        <span class="np-timeline-dot"></span>
       </div>
+      <div class="np-timeline-content">
+        <header>
+          <span class="np-timeline-step">2</span>
+          <h3>Network Investigator</h3>
+          <span class="np-status">waiting</span>
+        </header>
+        <div class="np-card-source">
+          <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+          <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
+          <span class="np-source-tag bq">BIGQUERY</span>
+          <code>plated-complex-491512-n6.telecom_network.network_events</code>
+        </div>
+        <ul class="np-tools"></ul>
+        <pre class="np-text"></pre>
+        <footer class="np-timeline-handoff">
+          <span class="np-handoff-title">passes to next</span>
+          <code>category</code><code>region</code><code>network_findings</code>
+        </footer>
+      </div>
+    </li>
+
+    <li class="np-timeline-entry" data-agent="cdr_analyzer">
+      <div class="np-timeline-rail">
+        <time class="np-timeline-time">--:--:--</time>
+        <span class="np-timeline-dot"></span>
+      </div>
+      <div class="np-timeline-content">
+        <header>
+          <span class="np-timeline-step">3</span>
+          <h3>CDR Analyzer</h3>
+          <span class="np-status">waiting</span>
+        </header>
+        <div class="np-card-source">
+          <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+          <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+          <code>SELECT</code> from <code>call_records</code>
+        </div>
+        <ul class="np-tools"></ul>
+        <pre class="np-text"></pre>
+        <footer class="np-timeline-handoff">
+          <span class="np-handoff-title">passes to next</span>
+          <code>classification</code><code>category</code><code>region</code><code>network_findings</code><code>cdr_findings</code>
+        </footer>
+      </div>
+    </li>
+
+    <li class="np-timeline-entry" data-agent="response_formatter">
+      <div class="np-timeline-rail">
+        <time class="np-timeline-time">--:--:--</time>
+        <span class="np-timeline-dot"></span>
+      </div>
+      <div class="np-timeline-content">
+        <header>
+          <span class="np-timeline-step">4</span>
+          <h3>Response Formatter</h3>
+          <span class="np-status">waiting</span>
+        </header>
+        <div class="np-card-source">
+          <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+          <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+          <code>INSERT</code> into <code>incident_tickets</code>
+        </div>
+        <ul class="np-tools"></ul>
+        <pre class="np-text"></pre>
+      </div>
+    </li>
+  </ol>
+
+  <aside class="np-impact-card" hidden>
+    <div class="np-impact-primary">
+      <span class="np-impact-icon" aria-hidden="true">!</span>
+      <span class="np-impact-affected">--</span>
+      <span class="np-impact-affected-label">customers affected</span>
+      <span class="np-impact-sep">|</span>
+      <span class="np-impact-elapsed">--</span>
+      <span class="np-impact-elapsed-label">since onset</span>
     </div>
-
-    <article class="np-card" data-agent="network_investigator">
-      <header><h3>2. Network Investigator</h3><span class="np-status">waiting</span></header>
-      <div class="np-card-source">
-        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
-        <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
-        <span class="np-source-tag bq">BIGQUERY</span>
-        <code>plated-complex-491512-n6.telecom_network.network_events</code>
-      </div>
-      <ul class="np-tools"></ul>
-      <pre class="np-text"></pre>
-    </article>
-
-    <div class="np-flow">
-      <div class="np-flow-arrow">&#9660;</div>
-      <div class="np-flow-label">
-        <span class="np-flow-title">carry-over to next agent</span>
-        <code>category</code><code>region</code><code>network_findings</code>
-      </div>
+    <div class="np-impact-meta">
+      <span class="np-impact-events">--</span>
+      <div class="np-impact-sevs"></div>
     </div>
-
-    <article class="np-card" data-agent="cdr_analyzer">
-      <header><h3>3. CDR Analyzer</h3><span class="np-status">waiting</span></header>
-      <div class="np-card-source">
-        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
-        <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
-        <code>SELECT</code> from <code>call_records</code>
-      </div>
-      <ul class="np-tools"></ul>
-      <pre class="np-text"></pre>
-    </article>
-
-    <div class="np-flow">
-      <div class="np-flow-arrow">&#9660;</div>
-      <div class="np-flow-label">
-        <span class="np-flow-title">carry-over to next agent</span>
-        <code>classification</code><code>category</code><code>region</code><code>network_findings</code><code>cdr_findings</code>
-      </div>
-    </div>
-
-    <article class="np-card" data-agent="response_formatter">
-      <header><h3>4. Response Formatter</h3><span class="np-status">waiting</span></header>
-      <div class="np-card-source">
-        <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
-        <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
-        <code>INSERT</code> into <code>incident_tickets</code>
-      </div>
-      <ul class="np-tools"></ul>
-      <pre class="np-text"></pre>
-    </article>
-  </div>
+  </aside>
 
   <article class="np-final" hidden>
-    <h2>Incident Report</h2>
-    <div class="np-ticket"></div>
+    <header class="np-final-head">
+      <h2>Incident Report</h2>
+      <div class="np-final-meta">
+        <div class="np-ticket"></div>
+        <div class="np-ticket-badges"></div>
+      </div>
+    </header>
     <pre class="np-final-text"></pre>
+    <div class="np-actions-panel" hidden>
+      <h3 class="np-actions-title">Recommended NOC actions</h3>
+      <div class="np-actions-chips"></div>
+    </div>
   </article>
 </section>
 
@@ -121,7 +173,7 @@ function npAppendToolLine(ul, kind, ev) {
     tag.textContent = backend.label;
     li.appendChild(tag);
   }
-  var arrow = (kind === 'call') ? ' \u2192 ' : ' \u2190 ';
+  var arrow = (kind === 'call') ? ' → ' : ' ← ';
   var payload = (kind === 'call')
     ? ev.tool + '(' + JSON.stringify(ev.args || {}) + ')'
     : ev.tool + ': ' + JSON.stringify(ev.result || {}).slice(0, 200);
@@ -129,17 +181,204 @@ function npAppendToolLine(ul, kind, ev) {
   ul.appendChild(li);
 }
 
+function npNowHHMMSS() {
+  var d = new Date();
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+// §5.3 — incident-level state captured from intermediate events so the final
+// ticket card can render category / region / severity badges on `complete`.
+var npState = {category: '', region: '', topSeverity: ''};
+var SEVERITY_RANK = {critical: 4, high: 3, major: 3, medium: 2, minor: 2, low: 1, info: 1};
+
+// §5.5 — customer-impact rollup computed client-side from the
+// network_investigator tool_response.
+var npImpact = null;
+
+// §5.4 — static category → recommended NOC actions catalog. Mock for the
+// demo; the visual sells the workflow story without wiring real ITSM hooks.
+var CATEGORY_ACTIONS = {
+  billing: [
+    'Open billing dispute in BSS',
+    'Review CDR for disputed charges',
+    'Notify finance ops',
+    'Apply customer credit',
+  ],
+  network: [
+    'Page on-call NOC engineer',
+    'Open ServiceNow incident',
+    'Subscribe customer to status page',
+    'Run BGP / routing health check',
+    'Push update to public outage page',
+  ],
+  hardware: [
+    'Dispatch field technician',
+    'Open hardware RMA',
+    'Check CMDB asset record',
+    'Run remote device self-test',
+  ],
+  service: [
+    'Escalate to product owner',
+    'Verify SLA terms in CRM',
+    'Subscribe customer to status page',
+    'Add to weekly degradation report',
+  ],
+  general: [
+    'Open ServiceNow ticket',
+    'Route to L2 support',
+    'Add to triage queue',
+    'Schedule customer callback',
+  ],
+};
+
+function npExtractRows(result) {
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  if (typeof result !== 'object') return [];
+  var keys = ['rows', 'records', 'events', 'result', 'data'];
+  for (var i = 0; i < keys.length; i++) {
+    if (Array.isArray(result[keys[i]])) return result[keys[i]];
+  }
+  return [];
+}
+
+function npMaxSeverity(rows) {
+  var best = '';
+  var bestRank = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var sev = rows[i] && rows[i].severity;
+    if (!sev) continue;
+    var s = String(sev).toLowerCase();
+    var rank = SEVERITY_RANK[s] || 0;
+    if (rank > bestRank) { bestRank = rank; best = s; }
+  }
+  return best;
+}
+
+function npFormatNum(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function npFormatElapsed(iso) {
+  if (!iso) return '';
+  var t = Date.parse(iso);
+  if (isNaN(t)) return '';
+  var diff = Date.now() - t;
+  if (diff < 0) return 'just now';
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return '<1m';
+  if (mins < 60) return '~' + mins + 'm';
+  var hours = Math.floor(mins / 60);
+  if (hours < 48) return '~' + hours + 'h';
+  return '~' + Math.floor(hours / 24) + 'd';
+}
+
+var IMPACT_SEV_ORDER = ['critical', 'high', 'major', 'medium', 'minor', 'low', 'info'];
+
+function npComputeImpact(rows) {
+  if (!rows || !rows.length) return null;
+  var totalAffected = 0;
+  var earliest = null;
+  var sevCounts = {critical: 0, high: 0, major: 0, medium: 0, minor: 0, low: 0, info: 0};
+  rows.forEach(function (r) {
+    if (!r) return;
+    var raw = r.affected_customers;
+    var n = (typeof raw === 'number') ? raw : parseInt(raw, 10);
+    if (!isNaN(n)) totalAffected += n;
+    var sev = r.severity ? String(r.severity).toLowerCase() : '';
+    if (sev in sevCounts) sevCounts[sev]++;
+    if (r.started_at) {
+      var t = Date.parse(r.started_at);
+      if (!isNaN(t) && (earliest === null || t < earliest)) earliest = t;
+    }
+  });
+  return {
+    affected: totalAffected,
+    events: rows.length,
+    earliestIso: earliest ? new Date(earliest).toISOString() : null,
+    sevCounts: sevCounts,
+  };
+}
+
+function npRenderImpact() {
+  var card = document.querySelector('.np-impact-card');
+  if (!npImpact) { card.hidden = true; return; }
+  card.hidden = false;
+  card.querySelector('.np-impact-affected').textContent = npFormatNum(npImpact.affected);
+  card.querySelector('.np-impact-elapsed').textContent = npFormatElapsed(npImpact.earliestIso) || '--';
+  card.querySelector('.np-impact-events').textContent =
+    npImpact.events + ' event' + (npImpact.events === 1 ? '' : 's');
+  var sevHost = card.querySelector('.np-impact-sevs');
+  while (sevHost.firstChild) sevHost.removeChild(sevHost.firstChild);
+  IMPACT_SEV_ORDER.forEach(function (sev) {
+    var n = npImpact.sevCounts[sev];
+    if (!n) return;
+    var b = document.createElement('span');
+    b.className = 'np-badge np-badge-sev-' + sev;
+    b.textContent = n + ' ' + sev;
+    sevHost.appendChild(b);
+  });
+}
+
+function npAppendBadge(host, cls, text) {
+  var span = document.createElement('span');
+  span.className = 'np-badge ' + cls;
+  span.textContent = text;
+  host.appendChild(span);
+}
+
+function npRenderTicketBadges() {
+  var host = document.querySelector('.np-ticket-badges');
+  if (!host) return;
+  while (host.firstChild) host.removeChild(host.firstChild);
+  if (npState.category) {
+    npAppendBadge(host, 'np-badge-cat-' + npState.category, npState.category);
+  }
+  if (npState.region) {
+    npAppendBadge(host, 'np-badge-region', npState.region);
+  }
+  if (npState.topSeverity) {
+    npAppendBadge(host, 'np-badge-sev-' + npState.topSeverity, npState.topSeverity);
+  }
+}
+
+function npRenderActions() {
+  var panel = document.querySelector('.np-actions-panel');
+  var host = panel.querySelector('.np-actions-chips');
+  while (host.firstChild) host.removeChild(host.firstChild);
+  var actions = CATEGORY_ACTIONS[npState.category];
+  if (!actions || !actions.length) { panel.hidden = true; return; }
+  panel.hidden = false;
+  actions.forEach(function (a) {
+    var chip = document.createElement('span');
+    chip.className = 'np-action-chip';
+    chip.textContent = a;
+    host.appendChild(chip);
+  });
+}
+
 function npReset() {
-  document.querySelectorAll('.np-card').forEach(function (c) {
-    c.querySelector('.np-status').textContent = 'waiting';
-    npClearList(c.querySelector('.np-tools'));
-    c.querySelector('.np-text').textContent = '';
-    c.classList.remove('running', 'done', 'error');
+  document.querySelectorAll('.np-timeline-entry').forEach(function (entry) {
+    entry.classList.remove('running', 'done', 'error');
+    entry.querySelector('.np-status').textContent = 'waiting';
+    entry.querySelector('.np-timeline-time').textContent = '--:--:--';
+    npClearList(entry.querySelector('.np-tools'));
+    entry.querySelector('.np-text').textContent = '';
   });
   var f = document.querySelector('.np-final');
   f.hidden = true;
   f.querySelector('.np-ticket').textContent = '';
   f.querySelector('.np-final-text').textContent = '';
+  var badges = f.querySelector('.np-ticket-badges');
+  while (badges.firstChild) badges.removeChild(badges.firstChild);
+  npState = {category: '', region: '', topSeverity: ''};
+  npImpact = null;
+  document.querySelector('.np-impact-card').hidden = true;
+  var actionsPanel = document.querySelector('.np-actions-panel');
+  actionsPanel.hidden = true;
+  var chipsHost = actionsPanel.querySelector('.np-actions-chips');
+  while (chipsHost.firstChild) chipsHost.removeChild(chipsHost.firstChild);
 }
 
 async function npSubmit() {
@@ -173,6 +412,21 @@ async function npSubmit() {
   }
 }
 
+function npOnLoad() {
+  // Landing page chips link here with ?seed=...&autorun=1 for one-click demo.
+  var params = new URLSearchParams(window.location.search);
+  var seed = params.get('seed');
+  if (!seed) return;
+  var input = document.getElementById('np-input');
+  input.value = seed;
+  if (params.get('autorun') === '1') {
+    npSubmit();
+  } else {
+    input.focus();
+  }
+}
+window.addEventListener('DOMContentLoaded', npOnLoad);
+
 function npHandle(ev) {
   if (ev.type === 'error') {
     var f = document.querySelector('.np-final');
@@ -186,23 +440,37 @@ function npHandle(ev) {
     fc.querySelector('.np-ticket').textContent =
       ev.ticket_id ? ('Ticket #' + ev.ticket_id) : '(no ticket)';
     fc.querySelector('.np-final-text').textContent = ev.final_report || '';
+    npRenderTicketBadges();
+    npRenderActions();
     return;
   }
-  var card = document.querySelector('.np-card[data-agent="' + ev.agent + '"]');
-  if (!card) return;
+  var entry = document.querySelector('.np-timeline-entry[data-agent="' + ev.agent + '"]');
+  if (!entry) return;
   if (ev.type === 'agent_start') {
-    card.classList.add('running');
-    card.querySelector('.np-status').textContent = 'running';
+    entry.classList.add('running');
+    entry.querySelector('.np-status').textContent = 'running';
+    entry.querySelector('.np-timeline-time').textContent = npNowHHMMSS();
   } else if (ev.type === 'tool_call') {
-    npAppendToolLine(card.querySelector('.np-tools'), 'call', ev);
+    npAppendToolLine(entry.querySelector('.np-tools'), 'call', ev);
+    if (ev.tool === 'classify_issue' && ev.args) {
+      if (ev.args.category) npState.category = String(ev.args.category).toLowerCase();
+      if (ev.args.region) npState.region = String(ev.args.region);
+    }
   } else if (ev.type === 'tool_response') {
-    npAppendToolLine(card.querySelector('.np-tools'), 'resp', ev);
+    npAppendToolLine(entry.querySelector('.np-tools'), 'resp', ev);
+    if (ev.agent === 'network_investigator') {
+      var rows = npExtractRows(ev.result);
+      var sev = npMaxSeverity(rows);
+      if (sev) npState.topSeverity = sev;
+      var impact = npComputeImpact(rows);
+      if (impact && impact.events > 0) { npImpact = impact; npRenderImpact(); }
+    }
   } else if (ev.type === 'text') {
-    var pre = card.querySelector('.np-text');
+    var pre = entry.querySelector('.np-text');
     pre.textContent = (pre.textContent ? pre.textContent + '\n' : '') + ev.text;
-    card.classList.remove('running');
-    card.classList.add('done');
-    card.querySelector('.np-status').textContent = 'done';
+    entry.classList.remove('running');
+    entry.classList.add('done');
+    entry.querySelector('.np-status').textContent = 'done';
   }
 }
 </script>

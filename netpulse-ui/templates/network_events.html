@@ -32,7 +32,15 @@
     <thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
     <tbody>
       {% for row in result.rows %}
-      <tr>{% for c in result.columns %}<td>{{ row[c] }}</td>{% endfor %}</tr>
+      <tr>
+        {% for c in result.columns %}
+          {% if c == 'severity' and row[c] %}
+            <td><span class="np-badge np-badge-sev-{{ row[c] }}">{{ row[c] }}</span></td>
+          {% else %}
+            <td>{{ row[c] }}</td>
+          {% endif %}
+        {% endfor %}
+      </tr>
       {% endfor %}
     </tbody>
   </table>

@@ -28,7 +28,17 @@ Until the deadline, refinement is the priority workstream. Anchor items:
    the live deploy state still has the `asia-southeast1` static pin until
    the user runs the manual Cloud Run redeploy with the updated
    `--set-env-vars` flag (see `README.md` § Deployment).
-2. **Brainstorming queue** — further refinement candidates (architecture,
+2. **Visual redesign (Phase 4)** — landing page + workspace split is now
+   live in source. `/` renders `templates/landing.html` (hero, "How it
+   works" 4-step grid, launch chips, data-viewer cards, footer); `/app`
+   renders the chat workspace; `/chat` 301s to `/app`. The workspace
+   pipeline is now a vertical PagerDuty-style timeline (`<ol class="np-
+   timeline">`), each agent's row tagged with status badges and a left-
+   rail timestamp + status dot. A customer-impact card aggregates
+   network_investigator's BQ rows on the fly; a static category →
+   recommended-actions chip panel sits below the final ticket. All five
+   §5.* items in `REFINEMENT-PHASES.md` Phase 4 are checked.
+3. **Brainstorming queue** — further refinement candidates (architecture,
    performance, deeper Gen AI usage) to be scoped with the user before
    any code changes.
 
@@ -43,12 +53,16 @@ The core ADK package `telecom_ops/` exposes a `SequentialAgent` that runs
 four `LlmAgent` sub-agents in order: classifier, network investigator
 (BigQuery via MCP Toolbox), CDR analyzer (AlloyDB), and response formatter
 (writes the final ticket back to AlloyDB). The sibling Flask service
-`netpulse-ui/` wraps the same `root_agent` in a custom chat UI with three
-read-only data viewer tabs and Server-Sent-Events streaming. Both deploy
-to Cloud Run; both target Vertex AI Gemini 2.5 Flash through the
-`RegionFailoverGemini` wrapper in `telecom_ops/vertex_failover.py`, which
-defaults to `global` and fails over through ranked APAC + US regions on
-`RESOURCE_EXHAUSTED`.
+`netpulse-ui/` wraps the same `root_agent` in a hero landing page (`/`)
+plus a workspace (`/app`) that renders the agent run as a vertical
+timeline, with three read-only data viewer tabs and Server-Sent-Events
+streaming. The workspace surfaces a customer-impact rollup, a category /
+region / severity badge set on the saved ticket, and a static
+category → recommended-NOC-actions chip panel — all driven client-side
+from the existing SSE event stream. Both deploy to Cloud Run; both
+target Vertex AI Gemini 2.5 Flash through the `RegionFailoverGemini`
+wrapper in `telecom_ops/vertex_failover.py`, which defaults to `global`
+and fails over through ranked APAC + US regions on `RESOURCE_EXHAUSTED`.
 
 ## Non-obvious choices to preserve
 
@@ -117,6 +131,8 @@ emojis in code or docs unless explicitly requested.
 - `telecom_ops/prompts.py` — sub-agent instruction templates
 - `netpulse-ui/agent_runner.py` — async-to-sync bridge for the SSE chat
 - `netpulse-ui/data_queries.py` — read-only BigQuery + AlloyDB queries for the data viewer tabs
-- `netpulse-ui/app.py` — Flask routes, SSE plumbing, stdlib `.env` loader
+- `netpulse-ui/app.py` — Flask routes (`/` landing, `/app` workspace, `/chat` 301 → `/app`, three data-viewer tabs), SSE plumbing, stdlib `.env` loader
+- `netpulse-ui/templates/landing.html` — hero, "How it works" 4-step grid, launch chips (`?seed=...&autorun=1` handoff), data-viewer cards, footer
+- `netpulse-ui/templates/chat.html` — workspace timeline, impact card, badges, NOC action chips, plus the streaming SSE handler in inline JS
 - `Dockerfile` (parent) — Cloud Run image for the Flask UI; copies both packages so the cross-package import resolves
 - `setup_alloydb.py` — idempotent DDL for the `incident_tickets` table

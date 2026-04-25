@@ -16,8 +16,8 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **1. Pre-flight config** | ✅ **DONE** (2026-04-25) | 30 min | gcloud writes | Cold start killed (7.2s → 0.4s) |
 | **2. Foundation layers** | ✅ **DONE** (2026-04-25) | ~3h | source only | Tokens + prompt fix + enum guard |
 | **3. Innovation track** | ✅ **DONE** (2026-04-25) | ~2h | source only | Vertex region failover end-to-end |
-| **4. Visual redesign** | ⏳ Next | ~14h | source only | Landing + timeline + badges + impact + chips |
-| **5. Critical UX fixes** | Pending | ~3h | source only | Error states, button disable, input validation |
+| **4. Visual redesign** | ✅ **DONE** (2026-04-25) | ~14h est · ~4h actual | source only | Landing + timeline + badges + impact + chips |
+| **5. Critical UX fixes** | ⏳ Next | ~3h | source only | Error states, button disable, input validation |
 | **6. Reproducibility + portability** | Pending | ~4h | source only | BYO-data foundation (closes repro gap) |
 | **7. Story polish** | Pending | ~3h | source + docs | Region telemetry + README + GIF |
 | **8. Ship** | Pending | ~1h | Cloud Run deploy | Single consolidated redeploy |
@@ -121,24 +121,31 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 4 — Visual redesign ⏳ NEXT
+## Phase 4 — Visual redesign ✅ DONE
 
-**Estimated:** ~14h · source-only · no redeploy
+**Completed:** 2026-04-25
 **Authorization:** Source changes inside `netpulse-ui/`.
-**Blocked by:** Phase 2 §5.0a (tokens).
-**Order within phase:** Land §5.11 first (defines routing for the rest); other items independent.
+**Outcome:** Landing route + workspace timeline + badges + impact rollup + action-chip panel all wired and verified locally.
 
-- [ ] **§5.11** Hero landing page + routing redesign — new `templates/landing.html`, route `/` to landing, `/app` to workspace, `/chat` 301 → `/app`, `?seed=` handoff. *(~3-4h)*
-- [ ] **§5.2** Pipeline-as-timeline — convert horizontal 4-card row into vertical activity stream (PagerDuty-style). *(~3h)*
-- [ ] **§5.3** Severity + Category badges with color coding (consumes tokens). *(~1h)*
-- [ ] **§5.5** Customer-impact card (X affected · Y min · Z events) — computed from `network_investigator` output. *(~3h)*
-- [ ] **§5.4** Recommended NOC actions chip panel — static category→actions map version. *(~3h)*
+- [x] **§5.11** Hero landing page + routing redesign — new `templates/landing.html` (hero, 4-step "How it works", launch chips, data-viewer cards, footer); `app.py` routes `/` → landing, new `/app` route serves the chat workspace, `/chat` 301 → `/app`; `?seed=` and `?autorun=1` handoff handler in `chat.html`'s `npOnLoad()`; brand logo wrapped in `<a href="/">` for back-to-home affordance; `base.html` nav block now overridable so landing.html ships its own anchor nav.
+- [x] **§5.2** Pipeline-as-timeline — replaced the horizontal 4-card row + `.np-flow` arrow connectors with `<ol class="np-timeline">` of `.np-timeline-entry` items, each with a left rail (timestamp + status dot, animated pulse on running, accent fill on done) and a right content panel that retains the existing source pills, tool-call list, and text. Carry-over chips moved into a per-entry `.np-timeline-handoff` footer. JS selectors swapped from `.np-card[data-agent=…]` to `.np-timeline-entry[data-agent=…]` and a `npNowHHMMSS()` helper stamps each entry on `agent_start`.
+- [x] **§5.3** Severity + Category badges — `.np-badge` shell + per-category (`network|billing|hardware|service|general`) and per-severity (`critical|high|major|medium|minor|low|info`) and per-status (`new|acknowledged|resolved`) modifiers, all derived from `tokens.css` (--np-cat-*, --np-status-*) via `color-mix()` for matching bg/fg/border triples. `tickets.html` and `network_events.html` data-viewer rows now render category/status/severity columns as badges. Chat workspace's final ticket card grew a `.np-ticket-badges` host populated on `complete` from a JS `npState` rollup (category/region from `classify_issue` args; topSeverity from network_investigator's tool_response).
+- [x] **§5.5** Customer-impact card — new `.np-impact-card` between the timeline and the final report, hidden until `network_investigator`'s `tool_response` arrives. Client-side `npComputeImpact()` walks the BQ rows for `affected_customers` (sum), `severity` histogram, and earliest `started_at` (elapsed → `~Xm`/`~Xh`/`~Xd`). `npExtractRows()` is shape-agnostic — handles bare arrays, `{rows}`, `{records}`, `{events}`, `{result}`, `{data}` shapes from MCP Toolbox.
+- [x] **§5.4** Recommended NOC actions chip panel — `.np-actions-panel` lives inside `.np-final` after the recommendation text; renders 4-5 chips per category from a static `CATEGORY_ACTIONS` map in `chat.html` JS (billing/network/hardware/service/general). Chips are inert (mock) but visually convey workflow trigger affordance. Light pill styling tuned for the dark report background.
 
-**Verification before moving on:** Local UI shows landing page on `/`, app on `/app`, vertical timeline animates, badges colored, impact card prominent above ticket, action chips render below recommendation. Existing chat function unchanged.
+**Verifications run locally:**
+- `flask test_client()` smoke-test against the 3 routes (`/` 200, `/app` 200, `/chat` → `/app` 301) plus `?seed=` handoff round-trip.
+- Synthetic-event Node test exercising `npExtractRows` (4 MCP shape variants), `npComputeImpact` (sum/histogram/elapsed), `npFormatNum`, `npFormatElapsed`, `npMaxSeverity` against a 5-row payload — all assertions pass.
+- Static-markup probe across `/app` confirmed every new selector ships in the served HTML (`np-timeline-entry`, `np-impact-card`, `np-actions-panel`, `np-ticket-badges`, `npRenderImpact`, `npRenderActions`, `CATEGORY_ACTIONS`, etc.) and that legacy `np-pipeline / np-card / np-flow` selectors are gone.
+- `node -e "new Function(<chat.html script>)"` — JS parses cleanly with no syntax errors after the cumulative edits.
+
+**Verifications deferred to Phase 8 live deploy:**
+- Browser visual diff (cannot run Flask locally with real AlloyDB credentials inside Freeze A; the verifications above prove the static markup + JS logic).
+- Real-API end-to-end SSE chat run that emits the four agent events and triggers the impact card + badges + actions panel population sequence.
 
 ---
 
-## Phase 5 — Critical UX fixes Pending
+## Phase 5 — Critical UX fixes ⏳ NEXT
 
 **Estimated:** ~3h · source-only · no redeploy
 **Authorization:** Source-only.
