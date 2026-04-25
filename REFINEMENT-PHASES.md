@@ -18,8 +18,8 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **3. Innovation track** | ✅ **DONE** (2026-04-25) | ~2h | source only | Vertex region failover end-to-end |
 | **4. Visual redesign** | ✅ **DONE** (2026-04-25) | ~14h est · ~4h actual | source only | Landing + timeline + badges + impact + chips |
 | **5. Critical UX fixes** | ✅ **DONE** (2026-04-25) | ~3h est · ~1h actual | source only | Error states, button disable, input validation |
-| **6. Reproducibility + portability** | ⏳ Next | ~4h | source only | BYO-data foundation (closes repro gap) |
-| **7. Story polish** | Pending | ~3h | source + docs | Region telemetry + README + GIF |
+| **6. Reproducibility + portability** | ✅ **DONE** (2026-04-25) | ~4h est · ~1.5h actual | source only | BYO-data foundation (env-driven, schema, seed pipeline) |
+| **7. Story polish** | ⏳ Next | ~3h | source + docs | Region telemetry + README + GIF |
 | **8. Ship** | Pending | ~1h | Cloud Run deploy | Single consolidated redeploy |
 
 **Total remaining:** ~35h across phases 2-8.
@@ -167,25 +167,38 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 6 — Reproducibility + portability ⏳ NEXT
+## Phase 6 — Reproducibility + portability ✅ DONE
 
-**Estimated:** ~4h · source-only · no redeploy
-**Authorization:** Source-only. Seed extraction is read-only against current BQ + AlloyDB (Freeze A allows). Bootstrap scripts only mutate destinations the user explicitly supplies.
-**Note:** Pairs §2.7 + §2.12 in one PR — same files, complementary scope.
+**Completed:** 2026-04-25
+**Authorization:** Source-only. Seed extraction was read-only against current BQ + AlloyDB (Freeze A allows). Bootstrap scripts only mutate destinations the user explicitly supplies — they were NOT executed against `plated-complex-491512-n6`.
+**Note:** §2.7 + §2.12 landed together — they touch the same files and share the BYO contract surface.
+**Outcome:** A fresh `git clone` plus `bash scripts/setup_byo.sh --seed` against a new GCP project + AlloyDB cluster now stands up an end-to-end working NetPulse stack with the canonical sample data. The data layer is fully relocatable; only the contract documented in `docs/SCHEMA.md` is load-bearing.
 
-- [ ] **§2.7** Make hardcoded URLs/IDs env-driven (`TOOLBOX_URL`, `GOOGLE_CLOUD_PROJECT`, template paths). *(~30 min)*
-- [ ] **§2.12** Schema contract + seed pipeline:
-  - [ ] Env-driven dataset/table names in `tools.py` and `data_queries.py` (~30 min)
-  - [ ] Author `docs/SCHEMA.md` (column-by-column contract for the 3 tables) (~30 min)
-  - [ ] Extract current BQ + AlloyDB data into `docs/seed-data/*.csv` (~1h read-only via `bq query` + `psql \copy`)
-  - [ ] Author `scripts/setup_bigquery.py` and extend `setup_alloydb.py` to also create `call_records` (~1h)
-  - [ ] `scripts/setup_byo.sh` orchestrator + README BYO section (~30 min)
+- [x] **§2.7** Make hardcoded URLs/IDs env-driven — `TOOLBOX_URL` is now a required env var in `telecom_ops/tools.py` (raises with an actionable message if missing), `GOOGLE_CLOUD_PROJECT` is required in `netpulse-ui/data_queries.py` (was silently defaulting to the hackathon project ID — removed so a fork fails fast instead of pointing at the wrong project). The four hardcoded `plated-complex-491512-n6.telecom_network.network_events` / `call_records` / `incident_tickets` strings in `templates/{chat,network_events,call_records,tickets}.html` are now Jinja-driven via a new `inject_dataset_names` Flask context processor in `app.py`. README env-vars table and local-dev export snippet updated to document `TOOLBOX_URL`, `BQ_DATASET`, `BQ_NETWORK_TABLE`, `AL_CALL_TABLE`, `AL_TICKET_TABLE`. Phase 8 deploy snippet now sets `TOOLBOX_URL=...` so the redeploy carries the env-driven contract to production.
+- [x] **§2.12a** Env-driven dataset/table names — `BQ_DATASET`, `BQ_NETWORK_TABLE`, `AL_CALL_TABLE`, `AL_TICKET_TABLE` added in `data_queries.py` (defaults preserve current behavior); `AL_CALL_TABLE`, `AL_TICKET_TABLE` mirrored in `telecom_ops/tools.py` and substituted into the two SQL strings (`FROM {AL_CALL_TABLE}`, `INSERT INTO {AL_TICKET_TABLE}`). Pyright caught a real reference orphan during the rename (`BQ_TABLE` → `BQ_NETWORK_TABLE` in the BigQuery FROM clause); fixed before commit.
+- [x] **§2.12b** `docs/SCHEMA.md` authored — column-by-column contract for the three tables (BQ `network_events`, AlloyDB `call_records`, AlloyDB `incident_tickets`), including the shared `region` vocabulary and the `VALID_CATEGORIES` enum invariant. Enum values for `event_type`, `severity`, and `region` taken from a live `bq query` against the production dataset (read-only, Freeze A allows).
+- [x] **§2.12c** Seed CSVs extracted to `docs/seed-data/` — `network_events.csv` (30 rows, via `bq query --format=csv`), `call_records.csv` (50 rows, via SQLAlchemy + pg8000 against the AlloyDB public IP `35.225.53.8`), `incident_tickets.csv` (10 sample rows of the 68 in source, ordered by `ticket_id`). All extraction was read-only and used the project venv's `pg8000`; no `psql` client was needed. Verified row counts via `csv.DictReader`.
+- [x] **§2.12d** `scripts/setup_bigquery.py` authored — argparse-driven, idempotent dataset + table creation via `google.cloud.bigquery`, optional `--seed` loads `network_events.csv` with `WRITE_TRUNCATE` so re-runs restore the canonical state. `setup_alloydb.py` extended to also create `AL_CALL_TABLE` (with the full 10-column DDL inferred from `data_queries.py`'s SELECT list), with optional `--seed` that TRUNCATEs both tables and reloads from the CSVs. After loading, both SERIAL sequences (`call_records_call_id_seq`, `incident_tickets_ticket_id_seq`) are advanced via `setval(..., MAX(id) + 1, false)` so the next agent insert doesn't collide with seeded IDs.
+- [x] **§2.12e** `scripts/setup_byo.sh` orchestrator + README "Bring your own data" section — bash script runs `setup_bigquery.py` then `setup_alloydb.py` in sequence, validates `GOOGLE_CLOUD_PROJECT` and `DATABASE_URL` are exported, prefers the project's `.venv/bin/python` when present, propagates the optional `--seed` flag to both scripts. README gained a top-level "Bring your own data" subsection between the data-viewer table and the Project Structure tree, plus updated Project Structure to list the new `scripts/` and `docs/SCHEMA.md` / `docs/seed-data/` paths. README "Configure the AlloyDB schema" snippet updated to mention `--seed` and the second table the script now creates.
 
-**Verification:** Run `scripts/setup_byo.sh --seed` against a *throwaway* GCP project (NOT the hackathon project) and confirm a working NetPulse stack stands up. **Do NOT** run against `plated-complex-491512-n6` — Freeze A.
+**Verifications run locally:**
+- AST parse of all 5 modified Python files (`telecom_ops/tools.py`, `netpulse-ui/data_queries.py`, `netpulse-ui/app.py`, `scripts/setup_bigquery.py`, `setup_alloydb.py`) — all OK.
+- Module-import smoke against env-driven defaults — all 8 env-driven constants load correctly with the hackathon's existing values.
+- BYO-override propagation test via `flask test_client()` — set `GOOGLE_CLOUD_PROJECT=customer-acme`, `BQ_DATASET=acme_telecom`, `BQ_NETWORK_TABLE=outage_events`, `AL_CALL_TABLE=cdr_v2`, `AL_TICKET_TABLE=noc_tickets`; rendered `/app` HTML contains `customer-acme.acme_telecom.outage_events`, `<code>cdr_v2</code>`, `<code>noc_tickets</code>`.
+- Required-env failure-path test — confirmed `RuntimeError` with actionable messages when `TOOLBOX_URL`, `GOOGLE_CLOUD_PROJECT`, or `DATABASE_URL` are missing.
+- `flask test_client()` smoke against `/`, `/app`, `/chat` (still 200/200/301), `/network-events` (200, env-driven banner present).
+- `bash -n scripts/setup_byo.sh` (syntax OK), `--foo` arg → "Unknown argument" exit 64, no-env → "ERROR: GOOGLE_CLOUD_PROJECT must be exported".
+- `--help` text on both Python setup scripts renders with the env-var contract.
+- Symbol grep — 0 surviving hardcoded `plated-complex-491512-n6.telecom_network.*` strings in source (only 3 surviving mentions are in narrative comments / context-processor docstring explaining what was replaced).
+
+**Verifications deferred to Phase 8 live deploy + post-hackathon BYO test:**
+- `scripts/setup_byo.sh --seed` against a *throwaway* GCP project — explicitly NOT run against `plated-complex-491512-n6` per Freeze A. Source is structurally complete; the only remaining unknown is whether the BigQuery `bigquery.LoadJobConfig` schema matches a freshly-created table's accept-list (the schema was lifted directly from a `bq show` of the live table, so structurally it should match).
+- End-to-end Cloud Run redeploy with the new `TOOLBOX_URL=...` env var in `--set-env-vars`.
+- Visual confirmation that the workspace data-source banner and the four data-viewer tab banners render the env-driven dataset path against the live tokens.
 
 ---
 
-## Phase 7 — Story polish Pending
+## Phase 7 — Story polish ⏳ NEXT
 
 **Estimated:** ~3h · source + docs · no redeploy
 **Authorization:** Source-only + doc updates.

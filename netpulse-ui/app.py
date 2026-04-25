@@ -21,11 +21,16 @@ from flask import (
 
 from agent_runner import run_agent
 from data_queries import (
+    AL_CALL_TABLE,
+    AL_TICKET_TABLE,
     ALLOWED_CALL_STATUSES,
     ALLOWED_CALL_TYPES,
     ALLOWED_EVENT_TYPES,
     ALLOWED_REGIONS,
     ALLOWED_SEVERITIES,
+    BQ_DATASET,
+    BQ_NETWORK_TABLE,
+    GCP_PROJECT,
     alloydb_call_records,
     alloydb_incident_tickets,
     bq_network_events,
@@ -64,6 +69,24 @@ def _load_dotenv_stdlib(path: Path) -> None:
 _load_dotenv_stdlib(TELECOM_ENV)
 
 app = Flask(__name__)
+
+
+@app.context_processor
+def inject_dataset_names() -> dict[str, str]:
+    """Expose env-driven project + dataset + table names to every template.
+
+    Lets data-source banners and lineage labels render the current target
+    instead of hardcoded `plated-complex-491512-n6.telecom_network.*` strings,
+    so a fork pointing at a different GCP project shows the right path.
+    """
+    return {
+        "gcp_project": GCP_PROJECT,
+        "bq_dataset": BQ_DATASET,
+        "bq_network_table": BQ_NETWORK_TABLE,
+        "al_call_table": AL_CALL_TABLE,
+        "al_ticket_table": AL_TICKET_TABLE,
+    }
+
 
 EXAMPLE_COMPLAINTS: list[str] = [
     "Major dropped calls in Surabaya",

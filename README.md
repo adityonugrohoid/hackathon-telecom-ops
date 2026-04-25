@@ -292,7 +292,8 @@ pip install flask gunicorn google-cloud-bigquery
 python setup_alloydb.py
 ```
 
-This creates the `incident_tickets` table (idempotent, safe to re-run).
+This creates the `call_records` and `incident_tickets` tables (idempotent, safe to re-run).
+Pass `--seed` to also load `docs/seed-data/*.csv` into both tables — see [Bring your own data](#bring-your-own-data).
 
 ### Run the ADK Dev UI locally
 
@@ -312,6 +313,7 @@ export GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6
 export GOOGLE_CLOUD_LOCATION=global
 export GOOGLE_GENAI_USE_VERTEXAI=TRUE
 export DATABASE_URL='postgresql+pg8000://postgres:<password>@<alloydb-public-ip>:5432/postgres'
+export TOOLBOX_URL='https://network-toolbox-486319900424.us-central1.run.app'
 
 python app.py
 ```
@@ -324,6 +326,35 @@ Browse to `http://localhost:8080`. Four tabs:
 | **Network Events** | Live BigQuery query of `network_events` | BigQuery |
 | **Call Records** | Live AlloyDB query of `call_records` | AlloyDB read |
 | **Incident Tickets** | Live AlloyDB query of `incident_tickets` | AlloyDB write target |
+
+## Bring your own data
+
+NetPulse is dataset-driven. Match the [data contract in `docs/SCHEMA.md`](docs/SCHEMA.md),
+override the `BQ_DATASET`, `BQ_NETWORK_TABLE`, `AL_CALL_TABLE`, `AL_TICKET_TABLE`
+env vars (full list in [Configuration](#configuration)), and the agents work
+against your infrastructure with no code changes.
+
+The repo ships with the canonical schema in code (`scripts/setup_bigquery.py` for
+BigQuery, `setup_alloydb.py` for AlloyDB) and the original hackathon sample data
+in `docs/seed-data/{network_events,call_records,incident_tickets}.csv` so a fresh
+clone can stand up an end-to-end working demo against any GCP project + AlloyDB
+instance.
+
+Bootstrap a fresh project with the included sample data:
+
+```bash
+export GOOGLE_CLOUD_PROJECT=your-project
+export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/legacy_credentials/<account>/adc.json
+export DATABASE_URL='postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres'
+bash scripts/setup_byo.sh --seed
+```
+
+Without `--seed`, the script only creates the dataset + tables (idempotent —
+safe to re-run on an existing deployment). With `--seed`, the seeded tables
+are TRUNCATE+RELOAD'd from the CSVs, restoring the canonical demo state.
+
+Multi-tenant SaaS UI (login, per-tenant dataset isolation) is roadmapped for v2.
+The data layer is already deployable against any compatible infrastructure.
 
 ## Project Structure
 
@@ -353,7 +384,13 @@ hackathon-telecom-ops/
 │   ├── architecture.png                  #   Pre-rendered architecture diagram
 │   └── screenshots/                      #   ADK Dev UI + NetPulse UI captures
 │
-├── setup_alloydb.py                      # Idempotent DDL for incident_tickets
+├── setup_alloydb.py                      # Idempotent DDL for call_records + incident_tickets (+ optional --seed)
+├── scripts/
+│   ├── setup_bigquery.py                 # Idempotent DDL for the BigQuery network_events table (+ optional --seed)
+│   └── setup_byo.sh                      # Orchestrator: runs setup_bigquery.py + setup_alloydb.py
+├── docs/
+│   ├── SCHEMA.md                         # Column-by-column data contract for the 3 tables
+│   └── seed-data/                        # Canonical sample CSVs (network_events, call_records, incident_tickets)
 ├── CLAUDE.md                             # Project context for AI coding assistants
 └── README.md                             # This file
 ```
@@ -374,7 +411,7 @@ adk deploy cloud_run \
   telecom_ops \
   -- \
   --service-account=lab2-cr-service@plated-complex-491512-n6.iam.gserviceaccount.com \
-  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6,GOOGLE_CLOUD_LOCATION=global"
+  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6,GOOGLE_CLOUD_LOCATION=global,TOOLBOX_URL=https://network-toolbox-486319900424.us-central1.run.app"
 
 # Background-run deploys silently answer N to the "allow unauthenticated" prompt; fix:
 gcloud run services add-iam-policy-binding telecom-ops-assistant \
@@ -412,13 +449,20 @@ All configuration is via environment variables (no `python-dotenv`; the agent pa
 
 | Variable | Purpose | Default / example |
 |---|---|---|
-| `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI + BQ + AlloyDB | `plated-complex-491512-n6` |
+| `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI + BQ + AlloyDB (required) | `plated-complex-491512-n6` |
 | `GOOGLE_CLOUD_LOCATION` | Vertex AI inference region (initial — failover ladder kicks in on 429) | `global` |
 | `GOOGLE_GENAI_USE_VERTEXAI` | Force Vertex AI (vs Google AI Studio API key) | `TRUE` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to ADC JSON for local runs | `~/.config/gcloud/legacy_credentials/<account>/adc.json` |
-| `DATABASE_URL` | AlloyDB SQLAlchemy URL | `postgresql+pg8000://postgres:<pwd>@<ip>:5432/postgres` |
+| `DATABASE_URL` | AlloyDB SQLAlchemy URL (required) | `postgresql+pg8000://postgres:<pwd>@<ip>:5432/postgres` |
+| `TOOLBOX_URL` | MCP Toolbox endpoint (required by the ADK agent) | `https://network-toolbox-486319900424.us-central1.run.app` |
+| `BQ_DATASET` | BigQuery dataset that owns `network_events` | `telecom_network` |
+| `BQ_NETWORK_TABLE` | BigQuery table the network investigator reads | `network_events` |
+| `AL_CALL_TABLE` | AlloyDB table the CDR analyzer reads | `call_records` |
+| `AL_TICKET_TABLE` | AlloyDB table the response formatter writes | `incident_tickets` |
 
 For local development, use the AlloyDB instance's public IP. For Cloud Run, override `DATABASE_URL` with the private IP and add VPC connector flags so the container can reach AlloyDB through the VPC.
+
+The `BQ_*` and `AL_*` variables exist so a fork can point NetPulse at any GCP project + AlloyDB cluster that matches the [data contract in `docs/SCHEMA.md`](docs/SCHEMA.md). Defaults preserve the hackathon's wiring; overrides enable the [Bring your own data](#bring-your-own-data) flow.
 
 ## Observability
 
