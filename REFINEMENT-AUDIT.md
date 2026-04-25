@@ -47,6 +47,7 @@ Auth column legend:
 | 2.9 | "Quick Demo" section in README with example queries | 2 | Doc | MEDIUM | S | doc | `README.md` |
 | 2.10 | Architectural callouts above mermaid diagram | 2 | Doc | MEDIUM | S | doc | `README.md` |
 | 2.11 | SSE streaming GIF / animated screenshot in README | 2 | Doc | MEDIUM | M | doc | `README.md`, `docs/screenshots/` |
+| 2.12 | Schema contract + env-driven dataset names + reproducible seed pipeline (BYO-data foundation) | 2 | Tool/Doc/Reproducibility | HIGH | M | src+deploy | `docs/SCHEMA.md` (NEW), `docs/seed-data/*.csv` (NEW), `scripts/setup_bigquery.py` (NEW), `scripts/setup_byo.sh` (NEW), `setup_alloydb.py`, `telecom_ops/tools.py`, `netpulse-ui/data_queries.py`, `README.md` |
 | 3.1 | Vertex AI region failover (`global` default + ladder) | 3 | Innovation | HIGH | L | src+deploy+env | `telecom_ops/vertex_failover.py` (NEW), `agent.py`, `.env` |
 | 3.2 | Per-attempt region telemetry in chat cards | 3 | UX/Story | MEDIUM | M | src+deploy | `netpulse-ui/agent_runner.py`, `chat.html` |
 | 4.1 | Parallelize `network_investigator` + `cdr_analyzer` | 4 | Architecture | MEDIUM | L | src+deploy | `telecom_ops/agent.py` |
@@ -67,9 +68,9 @@ Auth column legend:
 | 5.10 | Empty-state illustrations on data viewer tabs | 4 | UX/Redesign | LOW | S | src+deploy | `templates/*.html`, `style.css` |
 | 5.11 | Hero landing page + routing redesign (`/` → landing, `/app` → chat) | 2 | UX/Redesign | HIGH | M | src+deploy | `templates/landing.html` (NEW), `app.py`, `chat.html`, `style.css` |
 
-**Counts:** Tier 1 = 7 items · Tier 2 = 18 items (incl. token foundation 5.0a + 6 redesign items 5.1–5.5 + 5.11) · Tier 3 = 2 items · Tier 4 = 9 items (incl. 5 redesign items 5.6–5.10) · **Total = 36**
+**Counts:** Tier 1 = 7 items · Tier 2 = 19 items (incl. token foundation 5.0a + 6 redesign items 5.1–5.5 + 5.11 + BYO-data foundation 2.12) · Tier 3 = 2 items · Tier 4 = 9 items (incl. 5 redesign items 5.6–5.10) · **Total = 37**
 
-**Effort budget:** Tier 1 = ~6h · Tier 2 = ~21h (incl. ~15h redesign) · Tier 3 = ~6h · Tier 4 = ~16h. Realistic 5-day plan: complete Tier 1 + Tier 3 + UX-focused Tier 2 subset (token foundation + landing + timeline + badges + impact card + action chips) = ~26h work.
+**Effort budget:** Tier 1 = ~6h · Tier 2 = ~24h (incl. ~15h redesign + ~3.5h BYO-data foundation) · Tier 3 = ~6h · Tier 4 = ~16h. Realistic 5-day plan: Tier 1 + Tier 3 + UX-focused Tier 2 subset (token foundation + landing + timeline + badges + impact card + action chips) + BYO-data foundation (§2.7 env vars + §2.12 schema/seed) = ~30h work.
 
 ---
 
@@ -342,6 +343,162 @@ Pass `GCP_PROJECT` to Jinja templates via `render_template(..., gcp_project=GCP_
 **Files:** `README.md`, `docs/screenshots/`.
 
 **Change:** Record a short screen capture of one chat run (use macOS Cmd+Shift+5 with .mov → ffmpeg to .gif, or a Linux equivalent). Place in `docs/screenshots/pipeline.gif`, embed in README near the architecture section.
+
+---
+
+### 2.12 Schema contract + env-driven dataset names + reproducible seed pipeline (BYO-data foundation)
+
+**Why this matters — closes a real gap, not just a feature ask.**
+
+Audit-confirmed reproducibility gap: of the 3 tables NetPulse depends on, only **1 of 3** is provisioned by repo-tracked code:
+
+| Table | Current provisioning | In repo? |
+|---|---|---|
+| `incident_tickets` | `setup_alloydb.py` (idempotent `CREATE TABLE IF NOT EXISTS`) | ✅ Yes |
+| `call_records` (AlloyDB) | Out-of-repo — likely manual `psql` during the build | ❌ No DDL, no seed |
+| `network_events` (BigQuery) | Out-of-repo — `bq load` or console upload during the build | ❌ No schema, no seed |
+
+A fresh clone of this repo cannot recreate the demo state. Only the original author can — from local memory of the build. This is a real bug, not a hypothetical SaaS feature.
+
+The fix simultaneously **closes the reproducibility gap** AND **gives NetPulse a credible "Bring Your Own Data" story** for the deck — without building actual multi-tenant SaaS (which is the 8-12 day Variant C path explicitly out of scope).
+
+**Three pieces of work, one PR:**
+
+#### a) Env-driven dataset/table names (~30 min)
+
+Replace hardcoded names with env-var-driven ones. Defaults preserve current behavior; overrides allow pointing at custom datasets.
+
+```python
+# telecom_ops/tools.py
+AL_CALL_TABLE   = os.environ.get("AL_CALL_TABLE",   "call_records")
+AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
+# ...
+sql = f"... FROM {AL_CALL_TABLE} WHERE 1=1"
+sql = f"INSERT INTO {AL_TICKET_TABLE} ..."
+
+# netpulse-ui/data_queries.py
+BQ_DATASET       = os.environ.get("BQ_DATASET",       "telecom_network")
+BQ_NETWORK_TABLE = os.environ.get("BQ_NETWORK_TABLE", "network_events")
+AL_CALL_TABLE    = os.environ.get("AL_CALL_TABLE",    "call_records")
+AL_TICKET_TABLE  = os.environ.get("AL_TICKET_TABLE",  "incident_tickets")
+```
+
+Touches `telecom_ops/tools.py` (lines ~83, 139) and `netpulse-ui/data_queries.py` (lines 25-26, 173, 216).
+
+**Honest scope:** This parameterizes the *names*, not the *columns*. Agents and queries still assume specific column names (`region`, `call_status`, `event_type`, `severity`, etc.). A user bringing their own data must match the documented schema contract — see (b).
+
+#### b) Schema contract documentation (~30 min)
+
+NEW: `docs/SCHEMA.md` — the canonical "what NetPulse expects" contract. Sketch:
+
+```markdown
+# NetPulse data contract
+
+NetPulse is dataset-driven. Point environment variables at any dataset
+matching this contract and the agents work against your data.
+
+## BigQuery: <BQ_DATASET>.<BQ_NETWORK_TABLE>
+
+| Column | Type | Required | Notes / example |
+|---|---|---|---|
+| event_id           | STRING    | yes | "EVT001" |
+| event_type         | STRING    | yes | one of: outage, degradation, restoration, maintenance |
+| region             | STRING    | yes | one of: Jakarta, Surabaya, Bandung, Medan, Semarang |
+| severity           | STRING    | yes | one of: critical, major, minor |
+| description        | STRING    | yes | "Major fiber cut affecting central Jakarta" |
+| started_at         | TIMESTAMP | yes | 2026-03-25 08:00:00 UTC |
+| resolved_at        | TIMESTAMP | no  | NULL while ongoing |
+| affected_customers | INT64     | yes | 45000 |
+
+## AlloyDB: <AL_CALL_TABLE>
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| call_id           | SERIAL PRIMARY KEY | yes | |
+| caller_number     | TEXT      | yes | "08121234001" |
+| receiver_number   | TEXT      | yes | "08131234001" |
+| call_type         | TEXT      | yes | one of: voice, data |
+| duration_seconds  | INT       | yes | 0 for failed/dropped calls |
+| data_usage_mb     | NUMERIC   | yes | 0 for voice calls |
+| call_date         | TIMESTAMP | yes | |
+| region            | TEXT      | yes | matches network_events.region values |
+| cell_tower_id     | TEXT      | yes | "JKT-001" etc. |
+| call_status       | TEXT      | yes | one of: completed, dropped, failed |
+
+## AlloyDB: <AL_TICKET_TABLE>
+
+(NetPulse-written; see existing setup_alloydb.py DDL.)
+```
+
+#### c) Reproducible seed pipeline (~2-3h)
+
+NEW files:
+- `docs/seed-data/network_events.csv` — extract today's 30 BQ rows
+- `docs/seed-data/call_records.csv` — extract today's 60 AlloyDB rows
+- `docs/seed-data/incident_tickets.csv` — optional 5-10 sample tickets for testing
+- `scripts/setup_bigquery.py` — creates BQ dataset + table + loads `network_events.csv`
+- `scripts/setup_byo.sh` — orchestrator: runs `setup_alloydb.py` and `setup_bigquery.py` in sequence
+
+MODIFY:
+- `setup_alloydb.py` — extend to also create `call_records` table (currently missing!) and optionally load `docs/seed-data/call_records.csv` when `--seed` flag passed.
+
+Resulting `setup_byo.sh` API:
+```bash
+# Bootstrap a fresh GCP project against the NetPulse data contract
+export GOOGLE_CLOUD_PROJECT=customer-project
+export DATABASE_URL=postgresql+pg8000://...
+export BQ_DATASET=customer_telecom        # optional override
+bash scripts/setup_byo.sh --seed
+```
+
+#### d) README "BYO data" section (~15 min)
+
+Single subsection in README.md:
+
+```markdown
+## Bring your own data
+
+NetPulse is dataset-driven. Match the [data contract](docs/SCHEMA.md),
+override the env vars (`BQ_DATASET`, `BQ_NETWORK_TABLE`, `AL_CALL_TABLE`,
+`AL_TICKET_TABLE`), and the agents work against your infrastructure.
+
+Bootstrap a fresh GCP project from the included sample data:
+\`\`\`bash
+export GOOGLE_CLOUD_PROJECT=your-project
+export DATABASE_URL=postgresql+pg8000://...
+bash scripts/setup_byo.sh --seed
+\`\`\`
+
+Multi-tenant SaaS UI (login, per-tenant dataset isolation) is roadmapped
+for v2; the data layer is already deployable against any compatible infra.
+```
+
+**Files (NEW):** `docs/SCHEMA.md`, `docs/seed-data/network_events.csv`, `docs/seed-data/call_records.csv`, `docs/seed-data/incident_tickets.csv`, `scripts/setup_bigquery.py`, `scripts/setup_byo.sh`
+
+**Files (MODIFY):** `setup_alloydb.py` (add `call_records` DDL + optional seed loader), `telecom_ops/tools.py` (env-driven `AL_CALL_TABLE`, `AL_TICKET_TABLE`), `netpulse-ui/data_queries.py` (env-driven `BQ_DATASET`, `BQ_NETWORK_TABLE`, `AL_CALL_TABLE`, `AL_TICKET_TABLE`), `README.md` (BYO section).
+
+**Effort:** M = ~3.5h total
+- Env-driven names: 30 min
+- `docs/SCHEMA.md`: 30 min
+- Extract seed data from current BQ + AlloyDB into CSVs (read-only `bq query` + `psql \copy`): 1h
+- Author `scripts/setup_bigquery.py` + extend `setup_alloydb.py`: 1h
+- `scripts/setup_byo.sh` + README section: 30 min
+
+**Auth:** src+deploy. Seed extraction is read-only against the deployed infra (Freeze A allows). The bootstrap scripts only mutate destinations the user explicitly supplies — they do NOT touch the protected hackathon datasets.
+
+**Synergy:** Pairs with §2.7 (env-driven URLs) — both are config-portability work; do them in the same PR. Together they make NetPulse fully relocatable: a fresh `gcloud run deploy` with the right env vars and a `setup_byo.sh --seed` produces a working stack against any GCP project.
+
+**Risk to Freeze A:** None. Source changes are additive (env-var defaults preserve current behavior). Seed extraction reads from the current BQ + AlloyDB without modification. Bootstrap scripts target whatever destination the user supplies — by default, against a fresh non-protected project.
+
+**Story payoff for the deck (one slide):**
+
+> "NetPulse v1 was a single-tenant demo with manual data provisioning.
+> v1.1 ships a documented schema contract, complete sample seed data,
+> and a one-line bootstrap (`scripts/setup_byo.sh`) that provisions any
+> GCP project to run NetPulse end-to-end. The data layer is now deployable
+> against any compatible infrastructure; multi-tenant UI roadmapped for v2."
+
+Two messages in one: closing a real reproducibility bug AND signalling SaaS readiness.
 
 ---
 
@@ -1064,6 +1221,7 @@ Recommendation: B with C as a small additional flag.
 4. **Pick UI redesign subset:** which of §5.0a–§5.11 enter Tier 2 active scope vs stay deferred? Recommendation for the 5-day window: **§5.0a (token foundation, prerequisite) → §5.11 (landing page) + §5.2 (timeline) + §5.3 (badges) + §5.5 (impact card) + §5.4 (action chips, static version)**. These six items together = ~18h of work and produce the biggest visible-in-5-min judging signal — tokens give every component visual coherence, landing page sets the narrative, timeline + badges + impact card transform the chat into an operator workspace, action chips suggest workflow integration. **§5.0a must land first** because §5.3 (badges), §5.11 (landing typography), §5.2 (timeline spacing), and §5.5 (impact card surface colors) all consume tokens defined there.
 5. **Defer §5.1 (three-pane workspace) and §5.6 (status workflow)** to post-Top-10 unless we're confident on the deadline math? Both are excellent but each is half-day-plus.
 6. **Promote any §4 brainstorming items to Tier 1/2?** §4.4 (demo seed panel) is a strong Tier-2 candidate — small effort, high demo-friction reduction.
+7. **Authorize §2.12 BYO-data foundation?** Closes the audit-confirmed reproducibility gap (`call_records` DDL + `network_events` schema currently out-of-repo) AND delivers the SaaS-ready story without building actual multi-tenancy. ~3.5h, fits Day 5 alongside §2.7. The repro gap is a real bug — recommend authorizing regardless of whether the BYO-data narrative is wanted in the deck, because the repo is otherwise un-cloneable.
 
 ---
 
