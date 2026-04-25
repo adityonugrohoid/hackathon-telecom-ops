@@ -33,8 +33,10 @@ class AgentEvent:
 
     Attributes:
         type: One of agent_start, tool_call, tool_response, text, complete, error.
-        agent: Name of the LlmAgent that produced the event.
-        tool: Function name when type is tool_call/tool_response.
+        agent: Name of the LlmAgent that produced the event. For type='error',
+            present iff the error originated inside a specific tool call;
+            absent for catastrophic top-level failures.
+        tool: Function name when type is tool_call/tool_response/error (tool-scoped).
         args: Tool call arguments when type is tool_call.
         result: Tool response payload when type is tool_response.
         text: Model text when type is text.
@@ -90,6 +92,32 @@ def _load_runner():
         return None, _runner_cache["error"]
 
 
+def _extract_tool_error(response: dict[str, Any]) -> str | None:
+    """Returns a human-readable error message if the tool response signals a failure.
+
+    Detects two shapes:
+      1. NetPulse native tools that explicitly return `{"status": "error", "message": ...}`
+         (e.g., `save_incident_ticket`'s VALID_CATEGORIES guard in `telecom_ops/tools.py`).
+      2. ADK's exception-wrapping shape `{"error": "<str>", ...}` produced when a
+         tool raises an uncaught exception inside `runner.run_async`.
+
+    Returns None when the response looks healthy. Non-string error values are
+    coerced to str so the SSE payload is always JSON-serializable.
+
+    Args:
+        response: The raw `function_response` dict captured from an ADK event.
+
+    Returns:
+        Error message string for the chat UI, or None if no error was detected.
+    """
+    if response.get("status") == "error":
+        return str(response.get("message") or "Tool returned status='error'")
+    err = response.get("error")
+    if isinstance(err, str) and err:
+        return err
+    return None
+
+
 def _convert_event(event) -> list[AgentEvent]:
     """Translate one ADK Event into 0..N UI events."""
     out: list[AgentEvent] = []
@@ -105,14 +133,25 @@ def _convert_event(event) -> list[AgentEvent]:
             )
         )
     for fr in event.get_function_responses():
+        response_dict = dict(fr.response) if fr.response else {}
         out.append(
             AgentEvent(
                 type="tool_response",
                 agent=author,
                 tool=fr.name or "",
-                result=dict(fr.response) if fr.response else {},
+                result=response_dict,
             )
         )
+        err_msg = _extract_tool_error(response_dict)
+        if err_msg:
+            out.append(
+                AgentEvent(
+                    type="error",
+                    agent=author,
+                    tool=fr.name or "",
+                    message=err_msg,
+                )
+            )
 
     if not getattr(event, "partial", False) and event.content and event.content.parts:
         text_chunks = [

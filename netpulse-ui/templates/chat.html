@@ -6,6 +6,7 @@
     <input id="np-input" type="text" placeholder="Describe a telecom incident..." autofocus>
     <button id="np-submit" type="submit">Investigate</button>
   </form>
+  <div id="np-input-hint" class="np-input-hint" role="alert" aria-live="polite" hidden></div>
   <div class="np-examples">
     {% for q in examples %}
       <button class="np-chip" type="button" onclick="npFill(this)">{{ q }}</button>
@@ -365,9 +366,12 @@ function npReset() {
     entry.querySelector('.np-timeline-time').textContent = '--:--:--';
     npClearList(entry.querySelector('.np-tools'));
     entry.querySelector('.np-text').textContent = '';
+    var msg = entry.querySelector('.np-error-msg');
+    if (msg) msg.parentNode.removeChild(msg);
   });
   var f = document.querySelector('.np-final');
   f.hidden = true;
+  f.classList.remove('np-final-error');
   f.querySelector('.np-ticket').textContent = '';
   f.querySelector('.np-final-text').textContent = '';
   var badges = f.querySelector('.np-ticket-badges');
@@ -381,43 +385,92 @@ function npReset() {
   while (chipsHost.firstChild) chipsHost.removeChild(chipsHost.firstChild);
 }
 
+// §1.2 — busy-state helper: locks input + button while a request is in flight,
+// shows a spinner inside the button, restores on completion/error.
+function npSetBusy(on) {
+  var input = document.getElementById('np-input');
+  var btn = document.getElementById('np-submit');
+  if (on) {
+    if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+    input.disabled = true;
+    btn.disabled = true;
+    btn.classList.add('np-busy');
+    btn.textContent = 'Investigating';
+  } else {
+    input.disabled = false;
+    btn.disabled = false;
+    btn.classList.remove('np-busy');
+    btn.textContent = btn.dataset.label || 'Investigate';
+  }
+}
+
+// §1.3 — visible inline hint for empty/whitespace input. Auto-clears on next
+// keystroke (wired in npOnLoad).
+function npFlashInputHint(msg) {
+  var hint = document.getElementById('np-input-hint');
+  hint.textContent = msg;
+  hint.hidden = false;
+}
+function npClearInputHint() {
+  var hint = document.getElementById('np-input-hint');
+  if (!hint) return;
+  hint.hidden = true;
+  hint.textContent = '';
+}
+
 async function npSubmit() {
-  var query = document.getElementById('np-input').value.trim();
-  if (!query) return;
+  var input = document.getElementById('np-input');
+  var query = (input.value || '').trim();
+  if (!query) {
+    npFlashInputHint('Type a complaint first — empty queries are not investigated.');
+    input.focus();
+    return;
+  }
+  npClearInputHint();
   npReset();
-  var res = await fetch('/api/query', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({query: query})
-  });
-  var reader = res.body.getReader();
-  var decoder = new TextDecoder();
-  var buf = '';
-  while (true) {
-    var chunkRead = await reader.read();
-    if (chunkRead.done) break;
-    buf += decoder.decode(chunkRead.value, {stream: true});
-    var idx;
-    while ((idx = buf.indexOf('\n\n')) >= 0) {
-      var chunk = buf.slice(0, idx);
-      buf = buf.slice(idx + 2);
-      var line = chunk.split('\n').find(function (l) { return l.startsWith('data: '); });
-      if (!line) continue;
-      try {
-        npHandle(JSON.parse(line.slice(6)));
-      } catch (e) {
-        console.error(e);
+  npSetBusy(true);
+  try {
+    var res = await fetch('/api/query', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: query})
+    });
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buf = '';
+    while (true) {
+      var chunkRead = await reader.read();
+      if (chunkRead.done) break;
+      buf += decoder.decode(chunkRead.value, {stream: true});
+      var idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0) {
+        var chunk = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        var line = chunk.split('\n').find(function (l) { return l.startsWith('data: '); });
+        if (!line) continue;
+        try {
+          npHandle(JSON.parse(line.slice(6)));
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
+  } catch (e) {
+    console.error(e);
+    npRenderGlobalError({message: 'Network error while contacting NetPulse: ' + (e && e.message ? e.message : e)});
+  } finally {
+    npSetBusy(false);
+    input.focus();
   }
 }
 
 function npOnLoad() {
   // Landing page chips link here with ?seed=...&autorun=1 for one-click demo.
+  var input = document.getElementById('np-input');
+  input.addEventListener('input', npClearInputHint);
   var params = new URLSearchParams(window.location.search);
   var seed = params.get('seed');
   if (!seed) return;
-  var input = document.getElementById('np-input');
   input.value = seed;
   if (params.get('autorun') === '1') {
     npSubmit();
@@ -427,11 +480,46 @@ function npOnLoad() {
 }
 window.addEventListener('DOMContentLoaded', npOnLoad);
 
+// §1.1 — agent-scoped error rendering: agent_runner emits `{type:'error', agent, tool?, message}`
+// when a tool returns status='error' (e.g., save_incident_ticket's enum guard) or when ADK wraps
+// a thrown exception. The targeted timeline entry gets a sticky red state + inline error message;
+// catastrophic top-level errors (no agent) fall through to the global final-card rendering.
+function npRenderAgentError(ev) {
+  var entry = document.querySelector('.np-timeline-entry[data-agent="' + ev.agent + '"]');
+  if (!entry) { npRenderGlobalError(ev); return; }
+  entry.classList.remove('running', 'done');
+  entry.classList.add('error');
+  entry.querySelector('.np-status').textContent = 'error';
+  var content = entry.querySelector('.np-timeline-content');
+  var host = entry.querySelector('.np-error-msg');
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'np-error-msg';
+    var handoff = content.querySelector('.np-timeline-handoff');
+    if (handoff) {
+      content.insertBefore(host, handoff);
+    } else {
+      content.appendChild(host);
+    }
+  }
+  var prefix = ev.tool ? ('[' + ev.tool + '] ') : '';
+  host.textContent = prefix + (ev.message || 'Unknown error');
+}
+
+function npRenderGlobalError(ev) {
+  var f = document.querySelector('.np-final');
+  f.hidden = false;
+  f.classList.add('np-final-error');
+  f.querySelector('.np-final-text').textContent = 'ERROR: ' + (ev.message || 'Unknown error');
+}
+
 function npHandle(ev) {
   if (ev.type === 'error') {
-    var f = document.querySelector('.np-final');
-    f.hidden = false;
-    f.querySelector('.np-final-text').textContent = 'ERROR: ' + (ev.message || '');
+    if (ev.agent) {
+      npRenderAgentError(ev);
+    } else {
+      npRenderGlobalError(ev);
+    }
     return;
   }
   if (ev.type === 'complete') {
@@ -468,9 +556,11 @@ function npHandle(ev) {
   } else if (ev.type === 'text') {
     var pre = entry.querySelector('.np-text');
     pre.textContent = (pre.textContent ? pre.textContent + '\n' : '') + ev.text;
-    entry.classList.remove('running');
-    entry.classList.add('done');
-    entry.querySelector('.np-status').textContent = 'done';
+    if (!entry.classList.contains('error')) {
+      entry.classList.remove('running');
+      entry.classList.add('done');
+      entry.querySelector('.np-status').textContent = 'done';
+    }
   }
 }
 </script>
