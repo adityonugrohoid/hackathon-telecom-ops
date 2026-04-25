@@ -13,6 +13,28 @@ This project was built collaboratively with [Claude Code](https://claude.com/cla
 Anthropic's CLI agent for software engineering. Acknowledging that up-front
 rather than hiding it.
 
+## Current phase: Prototype Refinement (Top 100 → Top 10)
+
+NetPulse AI was selected into the **Top 100** of the APAC GenAI Academy
+2026 (ranked #82, announced 2026-04-23). The hackathon is now in the
+**Prototype Refinement Phase** — refined prototype due **2026-04-30**.
+
+Until the deadline, refinement is the priority workstream. Anchor items:
+
+1. **Vertex AI region failover** — switch default to `global` and fail
+   over through `asia-southeast2` → `asia-southeast1` → `us-central1` on
+   `RESOURCE_EXHAUSTED`. Drafted in `PLAN-vertex-region-failover.md`;
+   not implemented yet. Will replace the `asia-southeast1` static pin
+   noted in § "Non-obvious choices to preserve" once authorized.
+2. **Brainstorming queue** — further refinement candidates (architecture,
+   performance, deeper Gen AI usage) to be scoped with the user before
+   any code changes.
+
+Deployed services in `plated-complex-491512-n6` remain under the freeze
+documented in global `~/.claude/CLAUDE.md`. Source edits inside this
+repo are within normal authorization; any Cloud Run redeploy still
+requires explicit per-change confirmation from the user.
+
 ## Architecture in one paragraph
 
 The core ADK package `telecom_ops/` exposes a `SequentialAgent` that runs
