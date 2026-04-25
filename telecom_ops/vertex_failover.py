@@ -4,11 +4,18 @@ The default region is `global` (Google's multi-region routing pool); on a
 `RESOURCE_EXHAUSTED` 429, the wrapper rebuilds its underlying `genai.Client`
 against the next region in `RANKED_REGIONS` and retries. Failover state is
 per-instance, so each `LlmAgent` walks the ladder independently.
+
+Each wrapper carries an `_owner_name` (the LlmAgent's `name`) so observer
+callbacks can route per-attempt telemetry back to a specific agent in the
+chat UI without needing extra correlation. Observers register through
+`set_attempt_observer`, which is backed by a `ContextVar` so concurrent
+Flask requests can each install their own callback in isolation.
 """
 
 import logging
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
+from contextvars import ContextVar
 
 from google.adk.models.google_llm import Gemini
 from google.adk.models.llm_request import LlmRequest
@@ -28,6 +35,55 @@ RANKED_REGIONS: tuple[str, ...] = (
 )
 
 _QUOTA_MARKERS: tuple[str, ...] = ("RESOURCE_EXHAUSTED", " 429", "QUOTA")
+
+AttemptCallback = Callable[[str, str, str, str | None], None]
+"""(owner_name, region, outcome, error_message) — outcome is "ok" | "failover"."""
+
+_attempt_observer: ContextVar[AttemptCallback | None] = ContextVar(
+    "_attempt_observer", default=None
+)
+
+
+def set_attempt_observer(callback: AttemptCallback | None) -> None:
+    """Register a callback invoked on each region attempt outcome.
+
+    The callback receives `(owner_name, region, outcome, error_message)` where
+    `outcome` is `"ok"` when the region returned a usable response and
+    `"failover"` when the region 429'd and the wrapper advanced to the next
+    entry in `RANKED_REGIONS`. `error_message` is the upstream error string on
+    `"failover"` and `None` on `"ok"`.
+
+    Pass `None` to unregister. State is held in a `ContextVar` so concurrent
+    callers — e.g., separate Flask request threads, each spawning its own
+    `_agent_worker` asyncio loop — install isolated observers without racing.
+
+    Args:
+        callback: Observer callable, or `None` to unregister.
+    """
+    _attempt_observer.set(callback)
+
+
+def _notify_attempt(
+    owner_name: str, region: str, outcome: str, err_msg: str | None
+) -> None:
+    """Best-effort notify the current observer, swallowing any callback error.
+
+    The observer must never break the Vertex AI call: a misbehaving callback
+    is logged and ignored so failover continues normally.
+
+    Args:
+        owner_name: The LlmAgent name that owns this wrapper instance.
+        region: The Vertex AI region the attempt targeted.
+        outcome: `"ok"` on success, `"failover"` on quota error.
+        err_msg: Upstream error string when `outcome == "failover"`, else None.
+    """
+    callback = _attempt_observer.get()
+    if callback is None:
+        return
+    try:
+        callback(owner_name, region, outcome, err_msg)
+    except Exception:  # noqa: BLE001
+        logger.exception("attempt observer raised; suppressing")
 
 
 def _is_quota_error(exc: Exception) -> bool:
@@ -67,6 +123,18 @@ class RegionFailoverGemini(Gemini):
     """
 
     _active_region: str = PrivateAttr(default=RANKED_REGIONS[0])
+    _owner_name: str = PrivateAttr(default="")
+
+    def set_owner_name(self, name: str) -> None:
+        """Tag this wrapper with the LlmAgent name that owns it.
+
+        Used by attempt observers to route per-region telemetry to the right
+        chat-UI timeline entry. Set once at agent-construction time.
+
+        Args:
+            name: The owning `LlmAgent.name` (e.g., "classifier").
+        """
+        self._owner_name = name
 
     def _build_client_for(self, region: str) -> Client:
         """Construct a Vertex AI Client pinned to a specific region.
@@ -149,6 +217,7 @@ class RegionFailoverGemini(Gemini):
             )
             async for response in super().generate_content_async(llm_request, stream):
                 yield response
+            _notify_attempt(self._owner_name, self._active_region, "ok", None)
             return
 
         last_exc: Exception | None = None
@@ -164,6 +233,7 @@ class RegionFailoverGemini(Gemini):
                     llm_request, stream
                 ):
                     yield response
+                _notify_attempt(self._owner_name, region, "ok", None)
                 return
             except genai_errors.ClientError as exc:
                 if not _is_quota_error(exc):
@@ -173,6 +243,7 @@ class RegionFailoverGemini(Gemini):
                     region,
                     exc,
                 )
+                _notify_attempt(self._owner_name, region, "failover", str(exc))
                 last_exc = exc
         raise RuntimeError(
             f"All Vertex AI regions exhausted: {RANKED_REGIONS}"
@@ -184,8 +255,9 @@ async def _self_test_failover_loop() -> None:
 
     Patches `Gemini.generate_content_async` with a stub that raises a quota
     error in the first region and yields a sentinel response in the second.
-    Asserts the wrapper walked exactly two regions and yielded the sentinel.
-    No Vertex AI traffic, no GCP credentials required.
+    Asserts the wrapper walked exactly two regions, yielded the sentinel, and
+    fired the registered attempt observer twice (failover then ok). No Vertex
+    AI traffic, no GCP credentials required.
     """
     from types import SimpleNamespace
     from unittest.mock import patch
@@ -210,19 +282,39 @@ async def _self_test_failover_loop() -> None:
 
     os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "test-project")
 
-    with patch.object(Gemini, "generate_content_async", mock_parent_call):
-        wrapper = RegionFailoverGemini(model="gemini-2.5-flash")
-        responses: list = []
-        async for response in wrapper.generate_content_async(llm_request=fake_request):
-            responses.append(response)
+    observer_log: list[tuple[str, str, str, str | None]] = []
+
+    def observer(owner: str, region: str, outcome: str, err: str | None) -> None:
+        observer_log.append((owner, region, outcome, err))
+
+    set_attempt_observer(observer)
+    try:
+        with patch.object(Gemini, "generate_content_async", mock_parent_call):
+            wrapper = RegionFailoverGemini(model="gemini-2.5-flash")
+            wrapper.set_owner_name("test_agent")
+            responses: list = []
+            async for response in wrapper.generate_content_async(
+                llm_request=fake_request
+            ):
+                responses.append(response)
+    finally:
+        set_attempt_observer(None)
 
     assert call_log == [RANKED_REGIONS[0], RANKED_REGIONS[1]], (
         f"expected first two regions, got {call_log}"
     )
     assert responses == ["FAKE_RESPONSE"], f"expected sentinel, got {responses}"
+    assert len(observer_log) == 2, f"expected 2 observer calls, got {observer_log}"
+    assert observer_log[0][0] == "test_agent" and observer_log[0][1] == RANKED_REGIONS[0] and observer_log[0][2] == "failover", (
+        f"expected first event=failover on region[0], got {observer_log[0]}"
+    )
+    assert observer_log[1][0] == "test_agent" and observer_log[1][1] == RANKED_REGIONS[1] and observer_log[1][2] == "ok" and observer_log[1][3] is None, (
+        f"expected second event=ok on region[1] with no err, got {observer_log[1]}"
+    )
     logger.info(
-        "OK: failover loop walked regions=%s and yielded sentinel after one 429",
+        "OK: failover loop walked regions=%s, yielded sentinel, observer fired %d times",
         call_log,
+        len(observer_log),
     )
 
 

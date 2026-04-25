@@ -24,6 +24,7 @@
           <span class="np-timeline-step">1</span>
           <h3>Classifier</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -48,6 +49,7 @@
           <span class="np-timeline-step">2</span>
           <h3>Network Investigator</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -74,6 +76,7 @@
           <span class="np-timeline-step">3</span>
           <h3>CDR Analyzer</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -99,6 +102,7 @@
           <span class="np-timeline-step">4</span>
           <h3>Response Formatter</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -368,6 +372,12 @@ function npReset() {
     entry.querySelector('.np-text').textContent = '';
     var msg = entry.querySelector('.np-error-msg');
     if (msg) msg.parentNode.removeChild(msg);
+    var trace = entry.querySelector('.np-region-trace');
+    if (trace) {
+      trace.hidden = true;
+      trace.classList.remove('np-region-trace-failover');
+      while (trace.firstChild) trace.removeChild(trace.firstChild);
+    }
   });
   var f = document.querySelector('.np-final');
   f.hidden = true;
@@ -480,6 +490,55 @@ function npOnLoad() {
 }
 window.addEventListener('DOMContentLoaded', npOnLoad);
 
+// §3.2 — per-attempt Vertex AI region telemetry. agent_runner emits one
+// `region_attempt` event per RegionFailoverGemini attempt with shape
+// `{type:'region_attempt', agent, region, outcome, message?}`. We progressively
+// build a trace chip in the matching timeline entry's header:
+//   first ok → "via global"
+//   failover then ok → "via global ⤳ asia-southeast2"
+//   multiple failovers → "via global ⤳ asia-southeast2 ⤳ asia-southeast1"
+// The chip carries a 'failover' modifier class while a hop is mid-walk so the
+// chip reads as warning-tinted; a successful settle drops the modifier.
+function npRenderRegionAttempt(ev) {
+  if (!ev.agent || !ev.region) return;
+  var entry = document.querySelector('.np-timeline-entry[data-agent="' + ev.agent + '"]');
+  if (!entry) return;
+  var chip = entry.querySelector('.np-region-trace');
+  if (!chip) return;
+  chip.hidden = false;
+  if (!chip.firstChild) {
+    var prefix = document.createElement('span');
+    prefix.className = 'np-region-trace-prefix';
+    prefix.textContent = 'via ';
+    chip.appendChild(prefix);
+    var first = document.createElement('span');
+    first.className = 'np-region-trace-region';
+    first.textContent = ev.region;
+    chip.appendChild(first);
+  } else {
+    // chip already has at least one region — append "⤳ region" only if the new
+    // region differs from the last one already shown (defends against duplicate
+    // events on the streaming-bypass branch).
+    var existing = chip.querySelectorAll('.np-region-trace-region');
+    var last = existing[existing.length - 1];
+    if (!last || last.textContent !== ev.region) {
+      var sep = document.createElement('span');
+      sep.className = 'np-region-trace-sep';
+      sep.textContent = ' ⤳ ';  // ⤳
+      chip.appendChild(sep);
+      var next = document.createElement('span');
+      next.className = 'np-region-trace-region';
+      next.textContent = ev.region;
+      chip.appendChild(next);
+    }
+  }
+  if (ev.outcome === 'failover') {
+    chip.classList.add('np-region-trace-failover');
+  } else {
+    chip.classList.remove('np-region-trace-failover');
+  }
+}
+
 // §1.1 — agent-scoped error rendering: agent_runner emits `{type:'error', agent, tool?, message}`
 // when a tool returns status='error' (e.g., save_incident_ticket's enum guard) or when ADK wraps
 // a thrown exception. The targeted timeline entry gets a sticky red state + inline error message;
@@ -520,6 +579,10 @@ function npHandle(ev) {
     } else {
       npRenderGlobalError(ev);
     }
+    return;
+  }
+  if (ev.type === 'region_attempt') {
+    npRenderRegionAttempt(ev);
     return;
   }
   if (ev.type === 'complete') {
