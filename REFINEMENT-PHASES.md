@@ -14,8 +14,8 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | Phase | Status | Effort | Auth | Outcome |
 |---|---|---|---|---|
 | **1. Pre-flight config** | ✅ **DONE** (2026-04-25) | 30 min | gcloud writes | Cold start killed (7.2s → 0.4s) |
-| **2. Foundation layers** | ⏳ Next | ~5h | source only | Tokens + prompt fix + enum guard |
-| **3. Innovation track** | Pending | ~6h | source only | Vertex region failover end-to-end |
+| **2. Foundation layers** | ✅ **DONE** (2026-04-25) | ~3h | source only | Tokens + prompt fix + enum guard |
+| **3. Innovation track** | ⏳ Next | ~6h | source only | Vertex region failover end-to-end |
 | **4. Visual redesign** | Pending | ~14h | source only | Landing + timeline + badges + impact + chips |
 | **5. Critical UX fixes** | Pending | ~3h | source only | Error states, button disable, input validation |
 | **6. Reproducibility + portability** | Pending | ~4h | source only | BYO-data foundation (closes repro gap) |
@@ -77,21 +77,29 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 2 — Foundation layers ⏳ NEXT
+## Phase 2 — Foundation layers ✅ DONE
 
-**Estimated:** ~5h · source-only · no redeploy
-**Authorization:** Source changes inside `telecom_ops/` and `netpulse-ui/` are within normal scope.
-**Blocks:** Phase 4 (all UI redesign work consumes the token layer from §5.0a).
+**Completed:** 2026-04-25
+**Authorization:** Source changes inside `telecom_ops/` and `netpulse-ui/` (within normal scope).
+**Outcome:** Token foundation in place; prompt enumerates all events; category enum guard in place. All three changes ride to production in the Phase 8 single redeploy.
 
-- [ ] **§5.0a** Design token foundation — drop `static/tokens.css` from `heliodoron-ui-identity` curated subset, refactor `style.css` Phase 1+2 to consume tokens. *(~4h)*
-- [ ] **§1.5** Validate `category` enum in `save_incident_ticket` (`telecom_ops/tools.py`). *(~30 min)*
-- [ ] **§1.4** Tighten `network_investigator` prompt to enumerate ALL events returned (`telecom_ops/prompts.py`). *(~1h)*
+- [x] **§5.0a** Design token foundation — `netpulse-ui/static/tokens.css` (NEW, 116 token defs lifted from `heliodoron-ui-identity` commit `0923dfb` + NetPulse palette + status ladder + per-category accents + back-compat aliases). `templates/base.html` loads `tokens.css` before `style.css`; the four content templates inherit through the layout. `style.css` refactored conservatively — `:root` block removed (moved to tokens.css), exact-match hardcoded values (4/8/12/16/24px spacing, matching radii, system font stacks, the two recurring shadows) swapped to `var(--*)`, off-grid values (10px/14px/18px/22px) preserved verbatim so the rendered UI is pixel-identical.
+- [x] **§1.5** `VALID_CATEGORIES` module-level frozenset added in `telecom_ops/tools.py`; `save_incident_ticket` returns `{"status":"error","message":...}` before DB write if `category` is hallucinated.
+- [x] **§1.4** `NETWORK_INVESTIGATOR_INSTRUCTION` in `telecom_ops/prompts.py` — replaced "3-6 bullet points" with "For EACH event returned by the tool (do not omit any), emit one bullet…"; added rank-by-severity rule for >8-event payloads; explicit "Never truncate the list" guard.
 
-**Verification before moving on:** Local Flask UI renders identically to current deployed version (token refactor is a no-op visually); `network_investigator` lists all 9 Jakarta events for the audit complaint instead of 4; `save_incident_ticket` rejects non-enum `category` strings with a clear error.
+**Verifications run locally:**
+- `.venv/bin/python -c "import ast; ast.parse(...)"` on `tools.py` and `prompts.py` → OK.
+- Every `var(--*)` reference in `style.css` either resolves to a token defined in `tokens.css` or is a banner-scoped local `--bn-*` redefined inside `.np-source-banner` rules.
+- Templates: all 4 content templates (`chat`, `network_events`, `call_records`, `tickets`) extend `base.html`; the single `<link rel="stylesheet" href="…tokens.css">` propagates to all of them automatically.
+
+**Verifications deferred to Phase 8 live deploy:**
+- Browser visual diff against the deployed UI (blocked locally — Flask boot needs AlloyDB credentials inside Freeze A; refactor is a 1-to-1 token-for-value substitution so visual identity is provable mechanically).
+- Re-running the Jakarta complaint to confirm `network_investigator` now lists all 9 events (needs a live agent run against Vertex AI + BigQuery + AlloyDB).
+- Forced bad-category injection to confirm the enum guard's error path renders correctly in chat (needs Phase 5 §1.1 error-card UI to be in place to be visible).
 
 ---
 
-## Phase 3 — Innovation track Pending
+## Phase 3 — Innovation track ⏳ NEXT
 
 **Estimated:** ~6h · source-only · no redeploy
 **Authorization:** Source changes inside `telecom_ops/` are within normal scope; the Cloud Run env-var update lives in Phase 8.
