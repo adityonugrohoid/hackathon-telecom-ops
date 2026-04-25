@@ -12,11 +12,23 @@ from .tools import (
     query_cdr,
     save_incident_ticket,
 )
+from .vertex_failover import RegionFailoverGemini
 
-MODEL = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-flash"
+
+
+def _failover_model() -> RegionFailoverGemini:
+    """Build a fresh failover-enabled Gemini wrapper for one LlmAgent.
+
+    Each LlmAgent gets its own instance so the per-instance failover state
+    (active region, cached genai.Client) is isolated — one agent's failover
+    does not bind the others to the same region.
+    """
+    return RegionFailoverGemini(model=MODEL_NAME)
+
 
 classifier = LlmAgent(
-    model=MODEL,
+    model=_failover_model(),
     name="classifier",
     description="Classifies the telecom complaint into a category and identifies the region.",
     instruction=CLASSIFIER_INSTRUCTION,
@@ -25,7 +37,7 @@ classifier = LlmAgent(
 )
 
 network_investigator = LlmAgent(
-    model=MODEL,
+    model=_failover_model(),
     name="network_investigator",
     description="Queries the BigQuery network events database for outages relevant to the region.",
     instruction=NETWORK_INVESTIGATOR_INSTRUCTION,
@@ -34,7 +46,7 @@ network_investigator = LlmAgent(
 )
 
 cdr_analyzer = LlmAgent(
-    model=MODEL,
+    model=_failover_model(),
     name="cdr_analyzer",
     description="Queries AlloyDB call_records for evidence supporting the complaint.",
     instruction=CDR_ANALYZER_INSTRUCTION,
@@ -43,7 +55,7 @@ cdr_analyzer = LlmAgent(
 )
 
 response_formatter = LlmAgent(
-    model=MODEL,
+    model=_failover_model(),
     name="response_formatter",
     description="Synthesizes findings into a final incident report and persists it to AlloyDB.",
     instruction=RESPONSE_FORMATTER_INSTRUCTION,
