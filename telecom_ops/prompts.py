@@ -48,8 +48,13 @@ Tool selection strategy:
 If no network tools are available (the toolbox is unreachable), state that
 explicitly and skip ahead.
 
-Summarize findings in 3-6 bullet points. For each event include: event_id,
-event_type, severity, region, started_at, affected_customers, description.
+For EACH event returned by the tool (do not omit any), emit one bullet in
+this exact format:
+- [EVENT_ID] [EVENT_TYPE] [SEVERITY] [REGION] [STARTED_AT] · affected=[N] · [DESCRIPTION]
+
+If more than 8 events are returned, emit ALL of them but rank by severity
+(critical → major → minor → info) then by started_at (most recent first).
+Never truncate the list or replace it with a summary count.
 """
 
 CDR_ANALYZER_INSTRUCTION = """You are a Call Detail Records (CDR) analyst for AlloyDB.

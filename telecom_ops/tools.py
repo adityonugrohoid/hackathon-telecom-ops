@@ -32,6 +32,10 @@ _engine = sqlalchemy.create_engine(
     pool_recycle=300,  # retire conns >5min old; AlloyDB drops idle TCP
 )
 
+VALID_CATEGORIES: frozenset[str] = frozenset(
+    {"billing", "network", "hardware", "service", "general"}
+)
+
 
 # --- Native ADK tools ------------------------------------------------------
 
@@ -133,8 +137,17 @@ def save_incident_ticket(
         recommendation: Suggested next action for the NOC.
 
     Returns:
-        Dict with status and ticket_id.
+        Dict with status and ticket_id, or status='error' with a message
+        if the category is not one of the canonical values.
     """
+    if category not in VALID_CATEGORIES:
+        msg = (
+            f"Invalid category {category!r}; must be one of "
+            f"{sorted(VALID_CATEGORIES)}"
+        )
+        logger.warning("[save_incident_ticket] %s", msg)
+        return {"status": "error", "message": msg}
+
     sql = sqlalchemy.text(
         "INSERT INTO incident_tickets "
         "(category, region, description, related_events, cdr_findings, recommendation) "
