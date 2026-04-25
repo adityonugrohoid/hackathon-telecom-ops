@@ -1,0 +1,37 @@
+ticket_id,category,region,description,related_events,cdr_findings,recommendation,status,created_at
+1,network,Surabaya,Customers are reporting dropped calls in Surabaya.,EVT007: Flooding damaged ground-level equipment in west Surabaya (major outage); EVT023: Undersea cable damage affecting international connectivity (critical outage); EVT002: Scheduled tower maintenance in east Surabaya (minor),No records for dropped calls found in Surabaya.,"Investigate ongoing network events (EVT007, EVT023, EVT002) to determine correlation with reported dropped calls.",open,2026-04-07 06:39:23.202183
+2,billing,unknown,Customer says they were charged twice for international calls,"EVT023: Critical outage in Surabaya due to undersea cable damage affecting international connectivity. Started on 2026-03-14 at 08:00:00Z, resolved on 2026-03-15 at 20:00:00Z, impacting 90,000 customers.",20 completed call records found across multiple regions and call types. No specific patterns were immediately apparent that would indicate double billing.,Further investigation into call details and billing records is needed to determine the cause of the alleged double billing.,open,2026-04-07 06:44:13.216525
+3,network,Surabaya,Customers are reporting dropped calls in Surabaya.,EVT002: Scheduled tower maintenance in east Surabaya on 2026-03-26 affecting 2000 customers.,none,"Monitor network performance; investigate if complaints persist, considering upcoming maintenance event EVT002.",open,2026-04-07 07:03:44.355872
+4,network,Bandung,Customer reports failed calls in Bandung,"EVT019: Radio interference causing dropped calls in south Bandung.
+EVT003: Packet loss exceeding 15% on 4G network in north Bandung.
+EVT009: Complete service outage due to transformer explosion near tower site.
+EVT025: Lightning strike damaged tower equipment in highland area.","2 dropped and 2 failed calls recorded between 2026-03-25 and 2026-03-28 across BDG-001, BDG-002, BDG-003.",Investigate ongoing network degradations and outages in Bandung to address the failed calls.,open,2026-04-07 07:39:36.288592
+5,network,Bandung,Customer reports failed calls in Bandung,"EVT019: radio interference causing dropped calls
+EVT003: packet loss exceeding 15% on 4G network",2 dropped and 2 failed calls between 2026-03-25 and 2026-03-28 on towers BDG-002 and BDG-003.,Investigate cell towers BDG-002 and BDG-003 for radio interference and packet loss.,open,2026-04-07 08:02:46.572005
+6,network,Bandung,Customer reports failed calls in Bandung.,"EVT019: Radio interference causing dropped calls in south Bandung.
+EVT003: Packet loss exceeding 15% on 4G network in north Bandung.
+EVT009: Complete service outage due to transformer explosion near tower site.
+EVT025: Lightning strike damaged tower equipment in highland area.","2 calls were dropped and 2 calls failed.
+Issues observed on cell towers BDG-002 and BDG-003.
+Failed calls on BDG-002 (March 25th, March 27th).
+Dropped calls on BDG-002 (March 28th) and BDG-003 (March 27th).",Investigate localized issues on cell towers BDG-002 and BDG-003.,open,2026-04-07 08:11:12.323290
+7,network,Bandung,Customer reports failed calls in Bandung.,"EVT019: Degradation (radio interference)
+EVT003: Degradation (packet loss)
+EVT009: Outage (transformer explosion)
+EVT025: Outage (lightning strike)","Total records: 10
+Call Status: 2 failed, 2 dropped, 6 completed
+Affected Cell Towers: BDG-001, BDG-002, BDG-003
+Failed Calls: BDG-002 (2026-03-25 11:30:00, 2026-03-27 09:00:00)
+Dropped Calls: BDG-003 (2026-03-27 14:00:00), BDG-002 (2026-03-28 11:00:00)","Investigate failed calls on BDG-002 and dropped calls on BDG-002/BDG-003, correlating with recent network degradation events.",open,2026-04-07 10:55:17.057813
+8,network,Surabaya,Customer complains about slow internet and frequent disconnections in Surabaya.,"EVT002: Scheduled tower maintenance in east Surabaya (minor, started 2026-03-26)
+EVT013: Full service restoration after flood damage repair (minor, started 2026-03-24)
+EVT007: Flooding damaged ground-level equipment in west Surabaya (major, started 2026-03-23)","10 CDR records, 9 completed, 1 failed.
+Calls routed via SBY-001, SBY-002, SBY-003 from March 25-28, 2026.
+Single failed call on March 26, 2026, at 09:00:00 via SBY-001.",Investigate the ongoing maintenance event EVT002 and the failed call associated with SBY-001.,open,2026-04-07 10:58:10.227524
+9,billing,unknown,The customer was charged twice for their monthly plan.,none,"20 completed call records from various cell towers across all regions between March 27-28, 2026; no unusual patterns found.",Investigate billing system for discrepancies.,open,2026-04-07 10:58:36.100876
+10,network,Medan,"Network outage reported across multiple towers in Medan, customers cannot make calls.","EVT010: Maintenance - Antenna realignment.
+EVT027: Degradation - Voice quality.
+EVT021: Restoration - Services after power recovery.
+EVT004: Outage - Power failure.
+EVT015: Outage - Microwave link failure.","10 call records (9 completed, 1 dropped).
+Dropped voice call (ID 18) on 2026-03-26 11:30:00 from MDN-003 aligns with EVT027 (voice quality degradation).",Investigate the correlation between the dropped call and the reported voice quality degradation (EVT027) in Medan.,open,2026-04-07 10:58:59.281102

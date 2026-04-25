@@ -21,9 +21,16 @@ if not DATABASE_URL:
         "DATABASE_URL must be set, e.g. "
         "postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres"
     )
-GCP_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "plated-complex-491512-n6")
-BQ_DATASET = "telecom_network"
-BQ_TABLE = "network_events"
+GCP_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+if not GCP_PROJECT:
+    raise RuntimeError(
+        "GOOGLE_CLOUD_PROJECT must be set; pick a GCP project that owns the "
+        "BigQuery dataset NetPulse reads from."
+    )
+BQ_DATASET = os.environ.get("BQ_DATASET", "telecom_network")
+BQ_NETWORK_TABLE = os.environ.get("BQ_NETWORK_TABLE", "network_events")
+AL_CALL_TABLE = os.environ.get("AL_CALL_TABLE", "call_records")
+AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
 
 ALLOWED_REGIONS = {"Jakarta", "Surabaya", "Bandung", "Medan", "Semarang"}
 ALLOWED_SEVERITIES = {"low", "medium", "high", "critical"}
@@ -116,7 +123,7 @@ def bq_network_events(
         params.append(bigquery.ScalarQueryParameter("event_type", "STRING", event_type))
 
     sql = (
-        f"SELECT * FROM `{GCP_PROJECT}.{BQ_DATASET}.{BQ_TABLE}` "
+        f"SELECT * FROM `{GCP_PROJECT}.{BQ_DATASET}.{BQ_NETWORK_TABLE}` "
         f"WHERE {' AND '.join(where)} "
         f"ORDER BY started_at DESC LIMIT {int(limit)}"
     )
@@ -170,7 +177,7 @@ def alloydb_call_records(
         "cell_tower_id",
         "call_status",
     ]
-    sql = f"SELECT {', '.join(cols)} FROM call_records WHERE 1=1"
+    sql = f"SELECT {', '.join(cols)} FROM {AL_CALL_TABLE} WHERE 1=1"
     params: dict[str, str] = {}
     if region in ALLOWED_REGIONS:
         sql += " AND region = :region"
@@ -213,7 +220,7 @@ def alloydb_incident_tickets(limit: int = 100) -> QueryResult:
         "created_at",
     ]
     sql = (
-        f"SELECT {', '.join(cols)} FROM incident_tickets "
+        f"SELECT {', '.join(cols)} FROM {AL_TICKET_TABLE} "
         f"ORDER BY ticket_id DESC LIMIT {int(limit)}"
     )
 

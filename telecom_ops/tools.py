@@ -11,13 +11,21 @@ logger = logging.getLogger(__name__)
 
 # --- Module-level singletons ----------------------------------------------
 
-TOOLBOX_URL = "https://network-toolbox-486319900424.us-central1.run.app"
+TOOLBOX_URL = os.environ.get("TOOLBOX_URL")
+if not TOOLBOX_URL:
+    raise RuntimeError(
+        "TOOLBOX_URL must be set, e.g. "
+        "https://network-toolbox-<project-number>.<region>.run.app"
+    )
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError(
         "DATABASE_URL must be set, e.g. "
         "postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres"
     )
+
+AL_CALL_TABLE = os.environ.get("AL_CALL_TABLE", "call_records")
+AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
 
 try:
     _toolbox = ToolboxSyncClient(TOOLBOX_URL)
@@ -84,7 +92,7 @@ def query_cdr(
     sql = (
         "SELECT call_id, caller_number, receiver_number, call_type, "
         "duration_seconds, data_usage_mb, call_date, region, "
-        "cell_tower_id, call_status FROM call_records WHERE 1=1"
+        f"cell_tower_id, call_status FROM {AL_CALL_TABLE} WHERE 1=1"
     )
     params: dict[str, str] = {}
     if region:
@@ -149,7 +157,7 @@ def save_incident_ticket(
         return {"status": "error", "message": msg}
 
     sql = sqlalchemy.text(
-        "INSERT INTO incident_tickets "
+        f"INSERT INTO {AL_TICKET_TABLE} "
         "(category, region, description, related_events, cdr_findings, recommendation) "
         "VALUES (:category, :region, :description, :related_events, :cdr_findings, :recommendation) "
         "RETURNING ticket_id"

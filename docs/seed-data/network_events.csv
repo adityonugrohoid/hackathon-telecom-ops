@@ -1,0 +1,31 @@
+event_id,event_type,region,severity,description,started_at,resolved_at,affected_customers
+EVT030,maintenance,Jakarta,minor,Security patch deployment across all edge routers,2026-03-10 02:00:00,2026-03-10 05:00:00,0
+EVT028,outage,Semarang,major,Power grid instability causing intermittent tower shutdowns,2026-03-11 18:00:00,2026-03-12 08:00:00,25000
+EVT026,maintenance,Jakarta,minor,Planned migration of customers to new billing system,2026-03-12 00:00:00,2026-03-12 06:00:00,0
+EVT025,outage,Bandung,major,Lightning strike damaged tower equipment in highland area,2026-03-13 16:00:00,2026-03-14 06:00:00,11000
+EVT029,restoration,Bandung,minor,Network fully restored after lightning damage repair,2026-03-14 06:00:00,,0
+EVT023,outage,Surabaya,critical,Undersea cable damage affecting international connectivity,2026-03-14 08:00:00,2026-03-15 20:00:00,90000
+EVT022,maintenance,Semarang,minor,Firmware update on access layer switches,2026-03-15 01:00:00,2026-03-15 04:00:00,800
+EVT020,outage,Jakarta,major,DDoS attack on DNS infrastructure causing partial outage,2026-03-16 15:00:00,2026-03-16 19:00:00,70000
+EVT018,maintenance,Surabaya,minor,Battery replacement at 5 cell sites across Surabaya,2026-03-17 02:00:00,2026-03-17 08:00:00,0
+EVT017,outage,Semarang,critical,Vandalism to fiber optic cables on main trunk line,2026-03-18 20:00:00,2026-03-19 10:00:00,42000
+EVT015,outage,Medan,major,Microwave link failure between Medan and Binjai,2026-03-19 14:00:00,2026-03-19 22:00:00,15000
+EVT014,maintenance,Bandung,minor,Capacity expansion on fiber backbone Bandung-Jakarta link,2026-03-20 01:00:00,2026-03-20 06:00:00,0
+EVT012,outage,Jakarta,critical,BGP routing loop causing network partitioning in east Jakarta,2026-03-21 07:00:00,2026-03-21 11:00:00,52000
+EVT009,outage,Bandung,critical,Complete service outage due to transformer explosion near tower site,2026-03-22 11:00:00,2026-03-22 20:00:00,35000
+EVT007,outage,Surabaya,major,Flooding damaged ground-level equipment in west Surabaya,2026-03-23 22:00:00,2026-03-24 16:00:00,28000
+EVT013,restoration,Surabaya,minor,Full service restoration after flood damage repair,2026-03-24 16:00:00,,0
+EVT004,outage,Medan,critical,Power failure at main switching center Medan,2026-03-24 16:00:00,2026-03-25 02:00:00,38000
+EVT021,restoration,Medan,minor,Services restored after switching center power recovery,2026-03-25 02:00:00,,0
+EVT001,outage,Jakarta,critical,Major fiber cut affecting central Jakarta business district,2026-03-25 08:00:00,2026-03-25 14:30:00,45000
+EVT003,degradation,Bandung,major,Packet loss exceeding 15% on 4G network in north Bandung,2026-03-25 10:00:00,2026-03-25 18:00:00,12000
+EVT005,restoration,Jakarta,minor,Service restored after fiber repair in south Jakarta,2026-03-25 14:30:00,,0
+EVT002,maintenance,Surabaya,minor,Scheduled tower maintenance in east Surabaya,2026-03-26 01:00:00,2026-03-26 05:00:00,2000
+EVT027,degradation,Medan,major,Voice quality degradation on 3G fallback network,2026-03-26 08:00:00,2026-03-26 16:00:00,7000
+EVT019,degradation,Bandung,major,Radio interference causing dropped calls in south Bandung,2026-03-26 12:00:00,2026-03-26 20:00:00,9000
+EVT008,degradation,Jakarta,major,High latency on broadband services during peak hours,2026-03-26 18:00:00,2026-03-26 23:00:00,60000
+EVT006,maintenance,Semarang,minor,Software upgrade on core routers Semarang region,2026-03-27 02:00:00,2026-03-27 04:00:00,500
+EVT011,degradation,Semarang,major,Intermittent DNS resolution failures across Semarang,2026-03-27 09:00:00,2026-03-27 15:00:00,18000
+EVT024,degradation,Jakarta,major,Congestion on LTE bands during city-wide event,2026-03-27 14:00:00,2026-03-27 22:00:00,80000
+EVT010,maintenance,Medan,minor,Antenna realignment at 3 tower sites in south Medan,2026-03-28 00:00:00,2026-03-28 06:00:00,1500
+EVT016,degradation,Jakarta,minor,Slight throughput reduction during routine traffic rerouting,2026-03-28 06:00:00,2026-03-28 08:00:00,5000

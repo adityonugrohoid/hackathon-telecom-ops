@@ -53,7 +53,7 @@
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
           <span class="np-source-tag bq">BIGQUERY</span>
-          <code>plated-complex-491512-n6.telecom_network.network_events</code>
+          <code>{{ gcp_project }}.{{ bq_dataset }}.{{ bq_network_table }}</code>
         </div>
         <ul class="np-tools"></ul>
         <pre class="np-text"></pre>
@@ -78,7 +78,7 @@
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
-          <code>SELECT</code> from <code>call_records</code>
+          <code>SELECT</code> from <code>{{ al_call_table }}</code>
         </div>
         <ul class="np-tools"></ul>
         <pre class="np-text"></pre>
@@ -103,7 +103,7 @@
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
-          <code>INSERT</code> into <code>incident_tickets</code>
+          <code>INSERT</code> into <code>{{ al_ticket_table }}</code>
         </div>
         <ul class="np-tools"></ul>
         <pre class="np-text"></pre>
