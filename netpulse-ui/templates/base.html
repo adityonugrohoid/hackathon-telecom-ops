@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="np-header">
-    <div class="np-brand">
+    <a class="np-brand" href="{{ url_for('landing') }}">
       <img class="np-logo" src="{{ url_for('static', filename='netpulse-logo.png') }}" alt="NetPulse AI logo">
       <svg class="np-tower" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
         <path d="M32 8 L20 56 L44 56 Z" fill="none" stroke="#fff" stroke-width="2"/>
@@ -21,9 +21,10 @@
         <h1>NetPulse AI</h1>
         <p>TelecomOps Assistant</p>
       </div>
-    </div>
+    </a>
+    {% block nav %}
     <nav class="np-tabs">
-      <a class="np-tab {% if active_tab == 'chat' %}active{% endif %}" href="{{ url_for('chat') }}">
+      <a class="np-tab {% if active_tab == 'chat' %}active{% endif %}" href="{{ url_for('app_workspace') }}">
         Chat
         <span class="np-source-tag adk">ADK&nbsp;SEQUENTIAL</span>
       </a>
@@ -40,6 +41,7 @@
         <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
       </a>
     </nav>
+    {% endblock %}
   </header>
   <main class="np-main">{% block content %}{% endblock %}</main>
 </body>

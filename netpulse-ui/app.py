@@ -65,23 +65,36 @@ _load_dotenv_stdlib(TELECOM_ENV)
 
 app = Flask(__name__)
 
+EXAMPLE_COMPLAINTS: list[str] = [
+    "Major dropped calls in Surabaya",
+    "Slow internet in Jakarta during peak hours",
+    "Customer charged twice for international calls",
+    "Router keeps disconnecting in Bandung",
+]
+
 
 @app.route("/")
-def root():
-    """Redirect to the chat tab."""
-    return redirect(url_for("chat"))
+def landing():
+    """Render the hero landing page (product-marketing entry point)."""
+    return render_template(
+        "landing.html",
+        active_tab="landing",
+        examples=EXAMPLE_COMPLAINTS,
+    )
+
+
+@app.route("/app")
+def app_workspace():
+    """Render the chat workspace UI with example query chips."""
+    return render_template(
+        "chat.html", active_tab="chat", examples=EXAMPLE_COMPLAINTS
+    )
 
 
 @app.route("/chat")
 def chat():
-    """Render the chat UI with example query chips."""
-    examples = [
-        "Major dropped calls in Surabaya",
-        "Slow internet in Jakarta during peak hours",
-        "Customer charged twice for international calls",
-        "Router keeps disconnecting in Bandung",
-    ]
-    return render_template("chat.html", active_tab="chat", examples=examples)
+    """Backwards-compat 301 to the new /app workspace URL."""
+    return redirect(url_for("app_workspace"), code=301)
 
 
 @app.route("/api/query", methods=["POST"])
