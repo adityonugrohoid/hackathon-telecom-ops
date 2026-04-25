@@ -692,6 +692,61 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* §3.2 — Per-attempt Vertex AI region trace chip
+   ----------------------------------------------------------------------------
+   Built progressively in the timeline-entry header by npRenderRegionAttempt
+   from the SSE region_attempt events. Default tone is neutral (success); the
+   .np-region-trace-failover modifier swaps to a warning tint while a hop is
+   mid-walk so the chip reads as "we had to try the next region".
+   The leading globe glyph is part of the prefix span so the chip width grows
+   only with the regions actually attempted. */
+.np-region-trace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.np-region-trace::before {
+  content: "🌐";
+  margin-right: 4px;
+  font-size: 11px;
+}
+.np-region-trace-prefix {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+  margin-right: 2px;
+}
+.np-region-trace-region {
+  color: var(--np-primary-dark);
+  font-weight: var(--weight-semibold);
+}
+.np-region-trace-sep {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+}
+.np-region-trace-failover {
+  background: color-mix(in srgb, var(--np-status-major) 12%, transparent);
+  color: var(--np-status-major);
+  border-color: color-mix(in srgb, var(--np-status-major) 35%, transparent);
+}
+.np-region-trace-failover .np-region-trace-region {
+  color: var(--np-status-major);
+}
+.np-region-trace-failover .np-region-trace-prefix,
+.np-region-trace-failover .np-region-trace-sep {
+  color: color-mix(in srgb, var(--np-status-major) 70%, transparent);
+}
+
 /* §5.5 — Customer-impact card
    ----------------------------------------------------------------------------
    Renders above the final ticket once network_investigator's tool_response

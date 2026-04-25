@@ -32,17 +32,23 @@ class AgentEvent:
     """One streamable event for the chat UI.
 
     Attributes:
-        type: One of agent_start, tool_call, tool_response, text, complete, error.
+        type: One of agent_start, tool_call, tool_response, text, complete,
+            error, region_attempt.
         agent: Name of the LlmAgent that produced the event. For type='error',
             present iff the error originated inside a specific tool call;
-            absent for catastrophic top-level failures.
+            absent for catastrophic top-level failures. For type='region_attempt',
+            this is the owning agent name from the RegionFailoverGemini wrapper.
         tool: Function name when type is tool_call/tool_response/error (tool-scoped).
         args: Tool call arguments when type is tool_call.
         result: Tool response payload when type is tool_response.
         text: Model text when type is text.
         ticket_id: Final incident ticket id when type is complete.
         final_report: Final response_formatter text when type is complete.
-        message: Error message when type is error.
+        message: Error message when type is error, or upstream quota error
+            string when type is region_attempt + outcome is failover.
+        region: Vertex AI region attempted when type is region_attempt
+            (e.g., "global", "asia-southeast2").
+        outcome: "ok" or "failover" when type is region_attempt.
     """
 
     type: str
@@ -54,6 +60,8 @@ class AgentEvent:
     ticket_id: int | None = None
     final_report: str | None = None
     message: str | None = None
+    region: str | None = None
+    outcome: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Returns a dict with None fields stripped for compact SSE payloads."""
@@ -165,12 +173,42 @@ def _convert_event(event) -> list[AgentEvent]:
 
 
 def _agent_worker(query: str, q: queue.Queue, runner) -> None:
-    """Run runner.run_async in its own asyncio loop and push events on q."""
+    """Run runner.run_async in its own asyncio loop and push events on q.
+
+    Installs a per-request region-attempt observer on the
+    `RegionFailoverGemini` wrappers so per-attempt Vertex AI region telemetry
+    flows back into the SSE stream as `region_attempt` events. The observer
+    is registered through a `ContextVar`, so concurrent worker threads
+    register isolated callbacks without interfering with each other. The
+    callback is unregistered in the `finally` block so a crashed run cannot
+    leak a queue reference into a future request.
+    """
     from google.genai import types
+
+    from telecom_ops.vertex_failover import set_attempt_observer
 
     seen_authors: set[str] = set()
     final_report: str | None = None
     final_ticket: int | None = None
+
+    def _on_region_attempt(
+        owner: str, region: str, outcome: str, err_msg: str | None
+    ) -> None:
+        """Push a region_attempt event onto the SSE queue.
+
+        Routed by `owner` (the LlmAgent name set via `set_owner_name` in
+        `telecom_ops/agent.py:_failover_model`), so the chat UI can attach
+        the chip to the right `.np-timeline-entry`.
+        """
+        q.put(
+            AgentEvent(
+                type="region_attempt",
+                agent=owner,
+                region=region,
+                outcome=outcome,
+                message=err_msg,
+            ).to_dict()
+        )
 
     async def _drain():
         nonlocal final_report, final_ticket
@@ -212,12 +250,14 @@ def _agent_worker(query: str, q: queue.Queue, runner) -> None:
             ).to_dict()
         )
 
+    set_attempt_observer(_on_region_attempt)
     try:
         asyncio.run(_drain())
     except Exception as exc:  # noqa: BLE001
         logger.exception("Agent run failed")
         q.put(AgentEvent(type="error", message=str(exc)).to_dict())
     finally:
+        set_attempt_observer(None)
         q.put(_SENTINEL)
 
 

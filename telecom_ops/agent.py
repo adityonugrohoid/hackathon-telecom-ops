@@ -17,18 +17,27 @@ from .vertex_failover import RegionFailoverGemini
 MODEL_NAME = "gemini-2.5-flash"
 
 
-def _failover_model() -> RegionFailoverGemini:
-    """Build a fresh failover-enabled Gemini wrapper for one LlmAgent.
+def _failover_model(owner_name: str) -> RegionFailoverGemini:
+    """Build a fresh failover-enabled Gemini wrapper tagged with its owner.
 
     Each LlmAgent gets its own instance so the per-instance failover state
     (active region, cached genai.Client) is isolated — one agent's failover
-    does not bind the others to the same region.
+    does not bind the others to the same region. The wrapper is tagged with
+    the owning agent's name so the region-attempt observer in
+    `netpulse-ui/agent_runner.py` can route per-attempt telemetry back to
+    the right chat-UI timeline entry.
+
+    Args:
+        owner_name: The owning `LlmAgent.name` (must match the `name=` arg
+            on the LlmAgent so chat-UI selectors line up).
     """
-    return RegionFailoverGemini(model=MODEL_NAME)
+    wrapper = RegionFailoverGemini(model=MODEL_NAME)
+    wrapper.set_owner_name(owner_name)
+    return wrapper
 
 
 classifier = LlmAgent(
-    model=_failover_model(),
+    model=_failover_model("classifier"),
     name="classifier",
     description="Classifies the telecom complaint into a category and identifies the region.",
     instruction=CLASSIFIER_INSTRUCTION,
@@ -37,7 +46,7 @@ classifier = LlmAgent(
 )
 
 network_investigator = LlmAgent(
-    model=_failover_model(),
+    model=_failover_model("network_investigator"),
     name="network_investigator",
     description="Queries the BigQuery network events database for outages relevant to the region.",
     instruction=NETWORK_INVESTIGATOR_INSTRUCTION,
@@ -46,7 +55,7 @@ network_investigator = LlmAgent(
 )
 
 cdr_analyzer = LlmAgent(
-    model=_failover_model(),
+    model=_failover_model("cdr_analyzer"),
     name="cdr_analyzer",
     description="Queries AlloyDB call_records for evidence supporting the complaint.",
     instruction=CDR_ANALYZER_INSTRUCTION,
@@ -55,7 +64,7 @@ cdr_analyzer = LlmAgent(
 )
 
 response_formatter = LlmAgent(
-    model=_failover_model(),
+    model=_failover_model("response_formatter"),
     name="response_formatter",
     description="Synthesizes findings into a final incident report and persists it to AlloyDB.",
     instruction=RESPONSE_FORMATTER_INSTRUCTION,

@@ -19,8 +19,8 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **4. Visual redesign** | ✅ **DONE** (2026-04-25) | ~14h est · ~4h actual | source only | Landing + timeline + badges + impact + chips |
 | **5. Critical UX fixes** | ✅ **DONE** (2026-04-25) | ~3h est · ~1h actual | source only | Error states, button disable, input validation |
 | **6. Reproducibility + portability** | ✅ **DONE** (2026-04-25) | ~4h est · ~1.5h actual | source only | BYO-data foundation (env-driven, schema, seed pipeline) |
-| **7. Story polish** | ⏳ Next | ~3h | source + docs | Region telemetry + README + GIF |
-| **8. Ship** | Pending | ~1h | Cloud Run deploy | Single consolidated redeploy |
+| **7. Story polish** | ✅ **DONE** (2026-04-25) | ~3h est · ~1.5h actual | source + docs | Region telemetry chip + README Quick Demo + architectural callouts |
+| **8. Ship** | ⏳ Next | ~1h | Cloud Run deploy | Single consolidated redeploy |
 
 **Total remaining:** ~35h across phases 2-8.
 **Single redeploy principle:** All source work in phases 2-7 stages locally; only Phase 8 redeploys.
@@ -198,22 +198,37 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 7 — Story polish ⏳ NEXT
+## Phase 7 — Story polish ✅ DONE
 
-**Estimated:** ~3h · source + docs · no redeploy
-**Authorization:** Source-only + doc updates.
-**Blocked by:** Phase 3 §3.1 (region telemetry depends on the failover wrapper).
+**Completed:** 2026-04-25
+**Authorization:** Source + doc updates inside `telecom_ops/`, `netpulse-ui/`, and `README.md`.
+**Outcome:** Per-attempt Vertex AI region telemetry now surfaces on every timeline entry as a `🌐 via global` chip (with a `⤳ asia-southeast2` extension on failover); README gained a 5-step Quick Demo walkthrough and a 6-bullet "What's load-bearing in the diagram" callouts block above the mermaid; the `region_attempt` SSE event shape is now documented so external integrators can subscribe. SSE GIF (§2.11) explicitly deferred — see verifications log.
 
-- [ ] **§3.2** Per-attempt region telemetry on chat cards (`agent_runner.py` extends `AgentEvent` with optional `region`; `chat.html` renders region badge). *(~2h)*
-- [ ] **§2.9** Quick Demo section in `README.md` (90-second walkthrough). *(~30 min)*
-- [ ] **§2.10** Architectural callouts above the mermaid diagram in README. *(~30 min)*
-- [ ] **§2.11** SSE streaming GIF in README *(optional, high-impact)* — record 5-second pipeline animation with screen capture, embed in README. *(~1h)*
+- [x] **§3.2** Per-attempt region telemetry on chat cards — `RegionFailoverGemini` got two new `PrivateAttr`s (`_owner_name`, `_active_region` was already present) plus a `set_owner_name(name)` method so each wrapper instance carries the owning `LlmAgent.name`. A new module-level `set_attempt_observer(callback)` API stores the observer in a `ContextVar`, so concurrent Flask request threads each install their own callback in isolation. The wrapper's `generate_content_async` calls `_notify_attempt(self._owner_name, region, "ok"|"failover", err_msg)` after each attempt outcome, on both branches (failover loop AND streaming-bypass). `agent.py`'s `_failover_model(owner_name)` factory now takes the owner name and tags it on the wrapper before returning. `agent_runner.py` gained: (a) two new optional fields on `AgentEvent` (`region`, `outcome`); (b) docstring updates for the new `region_attempt` event type; (c) an `_on_region_attempt` closure inside `_agent_worker` that pushes `region_attempt` events onto the SSE queue, registered before `asyncio.run(_drain())` and unregistered in the `finally` block. `chat.html` got: (a) a `<span class="np-region-trace" hidden>` element appended to each of the 4 timeline entry headers; (b) a new `npRenderRegionAttempt(ev)` JS helper that progressively builds `via global` → `via global ⤳ asia-southeast2` → ... segments using nested spans (prefix + region + sep), guards against duplicate events on the streaming-bypass branch, and toggles a `np-region-trace-failover` modifier mid-walk; (c) wiring in `npHandle` to dispatch `region_attempt` events; (d) `npReset` clearing the trace chip on each new run. `style.css` got a new `.np-region-trace` block (compact pill, monospace, tokens-only — `--surface-sunken`, `--text-secondary/tertiary`, `--np-primary-dark`, `--np-status-major` for the failover tint). *(~2h est · ~50 min actual)*
+- [x] **§2.9** Quick Demo section in `README.md` — new 5-step walkthrough between Overview and the existing heavy Demo section (which keeps the screenshots + observability tabs). Each step names a specific surface in the live UI: launch chip handoff, timeline animation with the new region chip, customer-impact card, saved ticket badges + NOC actions, persistence in the Incident Tickets tab. Closes with a pointer to the ADK Dev UI fallback for trace-level inspection. Also added Quick Demo to the Table of Contents. *(~30 min est · ~15 min actual)*
+- [x] **§2.10** Architectural callouts above the mermaid diagram — new "What's load-bearing in the diagram" block of 6 bullets directly above the `\`\`\`mermaid` fence: (1) SequentialAgent + 4 LlmAgents not 1 big agent; (2) MCP Toolbox vs direct BigQuery MCP; (3) Vertex AI region failover-ranked not pinned (with the new per-attempt UI telemetry mention); (4) two frontends one engine; (5) async-to-sync thread+queue rationale; (6) AlloyDB read+write. The callouts make the diagram readable without having to reverse-engineer the design choices from the picture. *(~30 min est · ~15 min actual)*
+- [x] Bonus polish landed in the same PR: (a) the existing region-failover Features bullet now mentions the visible-in-UI chip; (b) the Observability section's SSE event-shape sample now shows a `region_attempt` event with explanation of the failover variant. Total surface area for "what's new in Phase 7" reads consistently across hero → quick demo → features → architecture callouts → observability.
+- [ ] **§2.11** SSE streaming GIF in README *(deferred)* — recording a screen-capture GIF of the live pipeline animation requires running the Flask UI in a real browser against the live AlloyDB instance, which is inside the Freeze A boundary (no source-only path to record this from Claude Code). The static screenshot at `docs/screenshots/net-pulse-ai-app_chat_adk_sequential.png` already covers the pipeline narrative for the deck; the live URL gives judges the real animation. Moved to post-deploy follow-up — should be recorded by the user after the Phase 8 redeploy lands, since the new region chip is a visual addition the GIF should capture too.
 
-**Verification:** Region badge shows `🌐 via global` on every agent card during normal run; force a failover and confirm `🌐 via global ⤳ asia-southeast2`. README skim-reads as a complete product story.
+**Verifications run locally:**
+- AST parse of all 3 modified Python files (`telecom_ops/vertex_failover.py`, `telecom_ops/agent.py`, `netpulse-ui/agent_runner.py`) — all OK.
+- `.venv/bin/python telecom_ops/vertex_failover.py` — matcher 5/5 + mocked failover-loop walked `["global", "asia-southeast2"]`, yielded the sentinel, AND the registered observer fired exactly twice with shapes `("test_agent", "global", "failover", "<429 detail>")` then `("test_agent", "asia-southeast2", "ok", None)`.
+- `agent.py` Pydantic instantiation smoke — 4 distinct `RegionFailoverGemini` instances, each `_owner_name` matching its `LlmAgent.name` (classifier / network_investigator / cdr_analyzer / response_formatter), all defaulting to `_active_region='global'`.
+- `AgentEvent` round-trip — `region_attempt` events with both `outcome='ok'` (no message) and `outcome='failover'` (with upstream error string in `message`) round-trip cleanly through `to_dict()`; existing event types still strip `region`/`outcome` as None.
+- Synthetic `_convert_event` regression test — confirmed `tool_call`, `tool_response`, `text` events still emit unchanged from a fake ADK event with FunctionCall/FunctionResponse/Content parts; `region`/`outcome` fields stay stripped when None.
+- `node -e "(function(){<chat.html script>})"` — JS parses cleanly with the new `npRenderRegionAttempt` helper, the `npReset` chip cleanup, and the `npHandle` dispatch addition.
+- `flask test_client()` smoke against `/`, `/app`, `/chat` — still 200 / 200 / 301; `/app` HTML now ships all 7 new symbols (`np-region-trace`, `npRenderRegionAttempt`, `region_attempt`, `np-region-trace-failover`, `np-region-trace-prefix`, `np-region-trace-region`, `np-region-trace-sep`) with 27 total matches across 4 chip elements (one per agent timeline entry).
+- CSS token sanity — every token referenced by the new `.np-region-trace*` rules (`--surface-sunken`, `--text-secondary`, `--text-tertiary`, `--border-default`, `--np-primary-dark`, `--np-status-major`, `--font-mono`, `--weight-semibold`, `--weight-regular`, `--radius-pill`) resolves in `tokens.css`.
+- Symbol grep across `telecom_ops/` + `netpulse-ui/` (Python + HTML + CSS) — `region_attempt` (14), `np-region-trace` (24), `set_attempt_observer` (7), `_notify_attempt` (4), `set_owner_name` (4), `_owner_name` (10), `npRenderRegionAttempt` (3), `_attempt_observer` (11), `AttemptCallback` (3) — all new identifiers ship to the right surfaces.
+
+**Verifications deferred to Phase 8 live deploy:**
+- Real-API end-to-end SSE chat run that emits `region_attempt` for each of the 4 agents on the happy path, plus a forced quota miss (e.g., a region monkeypatched to a known-bad value) to confirm the chip grows into `🌐 via global ⤳ asia-southeast2` visually. Both paths need AlloyDB credentials + Vertex AI traffic, both inside Freeze A.
+- §2.11 SSE streaming GIF — the live UI is the only place to record it now that the new region chip is in the timeline.
+- Visual sanity of the new chip against the live tokens — color-mix tints render correctly in modern browsers but the actual production Cloud Run static-asset cache needs the new `style.css` deployed.
 
 ---
 
-## Phase 8 — Ship 🚀 Pending
+## Phase 8 — Ship 🚀 ⏳ NEXT
 
 **Estimated:** ~1h
 **Authorization:** **Single consolidated Cloud Run redeploy by user** (Freeze A boundary).

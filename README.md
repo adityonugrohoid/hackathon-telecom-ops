@@ -21,6 +21,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Quick Demo](#quick-demo)
 - [Demo](#demo)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
@@ -49,6 +50,18 @@ When a customer reports something like *"Major dropped calls in Surabaya"*, a NO
 4. **Synthesizes** an incident ticket with a NOC recommendation, persisted to AlloyDB and surfaced to the operator.
 
 The whole workflow runs as a Google ADK `SequentialAgent` orchestrating four `LlmAgent` sub-agents, each backed by Gemini 2.5 Flash on Vertex AI. End-to-end latency is **25-30 seconds** including all four LLM calls and three live database round-trips.
+
+## Quick Demo
+
+A 90-second tour. No login, no setup, no terminal:
+
+1. **Open the live UI** → [https://netpulse-ui-486319900424.us-central1.run.app](https://netpulse-ui-486319900424.us-central1.run.app). The hero landing page explains the four-agent pipeline and lists three pre-seeded example complaints.
+2. **Click any launch chip** (e.g., *"Customer reports failed calls in Jakarta"*). The chip handoff prefills the chat input and auto-submits via `?seed=...&autorun=1`, so you land directly on the workspace with the run already in flight.
+3. **Watch the timeline animate** — `Classifier → Network Investigator → CDR Analyzer → Response Formatter`. Each entry shows its data source pills, the live tool calls (`query_events_jakarta(...)`, `query_cdr(...)`, `save_incident_ticket(...)`), and a tiny `🌐 via global` chip in the header showing which Vertex AI region answered. On a quota miss you'd see `🌐 via global ⤳ asia-southeast2` instead — failure visible as one extra hop, not a hard 500.
+4. **Read the customer-impact card** that fades in once the network investigator returns its rows: total customers affected (summed across BQ network events), severity histogram, and elapsed-since-onset (`~Xm`/`~Xh`/`~Xd`).
+5. **Land on the saved incident report** at the bottom: a category badge (network/billing/hardware/service/general), region badge, severity badge, the model's structured `INCIDENT REPORT`, and a recommended-NOC-actions chip panel keyed off the category. The ticket itself is now persisted in AlloyDB — switch to the **Incident Tickets** tab in the top nav and you'll see the row at the top of the list.
+
+Want to see the underlying ADK trace? The fallback service ([`telecom-ops-assistant`](https://telecom-ops-assistant-486319900424.us-central1.run.app)) is the same engine wrapped in the `adk web` Dev UI — `/events` shows every sub-agent turn and `/trace` shows span-by-span timing for every LLM call and tool invocation.
 
 ## Demo
 
@@ -91,7 +104,7 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 - **Cross-source evidence correlation.** Automatically links BigQuery network events with AlloyDB CDR rows to surface root causes (e.g., a dropped call from cell tower JKT-002 correlated with the major fiber cut event EVT001).
 - **Persistent structured output.** Every run inserts an auditable row in AlloyDB `incident_tickets` with category, region, related events, CDR findings, and a NOC recommendation. Queryable, joinable, archivable, not a transient chat response.
 - **Two frontends, one engine.** A custom NetPulse UI (Flask + Server-Sent Events) for branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
-- **APAC-optimized inference with region failover.** Vertex AI Gemini 2.5 Flash defaults to the `global` multi-region pool, then fails over per-LlmAgent through `asia-southeast2` → `asia-southeast1` → `us-central1` on `RESOURCE_EXHAUSTED`. Each agent walks the ladder independently, so one agent's quota miss does not bind the others. Implementation in `telecom_ops/vertex_failover.py`.
+- **APAC-optimized inference with region failover (visible in the UI).** Vertex AI Gemini 2.5 Flash defaults to the `global` multi-region pool, then fails over per-LlmAgent through `asia-southeast2` → `asia-southeast1` → `us-central1` on `RESOURCE_EXHAUSTED`. Each agent walks the ladder independently, so one agent's quota miss does not bind the others. Per-attempt telemetry surfaces in the chat workspace as a `🌐 via global` chip on each timeline entry — on a quota miss, the chip grows into `🌐 via global ⤳ asia-southeast2`, so failure is visible as one extra hop instead of opaque latency. Implementation in `telecom_ops/vertex_failover.py`; UI wiring via the `region_attempt` SSE event in `netpulse-ui/agent_runner.py`.
 - **Boot-resilient by design.** MCP Toolbox client wrapped in `try/except`, AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive idle-connection reaping, agent runner is lazy-loaded so frontend tabs that don't need the agent stay functional even if the toolbox is cold.
 - **Validated end-to-end.** 32 incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission stress testing. Zero `429 RESOURCE_EXHAUSTED` errors after the asia-southeast1 region switch.
 
@@ -114,6 +127,15 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 ## Architecture
 
 The mermaid block below renders natively on GitHub. A pre-rendered PNG also lives at [`docs/architecture.png`](docs/architecture.png) for use in slides and offline viewing.
+
+**What's load-bearing in the diagram:**
+
+- **`SequentialAgent` over four `LlmAgent`s, not one big agent with four tools.** Each sub-agent owns one responsibility, one tool (or one toolset), and one `output_key` written into `session.state`. Downstream agents read that state via `{key?}` defensive substitution so a partial chain still produces a graceful report.
+- **MCP Toolbox is the BigQuery bridge — not the direct BigQuery MCP endpoint.** The direct endpoint returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent; the Toolbox-as-intermediary pattern is the proven workaround. 8 tools live in `tools.yaml` (5 per-region `query_events_<city>` plus 3 cross-cutting summaries).
+- **Vertex AI region is failover-ranked, not pinned.** Every LLM-call edge in the diagram routes through `RegionFailoverGemini`, which defaults to `global` and walks `asia-southeast2 → asia-southeast1 → us-central1` on `RESOURCE_EXHAUSTED`. State is per-`LlmAgent`, so one agent's quota miss does not bind the others. Per-attempt region telemetry surfaces in the chat UI's timeline header.
+- **Two frontends, one engine.** Both `NetPulse UI` (Flask + SSE) and `ADK Dev UI` (`/events` + `/trace`) call the same `Runner + InMemorySessionService + root_agent`. The custom UI is the demo surface; the Dev UI is the free debug surface. Building one didn't require rebuilding the other.
+- **Async ADK Runner ↔ sync Flask via thread + queue.** The Flask SSE generator pulls from a `queue.Queue` populated by a per-request worker thread that runs its own asyncio loop. The naive `asyncio.run()` wrapper buffers all events into a list before yielding, which breaks the chat-card animation — that's why this bridge looks heavier than it needs to be at first glance.
+- **AlloyDB is read AND write.** `call_records` (read by CDR Analyzer) and `incident_tickets` (written by Response Formatter) are two tables in the same Postgres-compatible cluster. Both engines use `pool_pre_ping=True` + `pool_recycle=300` to survive AlloyDB's idle TCP reaper.
 
 ```mermaid
 %%{init: {"flowchart": {"htmlLabels": true, "curve": "basis"}, "themeVariables": {"fontSize": "15px", "fontFamily": "-apple-system, Segoe UI, sans-serif"}}}%%
@@ -475,12 +497,15 @@ The custom NetPulse UI also exposes the SSE event stream at `POST /api/query` if
 
 ```
 data: {"type": "agent_start", "agent": "classifier"}
+data: {"type": "region_attempt", "agent": "classifier", "region": "global", "outcome": "ok"}
 data: {"type": "tool_call", "agent": "classifier", "tool": "classify_issue", "args": {...}}
 data: {"type": "tool_response", "agent": "classifier", "tool": "classify_issue", "result": {...}}
 data: {"type": "text", "agent": "classifier", "text": "Category: network..."}
 ...
 data: {"type": "complete", "ticket_id": 32, "final_report": "INCIDENT REPORT..."}
 ```
+
+`region_attempt` events fire one per Vertex AI region attempt from `RegionFailoverGemini`. On a quota miss you'll see an extra event with `"outcome": "failover"` and the upstream error in `message`, immediately followed by another attempt against the next region in the ranked ladder.
 
 ## Lessons & Trade-offs
 
