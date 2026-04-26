@@ -7,9 +7,9 @@ from .prompts import (
     RESPONSE_FORMATTER_INSTRUCTION,
 )
 from .tools import (
+    cdr_nl_tools,
     classify_issue,
     network_tools,
-    query_cdr,
     save_incident_ticket,
 )
 from .vertex_failover import RegionFailoverGemini
@@ -75,9 +75,9 @@ network_investigator = LlmAgent(
 cdr_analyzer = LlmAgent(
     model=_failover_model("cdr_analyzer", MODEL_FAST),
     name="cdr_analyzer",
-    description="Queries AlloyDB call_records for evidence supporting the complaint.",
+    description="Asks AlloyDB AI NL2SQL one question against call_records to find evidence supporting the complaint.",
     instruction=CDR_ANALYZER_INSTRUCTION,
-    tools=[query_cdr],
+    tools=cdr_nl_tools,
     output_key="cdr_findings",
 )
 

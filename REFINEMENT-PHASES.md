@@ -331,6 +331,43 @@ Five deliverables (Phase 10 grew from 4 to 5 once a pre-existing severity-vocab 
 
 ---
 
+## Phase 11 — AlloyDB AI NL2SQL + BigQuery analytical workload ✅ DONE
+
+**Started + Settled:** 2026-04-26 (same day as Phases 9 + 10)
+**Authorization:** Source + Cloud Run deploys + BigQuery + AlloyDB writes + IAM on the project — all within post-2026-04-26 Freeze A operational lift, no per-change confirmation needed.
+
+Three deliverables that exercise the two judged dimensions Phase 10 left on the table: AlloyDB AI NL2SQL (the `alloydb_ai_nl` extension was *available* but not installed) and a BigQuery workload that earns the columnar slot (132 rows in 14 KB does not).
+
+- [x] **§11.1** AlloyDB AI NL2SQL replaces the hand-written `query_cdr` Python tool — `cdr_analyzer` now poses a single English question to the toolbox tool `query_cdr_nl`, which calls `alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1)` and returns matching rows. Setup is captured in `scripts/setup_alloydb_nl.py` (10 idempotent steps: extension install, model registration via `google_ml.create_model`, configuration create + bind to model, `register_table_view` for `public.call_records`, `add_general_context` with 5 lines (cities, enums, tower scheme, time hints), `generate_schema_context` (3-5 min blocking LLM step) + `apply_generated_schema_context`, `associate_concept_type` for the `region` column → built-in `city_name`, `create_value_index`, 4 templates (tolerated to fail since `add_template` always validates SQL), and the `netpulse_nl_reader` read-only role with `SELECT` on `call_records` + `EXECUTE` on the `alloydb_ai_nl` schema). The toolbox connects as that role, so destructive NL is blocked structurally — not by prompt. Five non-obvious findings captured in `~/.claude/memory/reference_alloydb_ai_nl_setup.md`.
+- [x] **§11.2** BigQuery `network_events` table re-created **DAY-partitioned on `started_at` and clustered by `(region, severity)`**, seed grown 132 → **50 000 events** over 6 months (2025-11-01 → 2026-04-30), with a new analytical tool `weekly_outage_trend(region, weeks_back, limit)` that exploits both. The tool returns per-week event_count, critical_count, major_count, total_affected, and avg_mttr_minutes for a (region, week_start) grain, scoped via `INTERVAL @weeks_back * 7 DAY` (BQ rejects WEEK on TIMESTAMP). Generator: `scripts/generate_network_events.py` (deterministic Random(20260426); 70/22/5/3 mix of maintenance/degradation/outage/restoration). Seed reload via `scripts/setup_bigquery.py --seed --recreate` (the new `--recreate` flag drops + recreates the table to apply the partition spec — partitioning cannot be added in place).
+- [x] **§11.3** AlloyDB `call_records` seed grown 500 → **5 000 rows** with anchor-clustered failures so NL queries return non-trivial answers (the demo's "which tower is failing" narrative needs winners that stand out). Generator: `scripts/generate_call_records.py` (deterministic Random(20260426); 60/25/15 mix of completed/dropped/failed; ~50% of dropped land on the first 2 towers per city; ~50% of failed land on towers 3-4). Seed reload via `setup_alloydb.py --seed` (the Phase 10 multi-row INSERT is unchanged — handles 5k rows in <120s with no modification). MCP Toolbox redeployed twice (`network-toolbox-00007-7b7` for the new tool wiring, then `00010-cmd` for the workaround discovery + WEEK→DAY fix).
+
+**Tool wiring change (`telecom_ops/tools.py`, `agent.py`, `prompts.py`):**
+- `tools.py` — deleted the 60-line `query_cdr` function (lines 77-139 in the pre-Phase-11 file); added `cdr_nl_tools = _toolbox.load_toolset("cdr_nl_toolset")` next to the existing `network_tools` loader; both wrapped in the same try/except so toolbox unreachability degrades gracefully.
+- `agent.py` — `cdr_analyzer.tools` swapped from `[query_cdr]` to `cdr_nl_tools`. Description updated to mention NL2SQL.
+- `prompts.py` — `CDR_ANALYZER_INSTRUCTION` rewritten for the NL question pattern with a per-category example each (network/hardware/billing/service/general); `NETWORK_INVESTIGATOR_INSTRUCTION` extended with a third tool block for `weekly_outage_trend`.
+
+**Toolbox config change (`tools.yaml`):**
+- New `alloydb-postgres` source `alloydb-cdr` pointing at the cluster + instance with `${DB_PASSWORD}` env-var substitution and explicit comment forbidding the postgres superuser.
+- New tool `query_cdr_nl` of `kind: postgres-sql` (NOT `kind: alloydb-ai-nl` — that adapter is broken in toolbox v0.23.0; see CLAUDE.md non-obvious choices).
+- New tool `weekly_outage_trend` of `kind: bigquery-sql` joins the `telecom_network_toolset`.
+- New `cdr_nl_toolset` containing only `query_cdr_nl`.
+
+**Verifications run end-to-end:**
+- §11.1 — Direct `SELECT alloydb_ai_nl.get_sql('netpulse_cdr_config', 'How many dropped calls in Denpasar in the last 14 days?')` returns clean SQL (`WHERE call_status='dropped' AND region='Denpasar'`) in 1.8s; `execute_nl_query` as `netpulse_nl_reader` returns `{'dropped_calls_count': 15}`.
+- §11.2 — `bq show ... | jq '{numRows, timePartitioning, clustering}'` confirms 50 000 rows, DAY partition on `started_at`, clustering on (region, severity); `bq query --dry_run` for 7-day window reports 24 944 bytes processed (vs 6 MB unfiltered) — partition pruning works.
+- §11.3 — Distribution audit: 3 000 completed / 1 250 dropped / 750 failed; per-region top tower DPS-002 has 41 dropped calls vs DPS-005's 11 (clustering bias landed).
+- E2E (Flask UI) — three demo complaints landed three new tickets: #12 Denpasar (network, cdr_findings = 6 towers DPS-001..006 with low-volume failure summary), #13 Jakarta (network, weekly_outage_trend used, JKT-002/003 highlighted), #14 Surabaya (network, hardware-leaning, SBY-002/003 highlighted). Per-run latency: 16s, 15s, 16s — within the 15s ±1s demo budget.
+
+**Operational lessons captured in `~/.claude/memory/reference_alloydb_ai_nl_setup.md`:**
+1. Toolbox v0.23.0 `kind: alloydb-ai-nl` always emits `param_names => ARRAY[]::TEXT[], param_values => ARRAY[]::TEXT[]` when no `nlConfigParameters:` are declared, and AlloyDB AI rejects empty text-arrays with `Invalid PSV named parameters`. Workaround: drop the native adapter and call `execute_nl_query` directly via `kind: postgres-sql`.
+2. `default_llm_model` instance flag is silently ignored unless the model is also registered in `google_ml.model_info_view` via `google_ml.create_model`. `predict_row(...)` auto-discovers Google publishers, but `alloydb_ai_nl` does not. Use a model that is BOTH in the catalog AND accessible from the AlloyDB instance's region (us-central1) — `gemini-2.5-flash:generateContent` works, `gemini-3.1-flash-lite-preview` does not (it is `global`-only on this project).
+3. `add_template` always executes the example SQL through an EXPLAIN-like validator regardless of `check_intent`. `$1` placeholders fail with `there is no parameter $1`. Templates are optional polish, not required.
+4. `associate_concept_type` only accepts pre-existing concept types. Built-ins: `city_name`, `country_name`, `date`, `full_person_name`, `generic_entity_name`, `region_name`, `ssn`. Custom enums need `add_concept_type` first. We use `city_name` for the region column and skip the call_status enum.
+5. BigQuery `TIMESTAMP_SUB` rejects `WEEK` for TIMESTAMP arguments; multiply into days (`INTERVAL N * 7 DAY`).
+
+---
+
 ## Out of scope (deferred from this 5-day window)
 
 Items present in `REFINEMENT-AUDIT.md` but not committed to the 5-day window:

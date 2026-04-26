@@ -64,6 +64,18 @@ every call** — use sentinel values to skip a filter:
   and event_type. Use this when the user asks for impact rollups or when the
   raw event list is too noisy to summarize.
 
+- weekly_outage_trend(region, weeks_back, limit)
+  - region: city name or "*" for all regions.
+  - weeks_back: integer (4 = month, 12 = quarter, 26 = half-year).
+  - limit: integer 1-500, default 100.
+
+  Returns weekly time-series rollup grouped by (week_start, region) with
+  event_count, critical_count, major_count, total_affected, and
+  avg_mttr_minutes. Use when the complaint references "this week" /
+  "lately" / "trend", when the raw event list shows >20 events and a
+  temporal summary helps, or when the user asks about historical patterns
+  or MTTR.
+
 If no network tools are available (the toolbox is unreachable), state that
 explicitly and skip ahead.
 
@@ -84,31 +96,37 @@ Prior context:
 - Network findings:
 {network_findings?}
 
-You have ONE tool: query_cdr(region, status_filter, call_type, days_back, limit).
+You have ONE tool: query_cdr_nl(question). The toolbox translates the question
+into SQL via AlloyDB AI Natural Language and returns matching rows from the
+call_records table (columns: call_id, caller_number, receiver_number,
+call_type {voice,sms,data}, duration_seconds, data_usage_mb, call_date, region,
+cell_tower_id, call_status {completed,dropped,failed}).
 
 CRITICAL RULES:
-1. Make EXACTLY ONE query_cdr function call. Do not chain multiple calls.
-   Do not emit Python code. Do not call print(). Use the ADK function-calling
-   protocol with a single function_call part.
-2. Pick a status_filter that matches the issue category — pick ONE value:
-   - network category   → status_filter=""        (returns all statuses; you
-                                                   will see dropped, failed,
-                                                   and completed calls in the
-                                                   same response)
-   - billing category   → status_filter="completed"
-   - hardware category  → status_filter="failed"
-   - service / general  → status_filter=""
-3. If region is "unknown", pass region="" to scan all regions.
-4. Optional filters — use sparingly:
-   - call_type: "voice", "sms", or "data"; "" for all (default).
-   - days_back: integer N to limit to the last N days; 0 for all-time (default).
-     Use 7 or 14 when the complaint mentions "this week" / "recently".
-   - limit: max rows to return (default 50, max 200). Increase only when the
-     impact warrants a wider sample.
-5. After the single query_cdr call returns, summarize the rows in 3-6 bullet
-   points: total row count, breakdown by call_status, affected cell towers,
-   timestamps, and any patterns (clustering by tower or time). If 0 rows
-   returned, say so explicitly.
+1. Make EXACTLY ONE query_cdr_nl function call. Do not chain multiple calls.
+   Do not emit Python code. Use the ADK function-calling protocol with a
+   single function_call part whose `question` argument is a focused English
+   sentence.
+2. The question MUST include the region (or say "all regions" if region is
+   "unknown") and a clear time scope. Default to "the last 7 days" when the
+   complaint mentions this week / recently / lately, "the last 30 days"
+   otherwise.
+3. Phrase the question to match the issue category — one example each:
+   - network  → "How many dropped and failed calls in {region} in the last 7
+                 days, grouped by cell_tower_id?"
+   - hardware → "Which cell towers in {region} have the most failed calls in
+                 the last 14 days?"
+   - billing  → "Total completed call volume and average duration in {region}
+                 over the last 30 days, grouped by call_type?"
+   - service  → "Daily call volume in {region} broken down by call_status
+                 over the last 14 days?"
+   - general  → "Top 5 cell towers in {region} by total call volume in the
+                 last 30 days?"
+4. After the single query_cdr_nl call returns, summarize the rows in 3-6
+   bullet points: row count, breakdown by call_status (or whichever grouping
+   was returned), notable cell towers or time clusters, and the headline
+   takeaway. If 0 rows returned, say so explicitly and note the question
+   that was asked.
 """
 
 RESPONSE_FORMATTER_INSTRUCTION = """You are the incident report formatter.

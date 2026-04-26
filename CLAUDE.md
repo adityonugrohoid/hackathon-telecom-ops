@@ -35,6 +35,26 @@ in `global`, ticket #74 issued. Pro-preview region-whitelist fragility
 resolved by collapsing `MODEL_SYNTHESIS = MODEL_FAST` so the failover
 ladder is structurally usable end-to-end.
 
+**Phase 11 ✅ DONE 2026-04-26** — three deliverables shipped same day,
+ahead of the 2026-04-30 Top-10 cut: (1) AlloyDB AI NL2SQL replaces the
+hand-written `query_cdr` SQL — `cdr_analyzer` now poses a single English
+question to `query_cdr_nl` and the toolbox translates it via
+`alloydb_ai_nl.execute_nl_query` against the new `netpulse_cdr_config`;
+read-only enforcement is structural via the `netpulse_nl_reader` Postgres
+role with `SELECT` on `call_records` only. (2) BigQuery seed grown 132 →
+50,000 events over 6 months, table re-created DAY-partitioned on
+`started_at` and clustered by `(region, severity)`, with a new
+`weekly_outage_trend` analytical tool that exploits both. (3) CDR seed
+grown 500 → 5,000 rows clustered around per-city anchor windows so NL
+queries return non-trivial counts. Live URL unchanged
+(`netpulse-ui-00012-z6n`); network-toolbox at `network-toolbox-00010-cmd`.
+Five new gotchas captured in
+`~/.claude/memory/reference_alloydb_ai_nl_setup.md` (toolbox v0.23
+alloydb-ai-nl adapter sends bad PSV; `default_llm_model` flag silently
+ignored without `google_ml.create_model`; `add_template` always validates
+SQL; `associate_concept_type` requires pre-existing concept; BQ
+`TIMESTAMP_SUB` rejects WEEK on TIMESTAMP).
+
 **Phase 10 ✅ DONE 2026-04-26** — five deliverables shipped same day:
 (1) MCP Toolbox refactor 8 tools → 2 universal parameterized tools
 (`network-toolbox-00006-bsm`); (2) `query_cdr` parameterized (added
@@ -70,8 +90,13 @@ Resources + project memory `protected_hackathon_deployment.md` §"Freeze A
 
 The core ADK package `telecom_ops/` exposes a `SequentialAgent` that runs
 four `LlmAgent` sub-agents in order: classifier, network investigator
-(BigQuery via MCP Toolbox), CDR analyzer (AlloyDB), and response formatter
-(writes the final ticket back to AlloyDB). The sibling Flask service
+(BigQuery via MCP Toolbox — `query_network_events`,
+`query_affected_customers_summary`, and the partition-pruning
+`weekly_outage_trend` analytical rollup), CDR analyzer (AlloyDB AI
+NL2SQL via MCP Toolbox — `query_cdr_nl` posts a single English question
+that `alloydb_ai_nl.execute_nl_query` translates against the
+`netpulse_cdr_config`), and response formatter (writes the final ticket
+back to AlloyDB). The sibling Flask service
 `netpulse-ui/` wraps the same `root_agent` in a hero landing page (`/`)
 plus a workspace (`/app`) that renders the agent run as a vertical
 timeline, with three read-only data viewer tabs and Server-Sent-Events
@@ -156,6 +181,47 @@ These look optional but each one is load-bearing for a reason:
   endpoint. The direct endpoint returns 403 / Connection-closed on
   Cloud Run; the toolbox-as-intermediary pattern works.
 
+- **`query_cdr_nl` uses `kind: postgres-sql`, not `kind: alloydb-ai-nl`.**
+  Toolbox v0.23.0's native alloydb-ai-nl adapter always emits
+  `param_names => ARRAY[]::TEXT[], param_values => ARRAY[]::TEXT[]` when no
+  `nlConfigParameters:` are declared, and AlloyDB AI rejects the empty
+  text-array with `SQLSTATE P0001 — Invalid PSV named parameters`. The
+  workaround is to drop the native adapter and call `execute_nl_query`
+  directly via `kind: postgres-sql`:
+  `SELECT alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1) AS result`.
+  The function-default NULLs land where they should and PSV is bypassed.
+  See `~/.claude/memory/reference_alloydb_ai_nl_setup.md` finding #1.
+
+- **AlloyDB AI NL2SQL needs the model registered via `google_ml.create_model`,
+  not just `default_llm_model` instance flag.** The flag is silently ignored
+  unless the model id appears in `google_ml.model_info_view`. We register
+  `gemini-2.5-flash:generateContent` (GA, accessible in us-central1) and
+  bind it to the `netpulse_cdr_config` via
+  `g_manage_configuration(operation => 'change_model', ...)`. Both steps
+  live in `scripts/setup_alloydb_nl.py`. Don't use `gemini-3.1-flash-lite-preview`
+  here — it's `global`-only on this project, and AlloyDB AI calls Vertex
+  from the AlloyDB instance's own region (us-central1).
+
+- **Read-only NL2SQL role is structural, not prompt-based.** The toolbox
+  connects to AlloyDB as `netpulse_nl_reader` (created by
+  `setup_alloydb_nl.py:create_reader_role`), which has only `SELECT` on
+  `public.call_records` and `EXECUTE` on the `alloydb_ai_nl` helper
+  functions. Even if the LLM emits a `DROP TABLE`, the role lacks the
+  privilege so the call errors out cleanly. The `alloydb-cdr` source in
+  `tools.yaml` carries an explicit comment forbidding the use of the
+  `postgres` superuser for convenience — that bypass would defeat the
+  protection.
+
+- **`network_events` is DAY-partitioned on `started_at` and clustered by
+  `(region, severity)`.** Phase 11 grew the seed 132 → 50,000 events so
+  the partition gates have something to prune. The `weekly_outage_trend`
+  tool relies on partition pruning to keep a 12-week / 26-week scan cheap;
+  without partitioning the table the rollup would scan the full 6-month
+  history every call. `setup_bigquery.py --recreate` is the only way to
+  apply the partition spec to a pre-Phase-11 unpartitioned table — BigQuery
+  does not allow partition changes in place. The flag is destructive
+  (drops + recreates the table); pair it with `--seed` to reload data.
+
 - **Toolbox parameters use sentinel defaults, not nullable binds.** The
   2 universal tools in `~/projects/genai-hackathon/track2-network-status/toolbox-service/tools.yaml`
   declare every param `required: true` with a `default:` sentinel — strings
@@ -199,7 +265,7 @@ emojis in code or docs unless explicitly requested.
 
 - `README.md` — full project overview, architecture diagram, screenshots, deployment commands
 - `telecom_ops/agent.py` — the four sub-agents and the SequentialAgent root
-- `telecom_ops/tools.py` — `classify_issue`, `query_cdr`, `save_incident_ticket`
+- `telecom_ops/tools.py` — `classify_issue` + `save_incident_ticket` (native ADK tools); `network_tools` and `cdr_nl_tools` toolset loaders for the MCP Toolbox
 - `telecom_ops/prompts.py` — sub-agent instruction templates
 - `netpulse-ui/agent_runner.py` — async-to-sync bridge for the SSE chat
 - `netpulse-ui/data_queries.py` — read-only BigQuery + AlloyDB queries for the data viewer tabs
@@ -207,7 +273,10 @@ emojis in code or docs unless explicitly requested.
 - `netpulse-ui/templates/landing.html` — hero, "How it works" 4-step grid, launch chips (`?seed=...&autorun=1` handoff), data-viewer cards, footer
 - `netpulse-ui/templates/chat.html` — workspace timeline, impact card, badges, NOC action chips, plus the streaming SSE handler in inline JS
 - `Dockerfile` (parent) — Cloud Run image for the Flask UI; copies both packages so the cross-package import resolves
-- `setup_alloydb.py` — idempotent DDL for both `incident_tickets` and `call_records`; `--seed` reloads CSVs via single multi-row INSERT (one round-trip even for 500 rows)
-- `scripts/setup_bigquery.py` — idempotent dataset+table creation; `--seed` reloads `network_events.csv` via WRITE_TRUNCATE
-- `docs/seed-data/` — canonical sample data: `network_events.csv` (132 events, 10 cities, 2026-01-08 → 2026-05-12), `call_records.csv` (500 CDRs), `incident_tickets.csv` (10 sample rows)
-- `~/projects/genai-hackathon/track2-network-status/toolbox-service/tools.yaml` — MCP Toolbox config: 2 universal parameterized tools with sentinel defaults
+- `setup_alloydb.py` — idempotent DDL for both `incident_tickets` and `call_records`; `--seed` reloads CSVs via single multi-row INSERT (one round-trip even for 5 000 rows)
+- `scripts/setup_alloydb_nl.py` — Phase 11: idempotent 10-step setup for AlloyDB AI NL2SQL on `call_records` — extension, model registration, config + table view, schema-context generation (3-5 min blocking step), value index, templates, and the `netpulse_nl_reader` read-only role
+- `scripts/setup_bigquery.py` — idempotent dataset+table creation; `--seed` reloads `network_events.csv` via WRITE_TRUNCATE; `--recreate` drops + recreates the table to apply DAY-partition + region/severity clustering (Phase 11)
+- `scripts/generate_network_events.py` — Phase 11: deterministic 50 000-row generator (180-day window, 70/22/5/3 mix, paired restorations) for `docs/seed-data/network_events.csv`
+- `scripts/generate_call_records.py` — Phase 11: deterministic 5 000-row CDR generator with anchor-clustered dropped/failed calls per city for `docs/seed-data/call_records.csv`
+- `docs/seed-data/` — canonical sample data: `network_events.csv` (50 000 events, 10 cities, 2025-11-01 → 2026-04-30), `call_records.csv` (5 000 CDRs), `incident_tickets.csv` (10 sample rows)
+- `~/projects/genai-hackathon/track2-network-status/toolbox-service/tools.yaml` — MCP Toolbox config: 3 BQ tools (`query_network_events`, `query_affected_customers_summary`, `weekly_outage_trend`) + 1 NL tool (`query_cdr_nl` via `kind: postgres-sql` against the `alloydb-cdr` source)
