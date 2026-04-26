@@ -32,8 +32,11 @@ BQ_NETWORK_TABLE = os.environ.get("BQ_NETWORK_TABLE", "network_events")
 AL_CALL_TABLE = os.environ.get("AL_CALL_TABLE", "call_records")
 AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
 
-ALLOWED_REGIONS = {"Jakarta", "Surabaya", "Bandung", "Medan", "Semarang"}
-ALLOWED_SEVERITIES = {"low", "medium", "high", "critical"}
+ALLOWED_REGIONS = {
+    "Jakarta", "Surabaya", "Bandung", "Medan", "Semarang",
+    "Yogyakarta", "Denpasar", "Makassar", "Palembang", "Balikpapan",
+}
+ALLOWED_SEVERITIES = {"critical", "major", "minor"}
 ALLOWED_EVENT_TYPES = {"outage", "maintenance", "degradation", "restoration"}
 ALLOWED_CALL_STATUSES = {"completed", "dropped", "failed"}
 ALLOWED_CALL_TYPES = {"voice", "sms", "data"}
