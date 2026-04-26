@@ -24,38 +24,35 @@ redeploy carried Phases 2-7 to production (rev `00004-sfn`); subsequent
 revisions `00005-ns6` (env-var typo fix), `00006-7v8` (heliodoron tokens
 + footer trim), `00007-x7t` (pandan accent unification), `00008-kzk`
 (5s timeout + 3.1 preview models), `00009-f2c` (multi-continent region
-ladder) all rode the same Phase 9 polish loop. Live URL:
+ladder), `00010-mqc` (Phase 9 round 2: header darker, done-state pandan
+unification, impact-card extractor + layout fix, Flash-Lite collapse for
+all 4 agents) all rode the same iterative polish loop. **Live URL:**
 https://netpulse-ui-486319900424.us-central1.run.app.
 
-Phase 9 in-flight workstreams:
+**Phase 9 ✅ DONE 2026-04-26** — last healthy production run on `00010-mqc`:
+10.5s end-to-end, all 4 agents on `gemini-3.1-flash-lite-preview` first-try
+in `global`, ticket #74 issued. Pro-preview region-whitelist fragility
+resolved by collapsing `MODEL_SYNTHESIS = MODEL_FAST` so the failover
+ladder is structurally usable end-to-end.
 
-1. **Heliodoron visual identity v1** — `tokens.css` swapped to sand
-   neutrals (oklch hue 85), surya warm-gold brand, Geist + Newsreader +
-   JetBrains Mono via jsdelivr `@fontsource-variable`. Hero "in seconds."
-   accent + all data-source badges unified on `--np-pandan` deep green.
-   Footer trimmed of "with Claude Code" link.
-2. **Region-failover hardening** — `RegionFailoverGemini` gained a 5s
-   `asyncio.wait_for` per region attempt (covers silent hangs that don't
-   raise `RESOURCE_EXHAUSTED`). Region ladder swapped from APAC-heavy
-   (`asia-southeast2 → asia-southeast1 → us-central1`) to multi-continent
-   (`global → us-central1 → europe-west4 → asia-northeast1`) after the
-   APAC entries returned `400 FAILED_PRECONDITION` on `gemini-3.1-pro-
-   preview`. New `_self_test_failover_on_timeout` mocks `asyncio.Future()`
-   in region 0; runtime ~5s.
-3. **Per-agent model selection** — `agent.py` now takes a model arg per
-   agent. `MODEL_FAST = "gemini-3.1-flash-lite-preview"` for classifier +
-   network_investigator + cdr_analyzer (validated 7/7 calls successful in
-   production). `MODEL_SYNTHESIS = "gemini-3.1-pro-preview"` for
-   response_formatter — but Pro-preview is **`global`-only for this
-   project** (us-central1 returns 404 NOT_FOUND), so the ladder collapses
-   to a single point of failure for synthesis. Open question: bump
-   timeout to 8s + revert MODEL_SYNTHESIS to `gemini-2.5-pro` (GA, multi-
-   region) so failover is structurally usable.
+**Phase 10 (next) — toolbox refactor + seed enrichment.** Three bundled
+deliverables agreed 2026-04-26: (1) collapse 8 MCP toolbox tools to 2
+universal parameterized tools (`@p IS NULL OR ...` pattern; design captured
+in `~/.claude/memory/reference_mcp_toolbox_universal_tools.md`), (2)
+parameterize `query_cdr` (add `days_back`, `call_type`, configurable
+`LIMIT`), (3) richer seed data — extend to ~10 cities (add Yogyakarta,
+Denpasar, Makassar, Palembang, Balikpapan), ~150 events, ~500 CDRs,
+broader date span. Reseed BQ + AlloyDB, update `ALLOWED_REGIONS` +
+classifier prompt, redeploy `netpulse-ui`.
 
-Deployed services in `plated-complex-491512-n6` remain under the freeze
-documented in global `~/.claude/CLAUDE.md`. Source edits inside this
-repo are within normal authorization; any Cloud Run redeploy still
-requires explicit per-change confirmation from the user.
+**Freeze A operational lift (2026-04-26).** User explicitly lifted all
+Freeze A operational restrictions on `plated-complex-491512-n6`, keeping
+only the project-billing link to `018C72-72D309-CBD42A` frozen. Cloud Run
+deploys, BigQuery + AlloyDB writes, IAM on the project, services
+enable/disable, Artifact Registry — all proceed without per-change
+confirmation. Full scope in global `~/.claude/CLAUDE.md` §Protected
+Resources + project memory `protected_hackathon_deployment.md` §"Freeze A
+— operational lift, 2026-04-26".
 
 ## Architecture in one paragraph
 
@@ -121,14 +118,27 @@ These look optional but each one is load-bearing for a reason:
   constants split the four agents by cognitive role: `MODEL_FAST =
   "gemini-3.1-flash-lite-preview"` for the three upstream agents
   (classifier, network_investigator, cdr_analyzer — each does a tool
-  call + small reasoning step, which Flash-Lite handles in ~0.6-1.9s
-  per call); `MODEL_SYNTHESIS = "gemini-3.1-pro-preview"` for the
-  user-visible response_formatter. Caveat: as of 2026-04-26, Pro-preview
-  is `global`-only for `plated-complex-491512-n6` (us-central1 returns
-  404 NOT_FOUND), so the failover ladder is structurally a no-op for
-  the synthesis step. Revert option for stability: `MODEL_SYNTHESIS =
-  "gemini-2.5-pro"` (GA, multi-region addressable). One-line change
-  isolated to `agent.py`.
+  call + small reasoning step, which Flash-Lite handles in ~0.6-1.9s per
+  call). As of Phase 9 round 2 (2026-04-26 rev `00010-mqc`),
+  `MODEL_SYNTHESIS = MODEL_FAST` — the synthesis step also runs on
+  Flash-Lite. Earlier rev `00009-f2c` ran synthesis on
+  `gemini-3.1-pro-preview` for higher instruction-following fidelity, but
+  Pro-preview proved `global`-only for this project (us-central1 returned
+  404 NOT_FOUND), making the failover ladder a structural no-op for
+  synthesis. Flash-Lite is multi-region addressable, so the ladder works
+  end-to-end. Re-split this constant if production traces show synthesis
+  quality is insufficient (revert option: `MODEL_SYNTHESIS =
+  "gemini-2.5-pro"`, GA + multi-region).
+
+- **Customer-impact card consumes a JSON-encoded string from MCP toolbox.**
+  `netpulse-ui/templates/chat.html:npExtractRows` recurses through both
+  `Array` and `string` shapes when walking `tool_response.result`. Reason:
+  `toolbox_core/itransport.py:51` declares `tool_invoke -> str`, and
+  `google.adk.flows.llm_flows.functions.__build_response_event` wraps any
+  non-dict tool return as `{"result": "<string>"}`. So `result.result` on
+  the SSE payload is a JSON-encoded string of the row array, not the
+  array itself. Without the recursive `JSON.parse` step, the impact-card
+  rollup silently degrades to `[]` and the card never populates correctly.
 
 - **MCP Toolbox in front of BigQuery**, not the direct BigQuery MCP
   endpoint. The direct endpoint returns 403 / Connection-closed on

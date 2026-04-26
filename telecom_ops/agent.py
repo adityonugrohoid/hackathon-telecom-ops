@@ -21,12 +21,15 @@ which Flash-Lite handles cheaply and quickly. Preview status is acceptable
 because the failover ladder catches transient outages. Revert to
 `gemini-2.5-flash` (GA) if the preview endpoint becomes unstable."""
 
-MODEL_SYNTHESIS = "gemini-3.1-pro-preview"
-"""Quality-tier model for the user-visible synthesis step (response_formatter).
-Pro-preview produces the final incident ticket — a higher-stakes output that
-benefits from the larger model's better instruction-following and structured-
-output fidelity. Revert to `gemini-2.5-flash` (GA) if the preview endpoint
-becomes unstable."""
+MODEL_SYNTHESIS = MODEL_FAST
+"""Synthesis model for response_formatter — currently pinned to MODEL_FAST.
+
+Phase 9 collapsed this onto MODEL_FAST after `gemini-3.1-pro-preview` proved
+to be `global`-only for `plated-complex-491512-n6` (us-central1 returned 404
+NOT_FOUND), which made the failover ladder a structural no-op for synthesis.
+Flash-Lite is multi-region addressable, so the ladder is now usable end-to-
+end for all 4 agents under the same 5s per-attempt timeout. Re-split this
+constant if production traces show synthesis quality is insufficient."""
 
 
 def _failover_model(owner_name: str, model_name: str) -> RegionFailoverGemini:
