@@ -109,7 +109,7 @@ in `telecom_ops/vertex_failover.py` — three upstream agents on a fast
 Flash-class variant, the synthesis agent on a Pro-class variant — and
 the wrapper walks a multi-continent region ladder
 (`global → us-central1 → europe-west4 → asia-northeast1`) on
-`RESOURCE_EXHAUSTED` 429 *or* a 5s silent-hang timeout, with the next
+`RESOURCE_EXHAUSTED` 429 *or* a 10s silent-hang timeout, with the next
 attempt cancelling the prior in-flight call so only one HTTP request
 is ever live per agent.
 
@@ -131,21 +131,29 @@ These look optional but each one is load-bearing for a reason:
   forever waiting on a half-dead socket. We hit this during a demo gap.
   Both `telecom_ops/tools.py` and `netpulse-ui/data_queries.py` set it.
 
-- **Vertex AI region failover + 5s hang timeout** in
+- **Vertex AI region failover + 10s hang timeout** in
   `telecom_ops/vertex_failover.py`. Default region is `global` (Google's
   multi-region routing pool); on `RESOURCE_EXHAUSTED` 429 *or* on
-  `asyncio.TimeoutError` from the per-attempt 5s `wait_for`, each
+  `asyncio.TimeoutError` from the per-attempt 10s `wait_for`, each
   `LlmAgent` independently rebuilds its `genai.Client` against the next
   region in `RANKED_REGIONS` (`global → us-central1 → europe-west4 →
   asia-northeast1`). The ladder is **multi-continent** — APAC entries
   were swapped for a non-SE-Asia region (Tokyo) after asia-southeast1/2
-  returned 400 FAILED_PRECONDITION on `gemini-3.1-pro-preview`. The 5s
+  returned 400 FAILED_PRECONDITION on `gemini-3.1-pro-preview`. The 10s
   timeout is critical: a previously frozen run on 2026-04-26 hung for
   Cloud Run's full 300s request timeout because the wrapper had no way
   to detect a TCP socket that never returned a response. Now `wait_for`
   cancels the in-flight coroutine on timeout, the underlying aiohttp
   client closes the socket, and the next region attempt fires — only one
-  HTTP call is ever in flight per wrapper. `agent.py` builds a fresh
+  HTTP call is ever in flight per wrapper. The original budget was 5 s
+  but a Phase 11 production trace (network_investigator summarising a
+  15.5 KB weekly_outage_trend response on `global`) false-positive-timed-
+  out at 5.05 s; raised to 10 s. The failover ladder is `global`-only-
+  usable for `gemini-3.1-flash-lite-preview` on this project (other
+  regions return `404 NOT_FOUND`), so a false-positive timeout surfaces
+  as a hard failure — not a successful failover. 10 s gives global enough
+  headroom under load while still catching real silent hangs (those never
+  return). `agent.py` builds a fresh
   wrapper per `LlmAgent` so the four agents own independent failover
   state. Streaming (`stream=True`) bypasses both failover AND timeout
   because partial yields cannot be safely replayed; NetPulse uses
