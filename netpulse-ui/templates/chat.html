@@ -116,17 +116,17 @@
   </ol>
 
   <aside class="np-impact-card" hidden>
-    <div class="np-impact-primary">
-      <span class="np-impact-icon" aria-hidden="true">!</span>
-      <span class="np-impact-affected">--</span>
-      <span class="np-impact-affected-label">customers affected</span>
-      <span class="np-impact-sep">|</span>
-      <span class="np-impact-elapsed">--</span>
-      <span class="np-impact-elapsed-label">since onset</span>
-    </div>
-    <div class="np-impact-meta">
-      <span class="np-impact-events">--</span>
-      <div class="np-impact-sevs"></div>
+    <span class="np-impact-icon" aria-hidden="true">!</span>
+    <div class="np-impact-body">
+      <div class="np-impact-headline">
+        <span class="np-impact-affected">--</span>
+        <span class="np-impact-affected-label">customers affected</span>
+      </div>
+      <div class="np-impact-meta">
+        <span class="np-impact-events-wrap" hidden><strong class="np-impact-events">--</strong> events</span>
+        <span class="np-impact-elapsed-wrap" hidden><strong class="np-impact-elapsed">--</strong> since onset</span>
+        <div class="np-impact-sevs"></div>
+      </div>
     </div>
   </aside>
 
@@ -237,13 +237,28 @@ var CATEGORY_ACTIONS = {
   ],
 };
 
+// MCP Toolbox tools return a JSON-encoded STRING (per
+// google.adk.flows.llm_flows.functions.__build_response_event, ADK then
+// wraps non-dict returns as `{"result": "<string>"}`). So the chat UI sees
+// `result.result` as a JSON string of the row array, not an Array. This
+// extractor walks both shapes — string-encoded and direct — recursing once
+// through any single intermediate JSON-string field.
 function npExtractRows(result) {
   if (!result) return [];
   if (Array.isArray(result)) return result;
+  if (typeof result === 'string') {
+    try { return npExtractRows(JSON.parse(result)); }
+    catch (e) { return []; }
+  }
   if (typeof result !== 'object') return [];
   var keys = ['rows', 'records', 'events', 'result', 'data'];
   for (var i = 0; i < keys.length; i++) {
-    if (Array.isArray(result[keys[i]])) return result[keys[i]];
+    var v = result[keys[i]];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+      var nested = npExtractRows(v);
+      if (nested.length) return nested;
+    }
   }
   return [];
 }
@@ -288,13 +303,21 @@ function npComputeImpact(rows) {
   var sevCounts = {critical: 0, high: 0, major: 0, medium: 0, minor: 0, low: 0, info: 0};
   rows.forEach(function (r) {
     if (!r) return;
+    // BigQuery INT64 sometimes serializes as a string — coerce both.
+    // Also handle aggregate-summary rows that use total_affected instead of
+    // affected_customers (query_affected_customers_summary tool output).
     var raw = r.affected_customers;
+    if (raw === undefined || raw === null || raw === '') raw = r.total_affected;
     var n = (typeof raw === 'number') ? raw : parseInt(raw, 10);
-    if (!isNaN(n)) totalAffected += n;
+    if (!isNaN(n) && n > 0) totalAffected += n;
     var sev = r.severity ? String(r.severity).toLowerCase() : '';
     if (sev in sevCounts) sevCounts[sev]++;
-    if (r.started_at) {
-      var t = Date.parse(r.started_at);
+    var ts = r.started_at || r.event_time || r.timestamp;
+    if (ts) {
+      // Date.parse handles both "2026-04-26T07:14:14+00:00" (ISO) and
+      // "2026-04-26 07:14:14" (space-separated, what data_queries.py emits)
+      // on modern engines.
+      var t = Date.parse(ts);
       if (!isNaN(t) && (earliest === null || t < earliest)) earliest = t;
     }
   });
@@ -311,9 +334,27 @@ function npRenderImpact() {
   if (!npImpact) { card.hidden = true; return; }
   card.hidden = false;
   card.querySelector('.np-impact-affected').textContent = npFormatNum(npImpact.affected);
-  card.querySelector('.np-impact-elapsed').textContent = npFormatElapsed(npImpact.earliestIso) || '--';
-  card.querySelector('.np-impact-events').textContent =
-    npImpact.events + ' event' + (npImpact.events === 1 ? '' : 's');
+
+  // Each meta element hides its own wrapper when the underlying data is
+  // missing — keeps the card from showing "-- since onset" placeholders
+  // when started_at / event count is not available in the row payload.
+  var elapsed = npFormatElapsed(npImpact.earliestIso);
+  var elapsedWrap = card.querySelector('.np-impact-elapsed-wrap');
+  if (elapsed) {
+    card.querySelector('.np-impact-elapsed').textContent = elapsed;
+    elapsedWrap.hidden = false;
+  } else {
+    elapsedWrap.hidden = true;
+  }
+
+  var eventsWrap = card.querySelector('.np-impact-events-wrap');
+  if (npImpact.events > 0) {
+    card.querySelector('.np-impact-events').textContent = npImpact.events;
+    eventsWrap.hidden = false;
+  } else {
+    eventsWrap.hidden = true;
+  }
+
   var sevHost = card.querySelector('.np-impact-sevs');
   while (sevHost.firstChild) sevHost.removeChild(sevHost.firstChild);
   IMPACT_SEV_ORDER.forEach(function (sev) {

@@ -21,9 +21,13 @@ body {
   min-height: 100vh;
 }
 
-/* Header */
+/* Header — deep amber-bronze for substantial structural presence.
+   Uses --np-brand-deep (oklch 38%) as the anchor so white text + the white
+   logo plate clear WCAG AA easily, and the gradient lands in
+   --np-brand-interactive (oklch 62%) for a heliodoron sunset transition that
+   stays on the warm-gold hue family. */
 .np-header {
-  background: linear-gradient(135deg, var(--np-primary-dark) 0%, var(--np-primary) 100%);
+  background: linear-gradient(135deg, var(--np-brand-deep) 0%, var(--np-brand-interactive) 100%);
   color: #fff;
   padding: 18px 32px;
   display: flex;
@@ -231,8 +235,8 @@ body {
   animation: np-dot-pulse 1.4s infinite;
 }
 .np-timeline-entry.done .np-timeline-dot {
-  background: var(--np-accent);
-  box-shadow: 0 0 0 2px var(--np-accent);
+  background: var(--np-pandan);
+  box-shadow: 0 0 0 2px var(--np-pandan);
 }
 .np-timeline-entry.error .np-timeline-dot {
   background: var(--np-error);
@@ -260,7 +264,7 @@ body {
   border-left-color: var(--np-primary);
 }
 .np-timeline-entry.done .np-timeline-content {
-  border-left-color: var(--np-accent);
+  border-left-color: var(--np-pandan);
 }
 .np-timeline-entry.error .np-timeline-content {
   border-left-color: var(--np-error);
@@ -382,7 +386,7 @@ body {
   color: #fff;
   animation: np-pulse 1.4s infinite;
 }
-.np-timeline-entry.done .np-status { background: var(--np-accent); color: #fff; }
+.np-timeline-entry.done .np-status { background: var(--np-pandan); color: #fff; }
 .np-timeline-entry.error .np-status {
   background: var(--np-error);
   color: #fff;
@@ -748,7 +752,13 @@ body {
    ----------------------------------------------------------------------------
    Renders above the final ticket once network_investigator's tool_response
    arrives. Aggregates affected_customers, severity counts, and onset elapsed
-   from the BQ rows. */
+   from the BQ rows.
+
+   Layout: icon-left + content-right. Content is split into a HEADLINE row
+   (the affected count as the lede) and a META row (elapsed + event count
+   + severity badges). The headline number is prominent (h1-tier), the
+   meta supports it. Each metric stays on its own line on narrow widths so
+   the card stays readable when cramped. */
 .np-impact-card {
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--np-status-critical) 8%, var(--surface-raised)) 0%,
@@ -759,59 +769,70 @@ body {
   padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-4);
   box-shadow: var(--shadow-soft);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.np-impact-primary {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4);
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  font-size: var(--type-body-sm);
-  color: var(--text-secondary);
 }
 .np-impact-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--np-status-critical);
   color: #fff;
   font-weight: var(--weight-bold);
-  font-size: 14px;
+  font-size: 18px;
   flex-shrink: 0;
 }
-.np-impact-affected,
-.np-impact-elapsed {
-  font-size: var(--type-h2);
+.np-impact-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.np-impact-headline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--type-body-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-tight);
+}
+.np-impact-affected {
+  font-size: var(--type-display-2);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
+  line-height: var(--leading-display);
 }
-.np-impact-affected-label,
-.np-impact-elapsed-label {
+.np-impact-affected-label {
   color: var(--text-secondary);
-}
-.np-impact-sep {
-  color: var(--text-tertiary);
-  margin: 0 var(--space-2);
-  user-select: none;
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
 }
 .np-impact-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-3) var(--space-4);
   font-size: var(--type-detail);
   color: var(--text-secondary);
 }
-.np-impact-events {
+.np-impact-meta > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.np-impact-meta strong {
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 .np-impact-sevs {
   display: flex;
