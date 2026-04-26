@@ -14,10 +14,22 @@ from .tools import (
 )
 from .vertex_failover import RegionFailoverGemini
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_FAST = "gemini-3.1-flash-lite-preview"
+"""Speed-tier model for the three upstream agents (classifier, network_
+investigator, cdr_analyzer). Each runs a tool call + small reasoning step,
+which Flash-Lite handles cheaply and quickly. Preview status is acceptable
+because the failover ladder catches transient outages. Revert to
+`gemini-2.5-flash` (GA) if the preview endpoint becomes unstable."""
+
+MODEL_SYNTHESIS = "gemini-3.1-pro-preview"
+"""Quality-tier model for the user-visible synthesis step (response_formatter).
+Pro-preview produces the final incident ticket — a higher-stakes output that
+benefits from the larger model's better instruction-following and structured-
+output fidelity. Revert to `gemini-2.5-flash` (GA) if the preview endpoint
+becomes unstable."""
 
 
-def _failover_model(owner_name: str) -> RegionFailoverGemini:
+def _failover_model(owner_name: str, model_name: str) -> RegionFailoverGemini:
     """Build a fresh failover-enabled Gemini wrapper tagged with its owner.
 
     Each LlmAgent gets its own instance so the per-instance failover state
@@ -30,14 +42,17 @@ def _failover_model(owner_name: str) -> RegionFailoverGemini:
     Args:
         owner_name: The owning `LlmAgent.name` (must match the `name=` arg
             on the LlmAgent so chat-UI selectors line up).
+        model_name: Vertex AI publisher model id (e.g., "gemini-2.5-flash").
+            Use `MODEL_FAST` for upstream agents and `MODEL_SYNTHESIS` for
+            the response_formatter.
     """
-    wrapper = RegionFailoverGemini(model=MODEL_NAME)
+    wrapper = RegionFailoverGemini(model=model_name)
     wrapper.set_owner_name(owner_name)
     return wrapper
 
 
 classifier = LlmAgent(
-    model=_failover_model("classifier"),
+    model=_failover_model("classifier", MODEL_FAST),
     name="classifier",
     description="Classifies the telecom complaint into a category and identifies the region.",
     instruction=CLASSIFIER_INSTRUCTION,
@@ -46,7 +61,7 @@ classifier = LlmAgent(
 )
 
 network_investigator = LlmAgent(
-    model=_failover_model("network_investigator"),
+    model=_failover_model("network_investigator", MODEL_FAST),
     name="network_investigator",
     description="Queries the BigQuery network events database for outages relevant to the region.",
     instruction=NETWORK_INVESTIGATOR_INSTRUCTION,
@@ -55,7 +70,7 @@ network_investigator = LlmAgent(
 )
 
 cdr_analyzer = LlmAgent(
-    model=_failover_model("cdr_analyzer"),
+    model=_failover_model("cdr_analyzer", MODEL_FAST),
     name="cdr_analyzer",
     description="Queries AlloyDB call_records for evidence supporting the complaint.",
     instruction=CDR_ANALYZER_INSTRUCTION,
@@ -64,7 +79,7 @@ cdr_analyzer = LlmAgent(
 )
 
 response_formatter = LlmAgent(
-    model=_failover_model("response_formatter"),
+    model=_failover_model("response_formatter", MODEL_SYNTHESIS),
     name="response_formatter",
     description="Synthesizes findings into a final incident report and persists it to AlloyDB.",
     instruction=RESPONSE_FORMATTER_INSTRUCTION,

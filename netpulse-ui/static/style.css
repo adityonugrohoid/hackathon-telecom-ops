@@ -347,8 +347,10 @@ body {
   border-radius: var(--radius-xs);
 }
 
-/* Backend tag pills — shared by card source, nav, banner, and inline tool calls.
-   Per-variant colors live at :root in the --c-* tokens above. */
+/* Backend tag pills — unified single-color badge across all backends.
+   The label text carries the context (BIGQUERY, ALLOYDB, etc.); color stays
+   uniform on --np-pandan to read as one consistent badge family. The per-
+   backend --c-* tokens still drive banner backgrounds in the workspace. */
 .np-source-tag,
 .np-tool-tag {
   display: inline-block;
@@ -361,14 +363,9 @@ body {
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 1.4;
+  background: color-mix(in oklab, var(--np-pandan) 14%, transparent);
+  color: var(--np-pandan);
 }
-.np-source-tag.adk,           .np-tool-tag.adk           { background: var(--c-adk-bg);            color: var(--c-adk-fg); }
-.np-source-tag.local,         .np-tool-tag.local         { background: var(--c-local-bg);          color: var(--c-local-fg); }
-.np-source-tag.mcp,           .np-tool-tag.mcp           { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
-.np-source-tag.bq,            .np-tool-tag.bq            { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
-.np-source-tag.alloydb,       .np-tool-tag.alloydb       { background: var(--c-alloydb-bg);        color: var(--c-alloydb-fg); }
-.np-source-tag.alloydb-write,
-.np-tool-tag.alloydb-write    { background: var(--c-alloydb-write-bg);  color: var(--c-alloydb-write-fg); }
 
 .np-tool-tag { margin-right: var(--space-1); }
 .np-status {
@@ -878,10 +875,7 @@ body {
   margin-bottom: var(--space-5);
 }
 .np-hero-accent {
-  background: linear-gradient(135deg, var(--np-primary) 0%, var(--np-accent) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--np-pandan);
 }
 .np-hero-sub {
   font-size: var(--type-body-lg);

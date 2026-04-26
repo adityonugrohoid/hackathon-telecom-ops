@@ -3,7 +3,7 @@
 Sequential runbook for the prototype refinement workstream. Each phase is grouped by execution order and dependency, not by impact tier. For per-item detail (rationale, file diffs, test plans, risks), see **`REFINEMENT-AUDIT.md`**.
 
 **Deadline:** 2026-04-30 EOD
-**Last updated:** 2026-04-25
+**Last updated:** 2026-04-26
 **Audit reference:** [`REFINEMENT-AUDIT.md`](./REFINEMENT-AUDIT.md)
 **Failover plan:** [`PLAN-vertex-region-failover.md`](./PLAN-vertex-region-failover.md)
 
@@ -20,10 +20,10 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **5. Critical UX fixes** | ✅ **DONE** (2026-04-25) | ~3h est · ~1h actual | source only | Error states, button disable, input validation |
 | **6. Reproducibility + portability** | ✅ **DONE** (2026-04-25) | ~4h est · ~1.5h actual | source only | BYO-data foundation (env-driven, schema, seed pipeline) |
 | **7. Story polish** | ✅ **DONE** (2026-04-25) | ~3h est · ~1.5h actual | source + docs | Region telemetry chip + README Quick Demo + architectural callouts |
-| **8. Ship** | ⏳ Next | ~1h | Cloud Run deploy | Single consolidated redeploy |
+| **8. Ship** | ✅ **DONE** (2026-04-26) | ~1.5h | Cloud Run deploy | First production deploy of Phases 2-7 (rev `00004-sfn`); revs `00005-ns6` (env-typo fix), `00006-7v8` (heliodoron tokens), `00007-x7t` (pandan unification), `00008-kzk` (5s timeout + 3.1 previews), `00009-f2c` (multi-continent ladder) carried Phase 9 polish |
+| **9. Post-deploy polish + robustness** | ⏳ In flight | ~3h | source + deploys | Heliodoron identity v1, footer trim, 5s hang timeout, per-agent model selection, multi-continent region ladder, Pro-preview region-whitelist surprise discovered |
 
-**Total remaining:** ~35h across phases 2-8.
-**Single redeploy principle:** All source work in phases 2-7 stages locally; only Phase 8 redeploys.
+**Single redeploy principle held for Phases 2-7** (one redeploy carried everything). Phase 9 now in iterative polish-and-redeploy mode against a warm `min-instances=1` service — each iteration ~3-5 min.
 
 ---
 
@@ -228,37 +228,64 @@ gcloud run services update network-toolbox \
 
 ---
 
-## Phase 8 — Ship 🚀 ⏳ NEXT
+## Phase 8 — Ship 🚀 ✅ DONE
 
-**Estimated:** ~1h
-**Authorization:** **Single consolidated Cloud Run redeploy by user** (Freeze A boundary).
+**Completed:** 2026-04-26
+**Authorization:** Single consolidated Cloud Run redeploy by user (Freeze A boundary).
 
-The one redeploy that carries every source change from phases 2-7 to production.
+The one redeploy that carried every source change from phases 2-7 to production.
 
-- [ ] User runs:
+- [x] User ran the deploy command (cleaned-up version, dropping the placeholder `DATABASE_URL=<unchanged>` segment so the existing AlloyDB URI rode through untouched via `--update-env-vars` merge semantics).
   ```bash
   gcloud run deploy netpulse-ui \
     --source . \
     --region us-central1 \
     --project plated-complex-491512-n6 \
-    --min-instances=1 \
-    --max-instances=10 \
-    --no-cpu-throttling \
-    --cpu-boost \
-    --update-env-vars="GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6,DATABASE_URL=<unchanged>,BQ_PROJECT=plated-complex-491512-n6,TOOLBOX_URL=https://network-toolbox-486319900424.us-central1.run.app,BQ_DATASET=telecom_network,BQ_NETWORK_TABLE=network_events,AL_CALL_TABLE=call_records,AL_TICKET_TABLE=incident_tickets"
+    --min-instances=1 --max-instances=10 \
+    --no-cpu-throttling --cpu-boost \
+    --update-env-vars="GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=plated-complex-491512-n6,BQ_PROJECT=plated-complex-491512-n6,TOOLBOX_URL=https://network-toolbox-486319900424.us-central1.run.app,BQ_DATASET=telecom_network,BQ_NETWORK_TABLE=network_events,AL_CALL_TABLE=call_records,AL_TICKET_TABLE=incident_tickets"
   ```
-- [ ] Health-check the 4 submitted URLs:
-  ```bash
-  for u in \
-    https://telecom-classifier-486319900424.us-central1.run.app \
-    https://network-status-agent-486319900424.us-central1.run.app \
-    https://telecom-cdr-app-486319900424.us-central1.run.app \
-    https://netpulse-ui-486319900424.us-central1.run.app; do
-    curl -s -o /dev/null -w "%{http_code} %s\n" --max-time 75 "$u"
-  done
-  ```
-- [ ] Smoke-test the deployed UI: open netpulse-ui, run an example complaint, confirm full pipeline + impact card + ticket.
-- [ ] Final review + submit before deadline EOD 2026-04-30.
+  - Result: revision **`netpulse-ui-00004-sfn`** serving 100% traffic.
+  - **Two env vars got mangled** by terminal line-wrapping during paste: `BQ_PROJECT=plated-complex-4\n  91512-n6` and `AL_CALL_TABLE=cal\n  l_records`. Caught immediately via `gcloud run services describe ... --format='value(spec.template.spec.containers[0].env)'`. Fixed via `gcloud run services update --update-env-vars="BQ_PROJECT=plated-complex-491512-n6,AL_CALL_TABLE=call_records"` → revision **`netpulse-ui-00005-ns6`**.
+- [x] Health-checked the 4 submitted URLs:
+  - `telecom-classifier`: 307 (IAM-protected redirect to login, healthy)
+  - `network-status-agent`: 307 (same)
+  - `telecom-cdr-app`: 200 (public)
+  - `netpulse-ui`: 200 (public)
+- [x] Smoke-test on deployed UI — Phase 9 polish loop began.
+
+**Verification finding logged for posterity:**
+The first chat run on revision `00005-ns6` at 05:48:22 UTC ran for **exactly 301 seconds** (Cloud Run's default 300s request timeout) and was killed mid-pipeline. Trace showed `network_investigator`'s second LLM call (after the BigQuery MCP tool call) sent at 05:48:34.703 and **never received a response** — silent Vertex AI hang. The region-failover wrapper had no `asyncio.wait_for` at this point, so it waited forever. This finding drove Phase 9 §9.4 (the 5s hang timeout).
+
+---
+
+## Phase 9 — Post-deploy polish + robustness ⏳ IN FLIGHT
+
+**Started:** 2026-04-26
+**Authorization:** Source changes inside `netpulse-ui/`, `telecom_ops/`, plus iterative Cloud Run redeploys (Freeze A — explicit per-deploy authorization).
+
+Each iteration is one redeploy. Warm `min-instances=1` keeps the service responsive between iterations.
+
+- [x] **§9.1** Heliodoron visual identity v1 — `tokens.css` swapped from cool-gray + Material Blue to heliodoron sand neutrals (oklch hue 85) + surya warm-gold brand. Three font @imports added: `@fontsource-variable/geist`, `newsreader`, `jetbrains-mono` from jsdelivr CDN. Heliodoron Indonesian accent palette (`--np-santan`, `--np-pandan`, `--np-tebu`, `--np-laut`, `--np-batik`, `--np-rosella`, `--np-terakota`) added to tokens.css for future iteration. Identity tokens curated from `~/projects/heliodoron-ui-identity/tokens/heliodoron.css` (commit `0923dfb`). Status ladder + category badges + backend palettes intentionally NOT touched in v1 (semantic distinctness preserved). **Revision `00006-7v8`.**
+- [x] **§9.2** Footer trim — removed "with Claude Code" link from `landing.html` footer. Now reads: `APAC GenAI Academy 2026 · Top 100 (#82) · Built by Adityo Nugroho.`. Rationale: "Claude Code" is too obvious for the hackathon context. **Rode revision `00006-7v8`.**
+- [x] **§9.3** Pandan accent unification — replaced the `linear-gradient(--np-primary → --np-accent)` text-clip on `.np-hero-accent` ("in seconds.") with a solid `var(--np-pandan)`. Replaced per-backend `.np-source-tag.{adk,local,mcp,bq,alloydb,alloydb-write}` color overrides with one unified `color-mix(in oklab, var(--np-pandan) 14%, transparent)` bg + `var(--np-pandan)` fg on the base `.np-source-tag, .np-tool-tag` selector. Backend `--c-*-bg/fg/accent` tokens preserved because they still drive workspace banner backgrounds via `color-mix()` derivations. **Revision `00007-x7t`.**
+- [x] **§9.4** 5s per-attempt Vertex AI timeout in `RegionFailoverGemini` — `asyncio.wait_for(_drain_one_attempt(), timeout=PER_ATTEMPT_TIMEOUT_S=5.0)` wraps each region attempt. On `TimeoutError`, the wrapper notifies the observer with `"failover"` + `"timeout after 5.0s"` message, advances to the next region. Only one HTTP call ever in flight per wrapper (cancellation propagates → aiohttp closes socket). New `_self_test_failover_on_timeout` mocks `asyncio.Future()` in region 0 (never resolves; only torn down by `wait_for`'s cancellation); test runtime ~5s. Three self-tests pass: matcher 5/5, quota-error failover (existing), hang failover (new). **Rode revision `00008-kzk`.**
+- [x] **§9.5** Per-agent model selection — `agent.py` `_failover_model(owner, model_name)` factory. `MODEL_FAST = "gemini-3.1-flash-lite-preview"` for classifier + network_investigator + cdr_analyzer (validated 7/7 calls successful in production trace). `MODEL_SYNTHESIS = "gemini-3.1-pro-preview"` for response_formatter — but see §9.7 below. **Rode revision `00008-kzk`.**
+- [x] **§9.6** Multi-continent region ladder — `RANKED_REGIONS` swapped from `("global", "asia-southeast2", "asia-southeast1", "us-central1")` to `("global", "us-central1", "europe-west4", "asia-northeast1")`. Self-tests pass against the new ladder (region 2 is now `us-central1` in both quota + hang test traces). **Revision `00009-f2c`.**
+- [ ] **§9.7** Pro-preview region-whitelist finding (open question). Production trace 2026-04-26 07:27 UTC showed `gemini-3.1-pro-preview` returns `404 NOT_FOUND` on `us-central1` for project `plated-complex-491512-n6` — model is `global`-only for this project. The failover ladder is structurally a no-op for the synthesis step under the current model choice. Plus the 5s timeout fired twice in a row on Pro/global (07:14 and 07:27 traces) — could be either a real hang or just normal Pro-class latency (5-12s typical) hitting a too-tight budget. **Recommended fix not yet applied:** bump `PER_ATTEMPT_TIMEOUT_S` to 8s + revert `MODEL_SYNTHESIS = "gemini-2.5-pro"` (GA, multi-region) so the ladder is structurally usable for synthesis. One-line model swap; ~30 min diagnose/decide/redeploy.
+- [ ] **§9.8** Post-deploy doc polish (this commit) — CLAUDE.md (project), REFINEMENT-PHASES.md, README.md region paragraph + lessons + deploy resource tables, memory files (`reference_vertex_ai_dsq.md`, new `reference_vertex_ai_preview_models.md`, update `MEMORY.md` index, update `project_top100_refinement.md`).
+- [ ] **§9.9** SSE streaming GIF in README (still deferred from §2.11) — the new region chip + heliodoron palette make this a richer demo asset; should be recorded by user post-§9.7 settle.
+
+**Verifications run locally (Phase 9):**
+- §9.1: deployed `tokens.css` + `style.css` confirmed serving 200 from live URL; `tokens.css` references in `base.html` confirmed via curl.
+- §9.4: `.venv/bin/python telecom_ops/vertex_failover.py` — matcher 5/5 + quota failover + hang failover. Hang test runtime exactly `PER_ATTEMPT_TIMEOUT_S` (~5s).
+- §9.5: 4 distinct `RegionFailoverGemini` instances confirmed via `id()`; `_owner_name` matches each `LlmAgent.name`; first 3 wrappers use `MODEL_FAST`, formatter uses `MODEL_SYNTHESIS`.
+- §9.6: self-tests adjusted for new ladder ordering — both walk `["global", "us-central1"]` instead of `["global", "asia-southeast2"]`.
+
+**Verifications surfaced from production logs:**
+- §9.4 timeout fired in production (`2026-04-26 07:14:52,238 WARNING telecom_ops.vertex_failover Vertex AI silent hang in region=global after 5.0s; falling over.`) — proves the new code path runs.
+- §9.5 Flash-Lite preview latencies measured: 0.6s, 1.4s, 1.7s, 1.9s, 4.3s (cold-start TLS handshake first call). All under the 5s budget except first call near 86%.
+- §9.7 Pro-preview unavailable in `us-central1`: `Publisher Model .../locations/us-central1/.../gemini-3.1-pro-preview was not found or your project does not have access to it.` — confirms global-only access for this project.
 
 ---
 
