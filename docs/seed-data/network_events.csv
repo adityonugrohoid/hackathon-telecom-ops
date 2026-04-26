@@ -1,31 +1,133 @@
 event_id,event_type,region,severity,description,started_at,resolved_at,affected_customers
+EVT031,outage,Jakarta,major,Submarine cable cut affecting Jakarta gateway,2026-01-08 09:00:00,2026-01-08 19:00:00,11347
+EVT042,outage,Yogyakarta,critical,Tower equipment damage from volcanic ash fall,2026-01-12 14:00:00,2026-01-12 20:00:00,67709
+EVT032,maintenance,Surabaya,minor,Software upgrade on core router fleet,2026-01-14 14:00:00,2026-01-14 16:00:00,0
+EVT070,outage,Makassar,major,Backbone disruption between Makassar and Manado,2026-01-15 12:00:00,2026-01-15 15:00:00,9600
+EVT056,outage,Denpasar,critical,Submarine cable damage south of Denpasar landing,2026-01-18 10:00:00,2026-01-18 16:00:00,37104
+EVT033,degradation,Bandung,major,Intermittent DNS resolution failures,2026-01-19 22:00:00,2026-01-20 02:00:00,19278
+EVT084,outage,Palembang,minor,Power failure at Plaju exchange,2026-01-21 08:00:00,2026-01-21 18:00:00,3219
+EVT034,outage,Medan,minor,Fiber backbone cut between Medan and Binjai,2026-01-23 06:00:00,2026-01-23 09:00:00,1700
+EVT098,outage,Balikpapan,critical,Fiber cut on East Kalimantan trunk,2026-01-24 16:00:00,2026-01-24 19:00:00,84041
+EVT043,maintenance,Yogyakarta,minor,Cooling system overhaul at primary exchange,2026-01-25 03:00:00,2026-01-25 06:00:00,0
+EVT071,maintenance,Makassar,minor,Cooling system overhaul at primary exchange,2026-01-27 05:00:00,2026-01-27 09:00:00,1500
+EVT035,maintenance,Semarang,minor,Power system maintenance at switching center,2026-01-28 11:00:00,2026-01-28 15:00:00,500
+EVT057,maintenance,Denpasar,minor,Firmware upgrade on access layer switches,2026-01-30 22:00:00,2026-01-31 04:00:00,1500
+EVT085,maintenance,Palembang,minor,Software upgrade on core router fleet,2026-02-01 18:00:00,2026-02-01 20:00:00,2500
+EVT036,degradation,Jakarta,major,High packet loss on 4G network during peak hours,2026-02-03 08:00:00,2026-02-03 12:00:00,21177
+EVT099,maintenance,Balikpapan,minor,Security patch deployment across edge equipment,2026-02-04 02:00:00,2026-02-04 05:00:00,1500
+EVT044,outage,Yogyakarta,major,Fiber cut during road expansion near Tugu,2026-02-05 19:00:00,2026-02-05 23:00:00,23922
+EVT072,outage,Makassar,major,Backbone disruption between Makassar and Manado,2026-02-06 17:00:00,2026-02-07 09:00:00,20568
+EVT058,outage,Denpasar,major,Microwave link degradation between Denpasar and Singaraja,2026-02-08 06:00:00,2026-02-08 16:00:00,13436
+EVT037,outage,Surabaya,critical,Mass power loss during seasonal storm,2026-02-09 18:00:00,2026-02-10 06:00:00,60793
+EVT086,outage,Palembang,minor,Riverine cable damage during dredging,2026-02-11 04:00:00,2026-02-11 20:00:00,2937
+EVT100,outage,Balikpapan,major,Switching center HVAC failure caused thermal shutdown,2026-02-13 11:00:00,2026-02-13 23:00:00,24284
+EVT038,maintenance,Bandung,minor,Capacity expansion on regional fiber backbone,2026-02-14 02:00:00,2026-02-14 06:00:00,500
+EVT045,degradation,Yogyakarta,major,High packet loss on 4G network during peak hours,2026-02-17 08:00:00,2026-02-17 14:00:00,5611
+EVT039,degradation,Medan,major,High packet loss on 4G network during peak hours,2026-02-18 13:00:00,2026-02-18 17:00:00,10355
+EVT073,degradation,Makassar,minor,Congestion on LTE bands during city-wide event,2026-02-18 23:00:00,2026-02-19 02:00:00,2171
+EVT059,degradation,Denpasar,major,Radio interference causing dropped calls,2026-02-19 15:00:00,2026-02-19 23:00:00,21473
+EVT087,degradation,Palembang,major,Voice quality degradation on 3G fallback,2026-02-21 13:00:00,2026-02-21 16:00:00,19870
+EVT040,outage,Semarang,major,Fiber optic vandalism on main trunk line,2026-02-22 20:00:00,2026-02-23 02:00:00,10152
+EVT101,degradation,Balikpapan,major,Voice quality degradation on 3G fallback,2026-02-24 19:00:00,2026-02-25 03:00:00,14195
+EVT041,maintenance,Jakarta,minor,Cable plant inspection and reconfiguration,2026-02-26 07:00:00,2026-02-26 12:00:00,0
+EVT074,maintenance,Makassar,minor,Battery replacement at multiple cell sites,2026-03-01 07:00:00,2026-03-01 12:00:00,0
+EVT046,maintenance,Yogyakarta,minor,Security patch deployment across edge equipment,2026-03-02 21:00:00,2026-03-02 23:00:00,0
+EVT060,maintenance,Denpasar,minor,Antenna realignment at tower cluster,2026-03-03 08:00:00,2026-03-03 10:00:00,2500
+EVT088,maintenance,Palembang,minor,Battery replacement at multiple cell sites,2026-03-04 22:00:00,2026-03-05 03:00:00,0
+EVT102,maintenance,Balikpapan,minor,Software upgrade on core router fleet,2026-03-05 06:00:00,2026-03-05 09:00:00,0
 EVT030,maintenance,Jakarta,minor,Security patch deployment across all edge routers,2026-03-10 02:00:00,2026-03-10 05:00:00,0
+EVT075,outage,Makassar,major,Eastern Indonesia gateway fiber cut,2026-03-11 14:00:00,2026-03-12 02:00:00,16589
 EVT028,outage,Semarang,major,Power grid instability causing intermittent tower shutdowns,2026-03-11 18:00:00,2026-03-12 08:00:00,25000
 EVT026,maintenance,Jakarta,minor,Planned migration of customers to new billing system,2026-03-12 00:00:00,2026-03-12 06:00:00,0
+EVT061,outage,Denpasar,critical,Submarine cable damage south of Denpasar landing,2026-03-12 19:00:00,2026-03-13 05:00:00,35391
+EVT089,outage,Palembang,critical,Tower outage at industrial corridor,2026-03-13 07:00:00,2026-03-13 23:00:00,72001
 EVT025,outage,Bandung,major,Lightning strike damaged tower equipment in highland area,2026-03-13 16:00:00,2026-03-14 06:00:00,11000
 EVT029,restoration,Bandung,minor,Network fully restored after lightning damage repair,2026-03-14 06:00:00,,0
 EVT023,outage,Surabaya,critical,Undersea cable damage affecting international connectivity,2026-03-14 08:00:00,2026-03-15 20:00:00,90000
+EVT047,outage,Yogyakarta,major,Tower power outage affecting university district,2026-03-14 11:00:00,2026-03-14 23:00:00,16313
 EVT022,maintenance,Semarang,minor,Firmware update on access layer switches,2026-03-15 01:00:00,2026-03-15 04:00:00,800
+EVT103,outage,Balikpapan,major,Switching center HVAC failure caused thermal shutdown,2026-03-16 13:00:00,2026-03-16 21:00:00,13274
 EVT020,outage,Jakarta,major,DDoS attack on DNS infrastructure causing partial outage,2026-03-16 15:00:00,2026-03-16 19:00:00,70000
 EVT018,maintenance,Surabaya,minor,Battery replacement at 5 cell sites across Surabaya,2026-03-17 02:00:00,2026-03-17 08:00:00,0
 EVT017,outage,Semarang,critical,Vandalism to fiber optic cables on main trunk line,2026-03-18 20:00:00,2026-03-19 10:00:00,42000
+EVT062,degradation,Denpasar,minor,Voice quality degradation on 3G fallback,2026-03-19 04:00:00,2026-03-19 07:00:00,2836
 EVT015,outage,Medan,major,Microwave link failure between Medan and Binjai,2026-03-19 14:00:00,2026-03-19 22:00:00,15000
 EVT014,maintenance,Bandung,minor,Capacity expansion on fiber backbone Bandung-Jakarta link,2026-03-20 01:00:00,2026-03-20 06:00:00,0
+EVT076,degradation,Makassar,minor,Signal degradation in densely populated zones,2026-03-20 20:00:00,2026-03-21 04:00:00,4660
 EVT012,outage,Jakarta,critical,BGP routing loop causing network partitioning in east Jakarta,2026-03-21 07:00:00,2026-03-21 11:00:00,52000
+EVT048,degradation,Yogyakarta,major,High packet loss on 4G network during peak hours,2026-03-21 16:00:00,2026-03-21 20:00:00,6163
 EVT009,outage,Bandung,critical,Complete service outage due to transformer explosion near tower site,2026-03-22 11:00:00,2026-03-22 20:00:00,35000
+EVT090,degradation,Palembang,major,Throughput reduction during traffic rerouting,2026-03-22 15:00:00,2026-03-22 21:00:00,8267
+EVT104,degradation,Balikpapan,minor,Voice quality degradation on 3G fallback,2026-03-23 20:00:00,2026-03-24 02:00:00,3542
 EVT007,outage,Surabaya,major,Flooding damaged ground-level equipment in west Surabaya,2026-03-23 22:00:00,2026-03-24 16:00:00,28000
+EVT063,maintenance,Denpasar,minor,Antenna realignment at tower cluster,2026-03-24 11:00:00,2026-03-24 14:00:00,2500
 EVT013,restoration,Surabaya,minor,Full service restoration after flood damage repair,2026-03-24 16:00:00,,0
 EVT004,outage,Medan,critical,Power failure at main switching center Medan,2026-03-24 16:00:00,2026-03-25 02:00:00,38000
 EVT021,restoration,Medan,minor,Services restored after switching center power recovery,2026-03-25 02:00:00,,0
+EVT077,maintenance,Makassar,minor,Antenna realignment at tower cluster,2026-03-25 03:00:00,2026-03-25 07:00:00,0
 EVT001,outage,Jakarta,critical,Major fiber cut affecting central Jakarta business district,2026-03-25 08:00:00,2026-03-25 14:30:00,45000
 EVT003,degradation,Bandung,major,Packet loss exceeding 15% on 4G network in north Bandung,2026-03-25 10:00:00,2026-03-25 18:00:00,12000
 EVT005,restoration,Jakarta,minor,Service restored after fiber repair in south Jakarta,2026-03-25 14:30:00,,0
 EVT002,maintenance,Surabaya,minor,Scheduled tower maintenance in east Surabaya,2026-03-26 01:00:00,2026-03-26 05:00:00,2000
+EVT049,maintenance,Yogyakarta,minor,Battery replacement at multiple cell sites,2026-03-26 02:00:00,2026-03-26 04:00:00,0
 EVT027,degradation,Medan,major,Voice quality degradation on 3G fallback network,2026-03-26 08:00:00,2026-03-26 16:00:00,7000
 EVT019,degradation,Bandung,major,Radio interference causing dropped calls in south Bandung,2026-03-26 12:00:00,2026-03-26 20:00:00,9000
 EVT008,degradation,Jakarta,major,High latency on broadband services during peak hours,2026-03-26 18:00:00,2026-03-26 23:00:00,60000
 EVT006,maintenance,Semarang,minor,Software upgrade on core routers Semarang region,2026-03-27 02:00:00,2026-03-27 04:00:00,500
+EVT091,maintenance,Palembang,minor,Software upgrade on core router fleet,2026-03-27 06:00:00,2026-03-27 11:00:00,500
 EVT011,degradation,Semarang,major,Intermittent DNS resolution failures across Semarang,2026-03-27 09:00:00,2026-03-27 15:00:00,18000
 EVT024,degradation,Jakarta,major,Congestion on LTE bands during city-wide event,2026-03-27 14:00:00,2026-03-27 22:00:00,80000
 EVT010,maintenance,Medan,minor,Antenna realignment at 3 tower sites in south Medan,2026-03-28 00:00:00,2026-03-28 06:00:00,1500
 EVT016,degradation,Jakarta,minor,Slight throughput reduction during routine traffic rerouting,2026-03-28 06:00:00,2026-03-28 08:00:00,5000
+EVT105,maintenance,Balikpapan,minor,Capacity expansion on regional fiber backbone,2026-03-28 08:00:00,2026-03-28 11:00:00,500
+EVT050,outage,Yogyakarta,major,Tower power outage affecting university district,2026-04-01 09:00:00,2026-04-01 13:00:00,9738
+EVT112,maintenance,Jakarta,minor,Capacity expansion on regional fiber backbone,2026-04-02 10:00:00,2026-04-02 15:00:00,2500
+EVT064,outage,Denpasar,critical,Submarine cable damage south of Denpasar landing,2026-04-02 16:00:00,2026-04-03 00:00:00,55365
+EVT122,outage,Medan,critical,Fiber backbone cut between Medan and Binjai,2026-04-03 07:00:00,2026-04-03 17:00:00,53412
+EVT078,outage,Makassar,major,Backbone disruption between Makassar and Manado,2026-04-03 11:00:00,2026-04-03 17:00:00,25144
+EVT092,outage,Palembang,major,Power failure at Plaju exchange,2026-04-04 12:00:00,2026-04-04 18:00:00,11934
+EVT116,outage,Surabaya,critical,Switching center fire damaged primary equipment,2026-04-04 14:00:00,2026-04-05 00:00:00,82528
+EVT125,maintenance,Semarang,minor,Security patch deployment across edge equipment,2026-04-05 04:00:00,2026-04-05 08:00:00,0
+EVT106,outage,Balikpapan,critical,Tower power loss during refinery outage,2026-04-05 14:00:00,2026-04-05 17:00:00,80689
+EVT051,maintenance,Yogyakarta,minor,Capacity expansion on regional fiber backbone,2026-04-06 14:00:00,2026-04-06 20:00:00,0
+EVT119,maintenance,Bandung,minor,Battery replacement at multiple cell sites,2026-04-06 16:00:00,2026-04-06 22:00:00,500
+EVT065,maintenance,Denpasar,minor,Software upgrade on core router fleet,2026-04-07 21:00:00,2026-04-08 02:00:00,1500
+EVT079,maintenance,Makassar,minor,Capacity expansion on regional fiber backbone,2026-04-08 16:00:00,2026-04-08 19:00:00,0
+EVT113,outage,Jakarta,major,Core router failure in central business district,2026-04-08 18:00:00,2026-04-09 04:00:00,9549
+EVT093,maintenance,Palembang,minor,Cable plant inspection and reconfiguration,2026-04-09 18:00:00,2026-04-09 20:00:00,1500
+EVT123,maintenance,Medan,minor,Capacity expansion on regional fiber backbone,2026-04-10 13:00:00,2026-04-10 19:00:00,0
+EVT107,maintenance,Balikpapan,minor,Power system maintenance at switching center,2026-04-10 19:00:00,2026-04-10 21:00:00,0
+EVT117,maintenance,Surabaya,minor,Scheduled migration to upgraded core routers,2026-04-11 21:00:00,2026-04-12 02:00:00,500
+EVT052,degradation,Yogyakarta,major,High packet loss on 4G network during peak hours,2026-04-11 22:00:00,2026-04-12 02:00:00,19759
+EVT066,degradation,Denpasar,major,Radio interference causing dropped calls,2026-04-12 08:00:00,2026-04-12 12:00:00,20111
+EVT126,outage,Semarang,major,Fiber optic vandalism on main trunk line,2026-04-12 18:00:00,2026-04-13 00:00:00,16345
+EVT120,outage,Bandung,major,Equipment failure at highland tower site,2026-04-13 11:00:00,2026-04-14 03:00:00,21229
+EVT080,degradation,Makassar,major,Throughput reduction during traffic rerouting,2026-04-13 21:00:00,2026-04-14 05:00:00,8223
+EVT094,degradation,Palembang,minor,Signal degradation in densely populated zones,2026-04-14 23:00:00,2026-04-15 03:00:00,3003
+EVT108,degradation,Balikpapan,major,Voice quality degradation on 3G fallback,2026-04-15 03:00:00,2026-04-15 06:00:00,13268
+EVT114,degradation,Jakarta,minor,Throughput reduction during traffic rerouting,2026-04-15 12:00:00,2026-04-15 18:00:00,2673
+EVT053,outage,Yogyakarta,critical,Fiber cut during road expansion near Tugu,2026-04-16 07:00:00,2026-04-16 23:00:00,39534
+EVT067,outage,Denpasar,minor,Microwave link degradation between Denpasar and Singaraja,2026-04-17 14:00:00,2026-04-17 20:00:00,2077
+EVT124,degradation,Medan,major,Throughput reduction during traffic rerouting,2026-04-17 22:00:00,2026-04-18 02:00:00,14954
+EVT081,outage,Makassar,major,Backbone disruption between Makassar and Manado,2026-04-18 06:00:00,2026-04-18 14:00:00,13561
+EVT118,degradation,Surabaya,major,Intermittent DNS resolution failures,2026-04-18 09:00:00,2026-04-18 15:00:00,12796
+EVT095,outage,Palembang,major,Tower outage at industrial corridor,2026-04-19 08:00:00,2026-04-19 16:00:00,27404
+EVT127,degradation,Semarang,minor,Latency spikes on broadband services,2026-04-19 11:00:00,2026-04-19 17:00:00,4567
+EVT109,outage,Balikpapan,critical,Submarine cable degradation Balikpapan-Mahakam,2026-04-20 09:00:00,2026-04-20 13:00:00,64718
+EVT121,degradation,Bandung,major,Signal degradation in densely populated zones,2026-04-20 19:00:00,2026-04-21 03:00:00,6899
+EVT054,maintenance,Yogyakarta,minor,Firmware upgrade on access layer switches,2026-04-21 13:00:00,2026-04-21 17:00:00,1500
+EVT115,maintenance,Jakarta,minor,Capacity expansion on regional fiber backbone,2026-04-22 08:00:00,2026-04-22 11:00:00,0
+EVT082,maintenance,Makassar,minor,Capacity expansion on regional fiber backbone,2026-04-22 12:00:00,2026-04-22 15:00:00,500
+EVT068,maintenance,Denpasar,minor,Power system maintenance at switching center,2026-04-22 19:00:00,2026-04-22 22:00:00,500
+EVT096,maintenance,Palembang,minor,Cooling system overhaul at primary exchange,2026-04-23 14:00:00,2026-04-23 16:00:00,0
+EVT110,maintenance,Balikpapan,minor,Scheduled migration to upgraded core routers,2026-04-23 16:00:00,2026-04-23 21:00:00,0
+EVT055,outage,Yogyakarta,major,Tower equipment damage from volcanic ash fall,2026-04-24 18:00:00,2026-04-24 22:00:00,21971
+EVT111,outage,Balikpapan,major,Tower power loss during refinery outage,2026-04-24 22:00:00,2026-04-25 02:00:00,14561
+EVT069,outage,Denpasar,critical,Submarine cable damage south of Denpasar landing,2026-04-25 09:00:00,2026-04-25 19:00:00,79981
+EVT083,outage,Makassar,major,Power grid failure at Tallo switching center,2026-04-25 17:00:00,2026-04-26 01:00:00,11254
+EVT097,outage,Palembang,major,Bukit Asam transmission line failure,2026-04-25 21:00:00,2026-04-26 05:00:00,18047
+EVT128,maintenance,Jakarta,minor,Firmware upgrade on access layer switches,2026-04-29 02:00:00,2026-04-29 06:00:00,0
+EVT129,maintenance,Surabaya,minor,Capacity expansion on regional fiber backbone,2026-05-02 01:00:00,2026-05-02 07:00:00,0
+EVT130,maintenance,Yogyakarta,minor,Power system maintenance at switching center,2026-05-05 03:00:00,2026-05-05 09:00:00,0
+EVT131,maintenance,Denpasar,minor,Battery replacement at multiple cell sites,2026-05-08 00:00:00,2026-05-08 02:00:00,0
+EVT132,maintenance,Makassar,minor,Firmware upgrade on access layer switches,2026-05-12 02:00:00,2026-05-12 06:00:00,0

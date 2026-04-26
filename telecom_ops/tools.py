@@ -78,13 +78,19 @@ def query_cdr(
     tool_context: ToolContext,
     region: str,
     status_filter: str = "",
+    call_type: str = "",
+    days_back: int = 0,
+    limit: int = 50,
 ) -> dict:
     """Queries the AlloyDB call_records table for matching call detail records.
 
     Args:
         tool_context: ADK tool context (provides session state access).
-        region: One of Jakarta, Surabaya, Bandung, Medan, Semarang. Empty for all regions.
+        region: City name (e.g. Jakarta, Denpasar). Empty string for all regions.
         status_filter: Optional call_status filter: 'completed', 'dropped', 'failed'. Empty for all.
+        call_type: Optional call_type filter: 'voice', 'sms', 'data'. Empty for all.
+        days_back: Limit to calls within the last N days. 0 (default) = no time filter.
+        limit: Max rows to return. Clamped to 1..200; default 50.
 
     Returns:
         Dict with status, row_count, and a list of records.
@@ -94,14 +100,21 @@ def query_cdr(
         "duration_seconds, data_usage_mb, call_date, region, "
         f"cell_tower_id, call_status FROM {AL_CALL_TABLE} WHERE 1=1"
     )
-    params: dict[str, str] = {}
+    params: dict[str, str | int] = {}
     if region:
         sql += " AND region = :region"
         params["region"] = region
     if status_filter:
         sql += " AND call_status = :status"
         params["status"] = status_filter
-    sql += " ORDER BY call_date DESC LIMIT 20"
+    if call_type:
+        sql += " AND call_type = :call_type"
+        params["call_type"] = call_type
+    if days_back and days_back > 0:
+        days_int = max(1, min(int(days_back), 365))
+        sql += f" AND call_date >= NOW() - INTERVAL '{days_int} days'"
+    bounded_limit = max(1, min(int(limit) if limit else 50, 200))
+    sql += f" ORDER BY call_date DESC LIMIT {bounded_limit}"
 
     with _engine.connect() as conn:
         rows = [
@@ -116,9 +129,11 @@ def query_cdr(
 
     tool_context.state["cdr_results"] = rows
     logger.info(
-        "[query_cdr] region=%s status_filter=%s row_count=%d",
+        "[query_cdr] region=%s status=%s call_type=%s days_back=%s row_count=%d",
         region,
         status_filter,
+        call_type,
+        days_back,
         len(rows),
     )
     return {"status": "success", "row_count": len(rows), "records": rows}

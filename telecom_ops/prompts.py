@@ -12,7 +12,7 @@ CLASSIFIER_INSTRUCTION = """You are a telecom support classifier.
 When a user sends a complaint, you MUST call the classify_issue tool exactly once with:
 - complaint: the user's verbatim complaint text
 - category: one of [billing, network, hardware, service, general]
-- region: the city mentioned in the complaint (Jakarta, Surabaya, Bandung, Medan, Semarang) or "unknown"
+- region: the city mentioned in the complaint (Jakarta, Surabaya, Bandung, Medan, Semarang, Yogyakarta, Denpasar, Makassar, Palembang, Balikpapan) or "unknown"
 - reasoning: one short sentence
 
 Categories:
@@ -37,13 +37,32 @@ The classifier produced:
 Use the available network tools (BigQuery via MCP Toolbox) to find any outages,
 maintenance events, degradations, or restorations relevant to the region above.
 
-Tool selection strategy:
-- If region is one of Jakarta/Surabaya/Bandung/Medan/Semarang, call the matching
-  query_events_<region> tool (e.g., query_events_surabaya).
-- Otherwise call query_critical_outages and query_affected_customers_summary.
-- For non-network categories (billing/service/hardware/general), still call
-  query_critical_outages once and report whether anything is currently impacting
-  the region; this rules network out as a contributing factor.
+You have TWO tools, both parameterized. **You MUST pass ALL parameters on
+every call** — use sentinel values to skip a filter:
+
+- query_network_events(region, severity, event_type, days_back, limit)
+  - region: city name (e.g. "Denpasar") or "*" for all regions.
+  - severity: "critical" / "major" / "minor" or "*" for all severities.
+  - event_type: "outage" / "maintenance" / "degradation" / "restoration" or "*" for all.
+  - days_back: integer N (last N days), or 36500 for all-time.
+  - limit: integer 1-200 (default 50). Use 10 for a region scan, 50 for
+    a broader sweep with no region filter.
+
+  When to use:
+  - Regional investigation: region="<classifier region>", others "*"/36500/10.
+  - Severity-scoped sweep across all regions: region="*", severity="critical"
+    or "major", days_back=7 (recent only), limit=20.
+  - Non-network categories (billing/service/hardware/general): pass the
+    region with severity/event_type "*"; this rules out a network outage
+    as a contributing factor.
+
+- query_affected_customers_summary(region, days_back)
+  - region: city name or "*" for all regions.
+  - days_back: integer N or 36500 for all-time.
+
+  Returns aggregated impact (event_count, total_affected) grouped by region
+  and event_type. Use this when the user asks for impact rollups or when the
+  raw event list is too noisy to summarize.
 
 If no network tools are available (the toolbox is unreachable), state that
 explicitly and skip ahead.
@@ -53,7 +72,7 @@ this exact format:
 - [EVENT_ID] [EVENT_TYPE] [SEVERITY] [REGION] [STARTED_AT] · affected=[N] · [DESCRIPTION]
 
 If more than 8 events are returned, emit ALL of them but rank by severity
-(critical → major → minor → info) then by started_at (most recent first).
+(critical → major → minor) then by started_at (most recent first).
 Never truncate the list or replace it with a summary count.
 """
 
@@ -65,7 +84,7 @@ Prior context:
 - Network findings:
 {network_findings?}
 
-You have ONE tool: query_cdr(region, status_filter).
+You have ONE tool: query_cdr(region, status_filter, call_type, days_back, limit).
 
 CRITICAL RULES:
 1. Make EXACTLY ONE query_cdr function call. Do not chain multiple calls.
@@ -80,7 +99,13 @@ CRITICAL RULES:
    - hardware category  → status_filter="failed"
    - service / general  → status_filter=""
 3. If region is "unknown", pass region="" to scan all regions.
-4. After the single query_cdr call returns, summarize the rows in 3-6 bullet
+4. Optional filters — use sparingly:
+   - call_type: "voice", "sms", or "data"; "" for all (default).
+   - days_back: integer N to limit to the last N days; 0 for all-time (default).
+     Use 7 or 14 when the complaint mentions "this week" / "recently".
+   - limit: max rows to return (default 50, max 200). Increase only when the
+     impact warrants a wider sample.
+5. After the single query_cdr call returns, summarize the rows in 3-6 bullet
    points: total row count, breakdown by call_status, affected cell towers,
    timestamps, and any patterns (clustering by tower or time). If 0 rows
    returned, say so explicitly.

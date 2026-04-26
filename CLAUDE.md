@@ -35,15 +35,27 @@ in `global`, ticket #74 issued. Pro-preview region-whitelist fragility
 resolved by collapsing `MODEL_SYNTHESIS = MODEL_FAST` so the failover
 ladder is structurally usable end-to-end.
 
-**Phase 10 (next) — toolbox refactor + seed enrichment.** Three bundled
-deliverables agreed 2026-04-26: (1) collapse 8 MCP toolbox tools to 2
-universal parameterized tools (`@p IS NULL OR ...` pattern; design captured
-in `~/.claude/memory/reference_mcp_toolbox_universal_tools.md`), (2)
-parameterize `query_cdr` (add `days_back`, `call_type`, configurable
-`LIMIT`), (3) richer seed data — extend to ~10 cities (add Yogyakarta,
-Denpasar, Makassar, Palembang, Balikpapan), ~150 events, ~500 CDRs,
-broader date span. Reseed BQ + AlloyDB, update `ALLOWED_REGIONS` +
-classifier prompt, redeploy `netpulse-ui`.
+**Phase 10 ✅ DONE 2026-04-26** — five deliverables shipped same day:
+(1) MCP Toolbox refactor 8 tools → 2 universal parameterized tools
+(`network-toolbox-00006-bsm`); (2) `query_cdr` parameterized (added
+`days_back`, `call_type`, configurable `LIMIT`); (3) seed enriched to
+10 cities (added Yogyakarta, Denpasar, Makassar, Palembang, Balikpapan),
+132 events spanning 2026-01-08 → 2026-05-12 incl. 5 future maintenance
+windows, 500 CDRs with realistic dropped/failed clustering around outage
+anchors; (4) `setup_alloydb.py:truncate_and_load` rewritten to use a
+single multi-row `INSERT VALUES` statement (was timing out on pg8000
+`executemany` of 500 rows over WAN); (5) pre-existing `ALLOWED_SEVERITIES`
+vocab bug fixed (`low/medium/high/critical` → `critical/major/minor` to
+match `docs/SCHEMA.md`). The toolbox refactor needed three deploy
+iterations to discover four real BigQuery + toolbox-core runtime
+constraints (captured in
+`~/.claude/memory/reference_mcp_toolbox_universal_tools.md`): (a) the
+SDK ignores backend `default:` for `required: false` params, (b) BQ
+rejects null INT64 binds at dry-run, (c) BQ rejects null STRING binds
+at execute, (d) BQ `LIMIT` accepts only an integer literal or a single
+parameter — no expressions. Final shape: every param `required: true`
++ `default:` sentinel (`"*"` for strings, `36500` for days_back, `50`
+for limit), SQL uses sentinel comparison instead of nullable binds.
 
 **Freeze A operational lift (2026-04-26).** User explicitly lifted all
 Freeze A operational restrictions on `plated-complex-491512-n6`, keeping
@@ -144,6 +156,23 @@ These look optional but each one is load-bearing for a reason:
   endpoint. The direct endpoint returns 403 / Connection-closed on
   Cloud Run; the toolbox-as-intermediary pattern works.
 
+- **Toolbox parameters use sentinel defaults, not nullable binds.** The
+  2 universal tools in `~/projects/genai-hackathon/track2-network-status/toolbox-service/tools.yaml`
+  declare every param `required: true` with a `default:` sentinel — strings
+  default to `"*"`, `days_back` defaults to `36500`, `limit` defaults to
+  `50`. The SQL uses sentinel comparison (`@region = '*' OR region = @region`)
+  not nullable binds (`@region IS NULL OR ...`). This is load-bearing because
+  toolbox v0.23 + BigQuery's high-level Go client both reject null parameter
+  binds — STRING null fails at execute time, INT64 null fails at the dry-run
+  validator, and BigQuery `LIMIT` doesn't accept expressions like
+  `IFNULL(@limit, 50)`. `required: false` + `default:` does NOT work either:
+  `toolbox_core/protocol.py:113-118` overrides backend defaults with `None`
+  in the Python signature for required:false params. See
+  `~/.claude/memory/reference_mcp_toolbox_universal_tools.md` for the full
+  finding chain. `NETWORK_INVESTIGATOR_INSTRUCTION` in `prompts.py` is the
+  matching prompt — it tells the agent to ALWAYS pass all 5 params using
+  sentinels for "no filter".
+
 - **Cross-package import via `sys.path.insert`** at the top of
   `netpulse-ui/agent_runner.py`, plus a parent-level `Dockerfile` that
   copies both `netpulse-ui/` and `telecom_ops/` into the image. This is
@@ -178,4 +207,7 @@ emojis in code or docs unless explicitly requested.
 - `netpulse-ui/templates/landing.html` — hero, "How it works" 4-step grid, launch chips (`?seed=...&autorun=1` handoff), data-viewer cards, footer
 - `netpulse-ui/templates/chat.html` — workspace timeline, impact card, badges, NOC action chips, plus the streaming SSE handler in inline JS
 - `Dockerfile` (parent) — Cloud Run image for the Flask UI; copies both packages so the cross-package import resolves
-- `setup_alloydb.py` — idempotent DDL for the `incident_tickets` table
+- `setup_alloydb.py` — idempotent DDL for both `incident_tickets` and `call_records`; `--seed` reloads CSVs via single multi-row INSERT (one round-trip even for 500 rows)
+- `scripts/setup_bigquery.py` — idempotent dataset+table creation; `--seed` reloads `network_events.csv` via WRITE_TRUNCATE
+- `docs/seed-data/` — canonical sample data: `network_events.csv` (132 events, 10 cities, 2026-01-08 → 2026-05-12), `call_records.csv` (500 CDRs), `incident_tickets.csv` (10 sample rows)
+- `~/projects/genai-hackathon/track2-network-status/toolbox-service/tools.yaml` — MCP Toolbox config: 2 universal parameterized tools with sentinel defaults
