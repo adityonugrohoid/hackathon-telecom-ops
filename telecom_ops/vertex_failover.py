@@ -43,13 +43,19 @@ RANKED_REGIONS: tuple[str, ...] = (
                        # in the 07:14 UTC 2026-04-26 production trace.
 )
 
-PER_ATTEMPT_TIMEOUT_S: float = 5.0
+PER_ATTEMPT_TIMEOUT_S: float = 10.0
 """Per-attempt timeout for a single Vertex AI region. On TimeoutError, the
 wrapper cancels the in-flight HTTP call (the SDK closes the socket on
 asyncio.CancelledError) and advances to the next region in RANKED_REGIONS,
-identical to a quota-error failover. 5s is tight (typical Flash response is
-1-3s) but catches silent hangs without false-positives on most legitimate
-slow calls. Bump to 8-10s if production logs show false-positive timeouts."""
+identical to a quota-error failover. Originally 5s, raised to 10s on
+2026-04-26 after a Phase 11 production trace showed `network_investigator`
+false-positive-timing-out on `global` while summarising a 15.5 KB
+weekly_outage_trend response (the 50 000-row seed shifted the legitimate-
+slow tail past the 5s mark). The failover ladder then 404'd because
+`gemini-3.1-flash-lite-preview` is `global`-only on this project, so the
+false positive surfaces as a hard agent failure — not as a successful
+failover. 10s gives global-on-load enough headroom while still catching
+true silent hangs (those don't return ever)."""
 
 _QUOTA_MARKERS: tuple[str, ...] = ("RESOURCE_EXHAUSTED", " 429", "QUOTA")
 
@@ -386,7 +392,7 @@ async def _self_test_failover_on_timeout() -> None:
     yields the sentinel, and the observer fires twice (timeout-failover
     then ok). No Vertex AI traffic, no GCP credentials required.
 
-    Runtime: roughly equal to `PER_ATTEMPT_TIMEOUT_S` (~5s by default).
+    Runtime: roughly equal to `PER_ATTEMPT_TIMEOUT_S` (~10s by default).
     """
     from types import SimpleNamespace
     from unittest.mock import patch
