@@ -57,7 +57,7 @@ A 90-second tour. No login, no setup, no terminal:
 
 1. **Open the live UI** → [https://netpulse-ui-486319900424.us-central1.run.app](https://netpulse-ui-486319900424.us-central1.run.app). The hero landing page explains the four-agent pipeline and lists three pre-seeded example complaints.
 2. **Click any launch chip** (e.g., *"Customer reports failed calls in Jakarta"*). The chip handoff prefills the chat input and auto-submits via `?seed=...&autorun=1`, so you land directly on the workspace with the run already in flight.
-3. **Watch the timeline animate** — `Classifier → Network Investigator → CDR Analyzer → Response Formatter`. Each entry shows its data source pills, the live tool calls (`query_network_events(region='Jakarta', severity='*', ...)`, `query_cdr(...)`, `save_incident_ticket(...)`), and a tiny `🌐 via global` chip in the header showing which Vertex AI region answered. On a quota miss or 5s silent hang, the chip grows into `🌐 via global ⤳ us-central1` — failure visible as one extra hop, not a hard 500.
+3. **Watch the timeline animate** — `Classifier → Network Investigator → CDR Analyzer → Response Formatter`. Each entry shows its data source pills, the live tool calls (`query_network_events(...)` or `weekly_outage_trend(region='Jakarta', weeks_back=12, ...)`, `query_cdr_nl(question='How many dropped and failed calls in Jakarta in the last 7 days, grouped by cell_tower_id?')`, `save_incident_ticket(...)`), and a tiny `🌐 via global` chip in the header showing which Vertex AI region answered. On a quota miss or 5s silent hang, the chip grows into `🌐 via global ⤳ us-central1` — failure visible as one extra hop, not a hard 500.
 4. **Read the customer-impact card** that fades in once the network investigator returns its rows: total customers affected (summed across BQ network events), severity histogram, and elapsed-since-onset (`~Xm`/`~Xh`/`~Xd`).
 5. **Land on the saved incident report** at the bottom: a category badge (network/billing/hardware/service/general), region badge, severity badge, the model's structured `INCIDENT REPORT`, and a recommended-NOC-actions chip panel keyed off the category. The ticket itself is now persisted in AlloyDB — switch to the **Incident Tickets** tab in the top nav and you'll see the row at the top of the list.
 
@@ -116,8 +116,8 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 | LLM (per agent) | **Gemini 3.1 Flash-Lite preview** for classifier + network_investigator + cdr_analyzer · **Gemini 3.1 Pro preview** for response_formatter | Speed-tier model on the upstream agents (~0.6–1.9s per call), quality-tier model on the user-visible synthesis. Constants `MODEL_FAST` and `MODEL_SYNTHESIS` in `telecom_ops/agent.py` — one-line revert to `gemini-2.5-flash` / `gemini-2.5-pro` (GA) if preview endpoints destabilize. |
 | Inference region | **`global` with multi-continent failover** | Default to Google's multi-region pool (`global`); on `RESOURCE_EXHAUSTED` 429 OR 5s silent-hang timeout, fail over through `us-central1` (US) → `europe-west4` (EU) → `asia-northeast1` (Tokyo). Per-LlmAgent failover state in `telecom_ops/vertex_failover.py`. APAC entries (asia-southeast1/2) removed because Pro-preview returned `400 FAILED_PRECONDITION` there. |
 | Tool gateway | **MCP Toolbox for Databases** (Cloud Run) | Direct BigQuery MCP returns 403 on Cloud Run; Toolbox is the proven ADK-compatible bridge |
-| Analytical store | **BigQuery** (`telecom_network.network_events`) | 132-row dataset of outages, maintenance, degradations, restorations across 10 Indonesian cities, 2026-01-08 → 2026-05-12 |
-| Operational store | **AlloyDB for PostgreSQL 17** | Hosts `call_records` (500 rows of CDR data with realistic dropped/failed clustering around outage anchors) and `incident_tickets` (persistent agent output) |
+| Analytical store | **BigQuery** (`telecom_network.network_events`) | 50 000-event dataset across 10 Indonesian cities, 2025-11-01 → 2026-04-30. **DAY-partitioned on `started_at` and clustered by `(region, severity)`** so the new `weekly_outage_trend` rollup prunes to the requested window (a 7-day query reads ~25 KB instead of the full table). |
+| Operational store + NL2SQL | **AlloyDB for PostgreSQL 17** with the `alloydb_ai_nl` extension | Hosts `call_records` (5 000 CDRs with realistic dropped/failed clustering around per-city anchor windows) and `incident_tickets` (persistent agent output). The `cdr_analyzer` agent calls `query_cdr_nl(question='…')`; the toolbox routes to `alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1)` and connects as a read-only role (`netpulse_nl_reader`, `SELECT` on `call_records` only) so destructive NL is structurally blocked. Setup script: `scripts/setup_alloydb_nl.py`. |
 | Operational store driver | **SQLAlchemy 2 + pg8000** | Pure-Python wire driver, works in Cloud Run without C extensions |
 | Custom UI | **Flask 3 + Server-Sent Events** | Streams ADK events into animated chat cards; uses `fetch()` + `ReadableStream` (POST + SSE) |
 | Async-to-sync bridge | **threading.Thread + queue.Queue** | Drains the async ADK Runner from a sync Flask request handler without buffering |
@@ -164,8 +164,8 @@ flowchart TB
     subgraph TOOLS["Tool Layer"]
         direction LR
         T1["classify_issue<br/><span style='font-size:11px;font-weight:400'>native Python</span>"]
-        T2["telecom_network_toolset<br/><span style='font-size:11px;font-weight:400'>2 universal BQ tools via toolbox-core</span>"]
-        T3["query_cdr<br/><span style='font-size:11px;font-weight:400'>SQLAlchemy + pg8000</span>"]
+        T2["telecom_network_toolset<br/><span style='font-size:11px;font-weight:400'>3 BQ tools via toolbox-core (incl. weekly_outage_trend)</span>"]
+        T3["cdr_nl_toolset → query_cdr_nl<br/><span style='font-size:11px;font-weight:400'>AlloyDB AI NL2SQL via toolbox-core</span>"]
         T4["save_incident_ticket<br/><span style='font-size:11px;font-weight:400'>SQLAlchemy + pg8000</span>"]
     end
 
@@ -240,8 +240,8 @@ flowchart TB
 | # | Agent | Tool | Backend | Session-state output |
 |---|---|---|---|---|
 | 1 | **Classifier** | `classify_issue` | in-memory only | `category`, `region`, `complaint`, `reasoning`, `classification` |
-| 2 | **Network Investigator** | `telecom_network_toolset` (2 universal tools) | MCP Toolbox → BigQuery | `network_findings` |
-| 3 | **CDR Analyzer** | `query_cdr` | AlloyDB `call_records` (read) | `cdr_findings`, `cdr_results` |
+| 2 | **Network Investigator** | `telecom_network_toolset` (3 tools: `query_network_events`, `query_affected_customers_summary`, and the partition-pruning `weekly_outage_trend` rollup) | MCP Toolbox → BigQuery | `network_findings` |
+| 3 | **CDR Analyzer** | `cdr_nl_toolset` → `query_cdr_nl(question)` (AlloyDB AI NL2SQL) | MCP Toolbox → AlloyDB `alloydb_ai_nl.execute_nl_query` (read-only role) | `cdr_findings` |
 | 4 | **Response Formatter** | `save_incident_ticket` | AlloyDB `incident_tickets` (write) | `final_report`, `ticket_id` |
 
 Each agent is an `LlmAgent` with:
@@ -275,11 +275,11 @@ Input: *"Customer reports failed calls in Jakarta"*
 | Step | Agent | What happens |
 |---|---|---|
 | 1 | Classifier (~3 s) | LLM picks `category=network`, `region=Jakarta` and writes them to session state |
-| 2 | Network Investigator (~10 s) | LLM calls `query_network_events(region='Jakarta', severity='*', event_type='*', days_back=36500, limit=10)` via MCP Toolbox; gets back 9 BigQuery rows including EVT001 (fiber cut, critical), EVT016 (degradation, minor), EVT024 (LTE congestion, major); summarizes |
-| 3 | CDR Analyzer (~12 s) | LLM calls `query_cdr(region="Jakarta", status_filter="")`; gets 11 AlloyDB rows (7 completed, 3 dropped, 1 failed); correlates the failed call with EVT024 and the dropped calls with EVT001/EVT016 |
+| 2 | Network Investigator (~3 s) | LLM picks `weekly_outage_trend(region='Jakarta', weeks_back=12)` (the complaint mentions "trend" / "lately") via MCP Toolbox; gets 12 weekly rollup rows from BigQuery — `event_count`, `critical_count`, `major_count`, `total_affected`, `avg_mttr_minutes` — and summarizes the worst weeks |
+| 3 | CDR Analyzer (~3 s) | LLM calls `query_cdr_nl(question="How many dropped and failed calls in Jakarta in the last 30 days, grouped by cell_tower_id?")`; AlloyDB AI NL2SQL translates the question to SQL and returns 6 rows (one per JKT-001..006 tower); the LLM correlates the JKT-002/003 spike with the network findings |
 | 4 | Response Formatter (~5 s) | LLM calls `save_incident_ticket(...)`; AlloyDB returns `ticket_id=15`; emits the final structured INCIDENT REPORT |
 
-End-to-end: **~30 seconds**, three database round-trips, zero human intervention.
+End-to-end: **~15 seconds**, three database round-trips (BQ partitioned + clustered scan, AlloyDB AI NL2SQL on `call_records`, AlloyDB INSERT on `incident_tickets`), zero human intervention.
 
 ## Getting Started
 
@@ -368,12 +368,25 @@ Bootstrap a fresh project with the included sample data:
 export GOOGLE_CLOUD_PROJECT=your-project
 export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/legacy_credentials/<account>/adc.json
 export DATABASE_URL='postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres'
-bash scripts/setup_byo.sh --seed
+export NL_READER_PASSWORD='<strong-password-meeting-complexity>'  # only for --nl-setup
+bash scripts/setup_byo.sh --seed --nl-setup
 ```
 
 Without `--seed`, the script only creates the dataset + tables (idempotent —
 safe to re-run on an existing deployment). With `--seed`, the seeded tables
-are TRUNCATE+RELOAD'd from the CSVs, restoring the canonical demo state.
+are TRUNCATE+RELOAD'd from the CSVs, restoring the canonical demo state. With
+`--nl-setup`, the AlloyDB AI NL2SQL stack also gets installed: the
+`alloydb_ai_nl` extension, an LLM model registration, the `netpulse_cdr_config`
+configuration with `call_records` registered, schema-context generation
+(blocking 3-5 min), and the `netpulse_nl_reader` read-only role used by the
+MCP Toolbox. Requires the `alloydb_ai_nl.enabled=on` instance flag to be set
+beforehand:
+
+```bash
+gcloud alloydb instances update <instance> \
+  --cluster=<cluster> --region=<region> \
+  --database-flags=password.enforce_complexity=on,alloydb_ai_nl.enabled=on
+```
 
 Multi-tenant SaaS UI (login, per-tenant dataset isolation) is roadmapped for v2.
 The data layer is already deployable against any compatible infrastructure.
@@ -408,8 +421,11 @@ hackathon-telecom-ops/
 │
 ├── setup_alloydb.py                      # Idempotent DDL for call_records + incident_tickets (+ optional --seed)
 ├── scripts/
-│   ├── setup_bigquery.py                 # Idempotent DDL for the BigQuery network_events table (+ optional --seed)
-│   └── setup_byo.sh                      # Orchestrator: runs setup_bigquery.py + setup_alloydb.py
+│   ├── setup_bigquery.py                 # Idempotent DDL for the BigQuery network_events table (+ optional --seed and --recreate)
+│   ├── setup_alloydb_nl.py               # Idempotent AlloyDB AI NL2SQL setup (extension + config + reader role)
+│   ├── generate_network_events.py        # Deterministic 50 000-row generator for docs/seed-data/network_events.csv
+│   ├── generate_call_records.py          # Deterministic 5 000-row CDR generator for docs/seed-data/call_records.csv
+│   └── setup_byo.sh                      # Orchestrator: runs setup_bigquery.py + setup_alloydb.py + (optional) setup_alloydb_nl.py
 ├── docs/
 │   ├── SCHEMA.md                         # Column-by-column data contract for the 3 tables
 │   └── seed-data/                        # Canonical sample CSVs (network_events, call_records, incident_tickets)
