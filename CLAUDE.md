@@ -19,28 +19,38 @@ NetPulse AI was selected into the **Top 100** of the APAC GenAI Academy
 2026 (ranked #82, announced 2026-04-23). The hackathon is now in the
 **Prototype Refinement Phase** — refined prototype due **2026-04-30**.
 
-Until the deadline, refinement is the priority workstream. Anchor items:
+**Phase 8 (Ship) shipped 2026-04-26** — single consolidated Cloud Run
+redeploy carried Phases 2-7 to production (rev `00004-sfn`); subsequent
+revisions `00005-ns6` (env-var typo fix), `00006-7v8` (heliodoron tokens
++ footer trim), `00007-x7t` (pandan accent unification), `00008-kzk`
+(5s timeout + 3.1 preview models), `00009-f2c` (multi-continent region
+ladder) all rode the same Phase 9 polish loop. Live URL:
+https://netpulse-ui-486319900424.us-central1.run.app.
 
-1. **Vertex AI region failover** — implemented in
-   `telecom_ops/vertex_failover.py`. Default region is `global`; on
-   `RESOURCE_EXHAUSTED`, each `LlmAgent` independently walks
-   `asia-southeast2` → `asia-southeast1` → `us-central1`. Source landed;
-   the live deploy state still has the `asia-southeast1` static pin until
-   the user runs the manual Cloud Run redeploy with the updated
-   `--set-env-vars` flag (see `README.md` § Deployment).
-2. **Visual redesign (Phase 4)** — landing page + workspace split is now
-   live in source. `/` renders `templates/landing.html` (hero, "How it
-   works" 4-step grid, launch chips, data-viewer cards, footer); `/app`
-   renders the chat workspace; `/chat` 301s to `/app`. The workspace
-   pipeline is now a vertical PagerDuty-style timeline (`<ol class="np-
-   timeline">`), each agent's row tagged with status badges and a left-
-   rail timestamp + status dot. A customer-impact card aggregates
-   network_investigator's BQ rows on the fly; a static category →
-   recommended-actions chip panel sits below the final ticket. All five
-   §5.* items in `REFINEMENT-PHASES.md` Phase 4 are checked.
-3. **Brainstorming queue** — further refinement candidates (architecture,
-   performance, deeper Gen AI usage) to be scoped with the user before
-   any code changes.
+Phase 9 in-flight workstreams:
+
+1. **Heliodoron visual identity v1** — `tokens.css` swapped to sand
+   neutrals (oklch hue 85), surya warm-gold brand, Geist + Newsreader +
+   JetBrains Mono via jsdelivr `@fontsource-variable`. Hero "in seconds."
+   accent + all data-source badges unified on `--np-pandan` deep green.
+   Footer trimmed of "with Claude Code" link.
+2. **Region-failover hardening** — `RegionFailoverGemini` gained a 5s
+   `asyncio.wait_for` per region attempt (covers silent hangs that don't
+   raise `RESOURCE_EXHAUSTED`). Region ladder swapped from APAC-heavy
+   (`asia-southeast2 → asia-southeast1 → us-central1`) to multi-continent
+   (`global → us-central1 → europe-west4 → asia-northeast1`) after the
+   APAC entries returned `400 FAILED_PRECONDITION` on `gemini-3.1-pro-
+   preview`. New `_self_test_failover_on_timeout` mocks `asyncio.Future()`
+   in region 0; runtime ~5s.
+3. **Per-agent model selection** — `agent.py` now takes a model arg per
+   agent. `MODEL_FAST = "gemini-3.1-flash-lite-preview"` for classifier +
+   network_investigator + cdr_analyzer (validated 7/7 calls successful in
+   production). `MODEL_SYNTHESIS = "gemini-3.1-pro-preview"` for
+   response_formatter — but Pro-preview is **`global`-only for this
+   project** (us-central1 returns 404 NOT_FOUND), so the ladder collapses
+   to a single point of failure for synthesis. Open question: bump
+   timeout to 8s + revert MODEL_SYNTHESIS to `gemini-2.5-pro` (GA, multi-
+   region) so failover is structurally usable.
 
 Deployed services in `plated-complex-491512-n6` remain under the freeze
 documented in global `~/.claude/CLAUDE.md`. Source edits inside this
@@ -59,10 +69,15 @@ timeline, with three read-only data viewer tabs and Server-Sent-Events
 streaming. The workspace surfaces a customer-impact rollup, a category /
 region / severity badge set on the saved ticket, and a static
 category → recommended-NOC-actions chip panel — all driven client-side
-from the existing SSE event stream. Both deploy to Cloud Run; both
-target Vertex AI Gemini 2.5 Flash through the `RegionFailoverGemini`
-wrapper in `telecom_ops/vertex_failover.py`, which defaults to `global`
-and fails over through ranked APAC + US regions on `RESOURCE_EXHAUSTED`.
+from the existing SSE event stream. Both deploy to Cloud Run. Each
+sub-agent picks its own model through the `RegionFailoverGemini` wrapper
+in `telecom_ops/vertex_failover.py` — three upstream agents on a fast
+Flash-class variant, the synthesis agent on a Pro-class variant — and
+the wrapper walks a multi-continent region ladder
+(`global → us-central1 → europe-west4 → asia-northeast1`) on
+`RESOURCE_EXHAUSTED` 429 *or* a 5s silent-hang timeout, with the next
+attempt cancelling the prior in-flight call so only one HTTP request
+is ever live per agent.
 
 ## Non-obvious choices to preserve
 
@@ -82,20 +97,38 @@ These look optional but each one is load-bearing for a reason:
   forever waiting on a half-dead socket. We hit this during a demo gap.
   Both `telecom_ops/tools.py` and `netpulse-ui/data_queries.py` set it.
 
-- **Vertex AI region failover via `RegionFailoverGemini`** in
+- **Vertex AI region failover + 5s hang timeout** in
   `telecom_ops/vertex_failover.py`. Default region is `global` (Google's
-  multi-region routing pool); on `RESOURCE_EXHAUSTED`, each `LlmAgent`
-  independently rebuilds its `genai.Client` against the next region in
-  `RANKED_REGIONS` (`asia-southeast2` → `asia-southeast1` →
-  `us-central1`). `agent.py` builds a fresh wrapper per `LlmAgent` so the
-  four agents own independent failover state. Do NOT replace with a
-  single static `GOOGLE_CLOUD_LOCATION=us-central1` pin — that's the
-  verified failure mode (DSQ contention from APAC traffic). The single-
-  region `asia-southeast1` pin worked too but had no headroom on a
-  trial-billing project; the failover ladder converts a quota miss into
-  one extra hop instead of a hard 500. Streaming (`stream=True`) bypasses
-  failover because partial yields cannot be safely replayed; NetPulse
-  uses `stream=False` so this is not a hot-path concern.
+  multi-region routing pool); on `RESOURCE_EXHAUSTED` 429 *or* on
+  `asyncio.TimeoutError` from the per-attempt 5s `wait_for`, each
+  `LlmAgent` independently rebuilds its `genai.Client` against the next
+  region in `RANKED_REGIONS` (`global → us-central1 → europe-west4 →
+  asia-northeast1`). The ladder is **multi-continent** — APAC entries
+  were swapped for a non-SE-Asia region (Tokyo) after asia-southeast1/2
+  returned 400 FAILED_PRECONDITION on `gemini-3.1-pro-preview`. The 5s
+  timeout is critical: a previously frozen run on 2026-04-26 hung for
+  Cloud Run's full 300s request timeout because the wrapper had no way
+  to detect a TCP socket that never returned a response. Now `wait_for`
+  cancels the in-flight coroutine on timeout, the underlying aiohttp
+  client closes the socket, and the next region attempt fires — only one
+  HTTP call is ever in flight per wrapper. `agent.py` builds a fresh
+  wrapper per `LlmAgent` so the four agents own independent failover
+  state. Streaming (`stream=True`) bypasses both failover AND timeout
+  because partial yields cannot be safely replayed; NetPulse uses
+  `stream=False` so this is not a hot-path concern.
+
+- **Per-agent model selection** in `telecom_ops/agent.py`. Two named
+  constants split the four agents by cognitive role: `MODEL_FAST =
+  "gemini-3.1-flash-lite-preview"` for the three upstream agents
+  (classifier, network_investigator, cdr_analyzer — each does a tool
+  call + small reasoning step, which Flash-Lite handles in ~0.6-1.9s
+  per call); `MODEL_SYNTHESIS = "gemini-3.1-pro-preview"` for the
+  user-visible response_formatter. Caveat: as of 2026-04-26, Pro-preview
+  is `global`-only for `plated-complex-491512-n6` (us-central1 returns
+  404 NOT_FOUND), so the failover ladder is structurally a no-op for
+  the synthesis step. Revert option for stability: `MODEL_SYNTHESIS =
+  "gemini-2.5-pro"` (GA, multi-region addressable). One-line change
+  isolated to `agent.py`.
 
 - **MCP Toolbox in front of BigQuery**, not the direct BigQuery MCP
   endpoint. The direct endpoint returns 403 / Connection-closed on

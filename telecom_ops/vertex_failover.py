@@ -12,6 +12,7 @@ chat UI without needing extra correlation. Observers register through
 Flask requests can each install their own callback in isolation.
 """
 
+import asyncio
 import logging
 import os
 from collections.abc import AsyncGenerator, Callable
@@ -28,11 +29,27 @@ from pydantic import PrivateAttr
 logger = logging.getLogger(__name__)
 
 RANKED_REGIONS: tuple[str, ...] = (
-    "global",
-    "asia-southeast2",
-    "asia-southeast1",
-    "us-central1",
+    "global",          # Google's multi-region routing pool — best chance of
+                       # serving newer / preview models without per-region
+                       # availability gates.
+    "us-central1",     # Iowa — primary Vertex AI region, always carries the
+                       # newest Gemini models and the largest capacity pool.
+                       # Co-located with our Cloud Run service (~0ms hop).
+    "europe-west4",    # Netherlands — primary EU Vertex region, broadest model
+                       # coverage outside the US.
+    "asia-northeast1", # Tokyo — primary APAC Vertex region for newer models;
+                       # replaces the prior asia-southeast2/1 entries which
+                       # 400'd FAILED_PRECONDITION on `gemini-3.1-pro-preview`
+                       # in the 07:14 UTC 2026-04-26 production trace.
 )
+
+PER_ATTEMPT_TIMEOUT_S: float = 5.0
+"""Per-attempt timeout for a single Vertex AI region. On TimeoutError, the
+wrapper cancels the in-flight HTTP call (the SDK closes the socket on
+asyncio.CancelledError) and advances to the next region in RANKED_REGIONS,
+identical to a quota-error failover. 5s is tight (typical Flash response is
+1-3s) but catches silent hangs without false-positives on most legitimate
+slow calls. Bump to 8-10s if production logs show false-positive timeouts."""
 
 _QUOTA_MARKERS: tuple[str, ...] = ("RESOURCE_EXHAUSTED", " 429", "QUOTA")
 
@@ -193,19 +210,29 @@ class RegionFailoverGemini(Gemini):
     async def generate_content_async(
         self, llm_request: LlmRequest, stream: bool = False
     ) -> AsyncGenerator[LlmResponse, None]:
-        """Send a request to Gemini, failing over through ranked regions on 429.
+        """Send a request to Gemini, failing over on 429 OR silent hang.
+
+        Each region attempt is wrapped in `asyncio.wait_for(timeout=
+        PER_ATTEMPT_TIMEOUT_S)`. On `RESOURCE_EXHAUSTED` 429, the next region
+        is tried (existing failover behavior). On `asyncio.TimeoutError` (a
+        Vertex AI call that never returns), `wait_for` cancels the in-flight
+        coroutine — the SDK's aiohttp client closes the socket on
+        `CancelledError` — and the wrapper advances to the next region just
+        as it would on a quota error. No two HTTP calls are ever in flight
+        for the same wrapper instance.
 
         Args:
             llm_request: The ADK LlmRequest to send.
-            stream: When True, failover is bypassed and the upstream call is
-                made directly (partial responses cannot be safely replayed).
+            stream: When True, failover and timeout are both bypassed and the
+                upstream call is made directly (partial responses cannot be
+                safely replayed; timeouts mid-stream would lose chunks).
 
         Yields:
             LlmResponse: Each response from the upstream call.
 
         Raises:
-            RuntimeError: When every region in `RANKED_REGIONS` returns a quota
-                error.
+            RuntimeError: When every region in `RANKED_REGIONS` exhausts
+                (quota or timeout).
             genai.errors.ClientError: When the upstream call raises a non-quota
                 client error (re-raised immediately, no failover).
         """
@@ -224,17 +251,48 @@ class RegionFailoverGemini(Gemini):
         for region in RANKED_REGIONS:
             self._set_active_region(region)
             logger.info(
-                "Vertex AI attempt: agent_model=%s region=%s",
+                "Vertex AI attempt: agent_model=%s region=%s timeout=%ss",
                 llm_request.model,
                 region,
+                PER_ATTEMPT_TIMEOUT_S,
             )
-            try:
-                async for response in super().generate_content_async(
-                    llm_request, stream
+
+            async def _drain_one_attempt() -> list[LlmResponse]:
+                """Drain the parent's async generator into a list under one timeout.
+
+                With `stream=False` the parent yields exactly one response, so
+                draining is just one item. Wrapping the whole drain in
+                `asyncio.wait_for` lets a single timeout cover the entire
+                upstream HTTP round-trip cleanly.
+                """
+                out: list[LlmResponse] = []
+                async for r in Gemini.generate_content_async(
+                    self, llm_request, stream
                 ):
-                    yield response
+                    out.append(r)
+                return out
+
+            try:
+                responses = await asyncio.wait_for(
+                    _drain_one_attempt(), timeout=PER_ATTEMPT_TIMEOUT_S
+                )
+                for r in responses:
+                    yield r
                 _notify_attempt(self._owner_name, region, "ok", None)
                 return
+            except TimeoutError as exc:
+                logger.warning(
+                    "Vertex AI silent hang in region=%s after %ss; falling over.",
+                    region,
+                    PER_ATTEMPT_TIMEOUT_S,
+                )
+                _notify_attempt(
+                    self._owner_name,
+                    region,
+                    "failover",
+                    f"timeout after {PER_ATTEMPT_TIMEOUT_S}s",
+                )
+                last_exc = exc
             except genai_errors.ClientError as exc:
                 if not _is_quota_error(exc):
                     raise
@@ -318,9 +376,77 @@ async def _self_test_failover_loop() -> None:
     )
 
 
-if __name__ == "__main__":
-    import asyncio
+async def _self_test_failover_on_timeout() -> None:
+    """Validate the failover loop on a silent hang.
 
+    Mocks `Gemini.generate_content_async` so the first region awaits
+    `asyncio.Future()` (never resolves; only torn down by `wait_for`'s
+    cancellation), then the second region yields a sentinel response.
+    Asserts the wrapper times out after `PER_ATTEMPT_TIMEOUT_S`, advances,
+    yields the sentinel, and the observer fires twice (timeout-failover
+    then ok). No Vertex AI traffic, no GCP credentials required.
+
+    Runtime: roughly equal to `PER_ATTEMPT_TIMEOUT_S` (~5s by default).
+    """
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    call_log: list[str] = []
+    fake_request = SimpleNamespace(model="gemini-2.5-flash")
+
+    async def mock_parent_call_hang(self, _llm_request, _stream=False):
+        call_log.append(self._active_region)
+        if self._active_region == RANKED_REGIONS[0]:
+            await asyncio.Future()
+        yield "FAKE_RESPONSE_AFTER_HANG"
+
+    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "test-project")
+
+    observer_log: list[tuple[str, str, str, str | None]] = []
+
+    def observer(owner: str, region: str, outcome: str, err: str | None) -> None:
+        observer_log.append((owner, region, outcome, err))
+
+    set_attempt_observer(observer)
+    try:
+        with patch.object(Gemini, "generate_content_async", mock_parent_call_hang):
+            wrapper = RegionFailoverGemini(model="gemini-2.5-flash")
+            wrapper.set_owner_name("test_agent_hang")
+            responses: list = []
+            async for response in wrapper.generate_content_async(
+                llm_request=fake_request
+            ):
+                responses.append(response)
+    finally:
+        set_attempt_observer(None)
+
+    assert call_log == [RANKED_REGIONS[0], RANKED_REGIONS[1]], (
+        f"expected two regions (hang then ok), got {call_log}"
+    )
+    assert responses == ["FAKE_RESPONSE_AFTER_HANG"], (
+        f"expected sentinel from region 1, got {responses}"
+    )
+    assert len(observer_log) == 2, f"expected 2 observer calls, got {observer_log}"
+    assert (
+        observer_log[0][0] == "test_agent_hang"
+        and observer_log[0][1] == RANKED_REGIONS[0]
+        and observer_log[0][2] == "failover"
+        and "timeout" in (observer_log[0][3] or "").lower()
+    ), f"expected first event=failover with timeout msg, got {observer_log[0]}"
+    assert (
+        observer_log[1][0] == "test_agent_hang"
+        and observer_log[1][1] == RANKED_REGIONS[1]
+        and observer_log[1][2] == "ok"
+        and observer_log[1][3] is None
+    ), f"expected second event=ok with no err, got {observer_log[1]}"
+    logger.info(
+        "OK: hang test walked regions=%s, yielded sentinel, observer fired %d times",
+        call_log,
+        len(observer_log),
+    )
+
+
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     assert _is_quota_error(Exception("RESOURCE_EXHAUSTED: quota"))
@@ -331,3 +457,4 @@ if __name__ == "__main__":
     logger.info("OK: _is_quota_error matcher passes 5/5 cases")
 
     asyncio.run(_self_test_failover_loop())
+    asyncio.run(_self_test_failover_on_timeout())
