@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call Records · NetPulse AI</title>
+  <link rel="icon" type="image/svg+xml" href="img/np-glyph.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="np-page">
+
+  <header class="np-header">
+    <a href="index.html" class="np-brand">
+      <img src="img/np-glyph.svg" alt="" class="np-brand-glyph">
+      <span>NETPULSE&nbsp;AI</span>
+    </a>
+    <nav class="np-nav" aria-label="Primary">
+      <a href="chat.html"           class="np-nav-link">Workspace</a>
+      <a href="network-events.html" class="np-nav-link">Network Events</a>
+      <a href="call-records.html"   class="np-nav-link is-active">Call Records</a>
+      <a href="tickets.html"        class="np-nav-link">Tickets</a>
+      <a href="docs.html"           class="np-nav-link">Docs</a>
+      <a href="index.html" class="np-btn np-btn-secondary">← Home</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2 style="margin-top: var(--np-space-7); font-size: var(--np-fs-display-l);">Call Records</h2>
+
+    <div class="np-source-banner is-alloy">
+      <span class="np-source-tag is-alloy">ALLOYDB&nbsp;READ</span>
+      Reading live from <strong>AlloyDB</strong> (PostgreSQL 17) ·
+      <code>call_records</code> table
+      · ingested by <code>cdr_analyzer</code> agent via <code>query_cdr_nl</code>
+      (AlloyDB AI NL2SQL)
+    </div>
+
+    <form class="np-filter" onsubmit="return false" aria-label="Filter call records">
+      <select aria-label="Filter by region">
+        <option>All regions</option>
+        <option>Jakarta</option><option>Surabaya</option><option>Bandung</option>
+        <option>Medan</option><option>Semarang</option><option>Yogyakarta</option>
+        <option>Denpasar</option><option>Makassar</option><option>Palembang</option>
+        <option>Balikpapan</option>
+      </select>
+      <select aria-label="Filter by call status">
+        <option>All statuses</option>
+        <option>completed</option><option>dropped</option><option>failed</option>
+      </select>
+      <select aria-label="Filter by call type">
+        <option>All types</option>
+        <option>voice</option><option>sms</option><option>data</option>
+      </select>
+      <button type="submit">Filter</button>
+    </form>
+
+    <div class="np-rowcount">
+      Showing 10 of 5,000 ·
+      <span class="np-rowcount-hint">limit reached — refine filters to narrow</span>
+    </div>
+
+    <table class="np-table">
+      <thead>
+        <tr>
+          <th>call_id</th><th>caller</th><th>receiver</th><th>type</th>
+          <th>duration (s)</th><th>data (MB)</th><th>call_date</th>
+          <th>region</th><th>tower</th><th>status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4992</td><td>08121234012</td><td>08129001005</td>
+          <td>voice</td><td>0</td><td>0</td>
+          <td>2026-04-27 07:48</td><td>Surabaya</td><td><code>SUB-002</code></td>
+          <td><span class="np-badge np-badge-call-dropped">dropped</span></td>
+        </tr>
+        <tr>
+          <td>4991</td><td>08121234007</td><td>08129001023</td>
+          <td>voice</td><td>0</td><td>0</td>
+          <td>2026-04-27 07:46</td><td>Surabaya</td><td><code>SUB-002</code></td>
+          <td><span class="np-badge np-badge-call-dropped">dropped</span></td>
+        </tr>
+        <tr>
+          <td>4990</td><td>08121234041</td><td>08129001011</td>
+          <td>voice</td><td>187</td><td>0</td>
+          <td>2026-04-27 07:42</td><td>Jakarta</td><td><code>CGK-008</code></td>
+          <td><span class="np-badge np-badge-call-completed">completed</span></td>
+        </tr>
+        <tr>
+          <td>4989</td><td>08121234029</td><td>08129001017</td>
+          <td>sms</td><td>0</td><td>0</td>
+          <td>2026-04-27 07:40</td><td>Bandung</td><td><code>BDO-003</code></td>
+          <td><span class="np-badge np-badge-call-failed">failed</span></td>
+        </tr>
+        <tr>
+          <td>4988</td><td>08121234035</td><td>08129001028</td>
+          <td>data</td><td>0</td><td>248.50</td>
+          <td>2026-04-27 07:38</td><td>Denpasar</td><td><code>DPS-007</code></td>
+          <td><span class="np-badge np-badge-call-completed">completed</span></td>
+        </tr>
+        <tr>
+          <td>4987</td><td>08121234004</td><td>08129001042</td>
+          <td>voice</td><td>0</td><td>0</td>
+          <td>2026-04-27 07:36</td><td>Surabaya</td><td><code>SUB-002</code></td>
+          <td><span class="np-badge np-badge-call-dropped">dropped</span></td>
+        </tr>
+        <tr>
+          <td>4986</td><td>08121234019</td><td>08129001008</td>
+          <td>voice</td><td>421</td><td>0</td>
+          <td>2026-04-27 07:34</td><td>Medan</td><td><code>KNO-002</code></td>
+          <td><span class="np-badge np-badge-call-completed">completed</span></td>
+        </tr>
+        <tr>
+          <td>4985</td><td>08121234037</td><td>08129001003</td>
+          <td>data</td><td>0</td><td>1024.00</td>
+          <td>2026-04-27 07:30</td><td>Yogyakarta</td><td><code>JOG-005</code></td>
+          <td><span class="np-badge np-badge-call-completed">completed</span></td>
+        </tr>
+        <tr>
+          <td>4984</td><td>08121234022</td><td>08129001036</td>
+          <td>sms</td><td>0</td><td>0</td>
+          <td>2026-04-27 07:28</td><td>Bandung</td><td><code>BDO-003</code></td>
+          <td><span class="np-badge np-badge-call-failed">failed</span></td>
+        </tr>
+        <tr>
+          <td>4983</td><td>08121234014</td><td>08129001019</td>
+          <td>voice</td><td>62</td><td>0</td>
+          <td>2026-04-27 07:25</td><td>Makassar</td><td><code>UPG-001</code></td>
+          <td><span class="np-badge np-badge-call-completed">completed</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top: var(--np-space-5); font-family: var(--np-font-serif); color: var(--np-slate-light); font-size: var(--np-fs-paragraph-xs);">
+      The <code>cdr_analyzer</code> agent does not write hand-authored SQL
+      against this table. It poses an English question to
+      <code>query_cdr_nl</code>; AlloyDB AI translates it via the
+      <code>netpulse_cdr_config</code> registered schema and executes under
+      the read-only <code>netpulse_nl_reader</code> role. See the
+      <a href="docs.html#alloydb-ai" style="color: var(--np-pandan-deep);">AlloyDB AI section</a>.
+    </p>
+
+  </main>
+</div>
+
+<footer class="np-footer">
+  <div class="np-page">
+    <div class="np-footer-bottom">
+      <span>© 2026 Adityo Nugroho · NetPulse AI</span>
+      <a href="docs.html">Documentation →</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

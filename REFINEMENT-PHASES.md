@@ -3,9 +3,10 @@
 Sequential runbook for the prototype refinement workstream. Each phase is grouped by execution order and dependency, not by impact tier. For per-item detail (rationale, file diffs, test plans, risks), see **`REFINEMENT-AUDIT.md`**.
 
 **Deadline:** 2026-04-30 EOD
-**Last updated:** 2026-04-26
+**Last updated:** 2026-04-27
 **Audit reference:** [`REFINEMENT-AUDIT.md`](./REFINEMENT-AUDIT.md)
 **Failover plan:** [`PLAN-vertex-region-failover.md`](./PLAN-vertex-region-failover.md)
+**Active iteration mode:** Phase 13 — UI redesign in `static-mockup/` (untracked sandbox; do not commit until iteration closes)
 
 ---
 
@@ -25,6 +26,7 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **10. Toolbox refactor + seed enrichment** | ✅ **DONE** (2026-04-26) | ~5h | source + 2 deploys + BQ/AlloyDB writes | 8 MCP tools collapsed to 2 universal parameterized (`network-toolbox-00005-...`); query_cdr parameterized (days_back/call_type/limit); seed extended to 10 cities (132 events, 500 CDRs); ALLOWED_SEVERITIES vocab bug fixed; setup_alloydb.py bulk-insert patched |
 | **11. AlloyDB AI NL2SQL + BigQuery analytical workload** | ✅ **DONE** (2026-04-26) | ~5h | source + 2 deploys + BQ/AlloyDB writes + DDL | NL2SQL replaces hand-written `query_cdr` (3 tools → 1 NL question); BQ table re-created DAY-partitioned + (region,severity)-clustered with 50 000 events + new `weekly_outage_trend` analytical tool; CDR seed grown 500 → 5 000 with anchor-clustered failures; `setup_alloydb_nl.py` (NEW) automates the 10-step AlloyDB AI provisioning |
 | **12. Vertex model-ladder failover + viewer UX polish** | ✅ **DONE** (2026-04-27) | ~3h | source + iterative deploys | Vertex region ladder swapped for **model ladder** (primary 10s → primary+0.5s 20s → `gemini-2.5-flash` GA fallback 30s); deferred Tier-2 viewer items shipped (§2.2 pagination context, §2.3 ARIA labels, §2.6 complaint cap); call-status pill on CDR viewer; chip-reset for ADK 2-LLM-call pattern; `⤳` → `↪`; Cloud Run Buildpacks-vs-Dockerfile regression fixed |
+| **13. UI redesign — static-mockup iteration** | 🔄 **IN PROGRESS** (started 2026-04-27) | ongoing | source only (untracked) | Reference design extracted from `anthropic.com` via Playwright MCP → `docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md`. Six-page static mockup at `static-mockup/` (landing, chat workspace, 3 data viewers, single-page docs). CSS uses heliodoron 3-layer font system: raw stacks → semantic aliases → 11 `.np-type-*` role classes — typeface swap in 3 lines, no component CSS edits. Files **untracked** until iteration closes; port to Flask is a separate phase. |
 
 **Single redeploy principle held for Phases 2-7** (one redeploy carried everything). Phase 9 ran in iterative polish-and-redeploy mode against a warm `min-instances=1` service — each iteration ~3-5 min, settling on revision `00010-mqc`. Phases 10/11 each redeployed two services (`network-toolbox` + `netpulse-ui`). Phase 12 was netpulse-ui only (no toolbox change), 6 redeploys (`00014-kc8` → `00019-t46`) including 2 broken Buildpacks builds before the Dockerfile path was restored.
 
@@ -399,6 +401,71 @@ A reactive phase: a production trace surfaced the structural break in the prior 
 - `~/.claude/memory/reference_gcloud_run_source_dockerfile.md` (NEW) — Buildpacks-vs-Dockerfile auto-detect rules; absolute `--source` pinning; `--clear-base-image` requirement on flip-back.
 - `~/.claude/memory/reference_vertex_ai_dsq.md` §1c (UPDATED) — model-ladder pattern as the recommended successor to multi-region failover for projects with regionally-gated preview models.
 - `~/.claude/memory/protected_hackathon_deployment.md` (UPDATED) — current production revision pointer, Phase 12 deploy log.
+
+---
+
+## Phase 13 — UI redesign · static-mockup iteration loop 🔄 IN PROGRESS
+
+**Started 2026-04-27.** Heavy UI tweak phase using a parallel static
+HTML sandbox so design churn doesn't require Cloud Run redeploys per
+iteration. **Authorization:** source only; files intentionally
+**untracked in git** until the iteration loop is closed.
+
+**Why a sandbox phase.** The previous polish phases (Phase 9 round 2
+especially) iterated directly against the live Flask service —
+acceptable for a handful of token tweaks but expensive when the next
+round is a full visual redesign. Each iteration there is a
+~3-5 min Cloud Run redeploy and risks shipping half-finished states
+to a live URL. Static sandbox loop is ~5 s per edit-to-screenshot.
+
+**Reference design extraction.** Anthropic homepage extracted via
+Playwright MCP 2026-04-27 (live `getComputedStyle()` calls, not
+eyeballed) → `docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md`. The spec covers
+10 sections: design philosophy, full design tokens (colour palette,
+typography scale, spacing, radius, layout, breakpoints), component
+anatomy with ASCII diagrams (header/hero/feature card/release row/
+mission rail/footer), motion notes, accessibility audit, a 14-row
+**proprietary substitution table** mapping every Anthropic-specific
+element (logo, custom typefaces, brand copy, "Project Glasswing"
+artwork, split-button CTA, etc.) to an original NetPulse equivalent,
+implementation playbook, decision log, and verification checklist.
+
+**Deliverable: six-page static mockup in `static-mockup/`:**
+- `index.html` — landing (hero, dark feature card with agent topology, 3 release cards, mission rail, footer)
+- `chat.html` — workspace mockup (mocked 4-agent timeline + impact rollup + ticket card + NOC chips)
+- `network-events.html` / `call-records.html` / `tickets.html` — three data viewers with hand-curated rows matching `docs/SCHEMA.md`
+- `docs.html` — single-page comprehensive documentation (about, how it works, architecture, schema reference, BYO data guide, AlloyDB AI section, Vertex failover ladder, phase history, roadmap with custom-schema future work as the headline item)
+- `css/style.css` — single stylesheet, **heliodoron 3-layer font system**: Layer 1 raw stacks (`--np-stack-sans/serif/mono`), Layer 2 semantic aliases (`--np-font-display/-text/-ui/-mono`), Layer 3 — eleven `.np-type-*` role classes. Typeface swap is a 3-line change to `:root`, no component CSS edits required. Verified swap (`document.documentElement.style.setProperty('--np-font-display', 'var(--np-stack-serif)')` in console flips hero from Inter to Source Serif while nav/buttons stay sans).
+- `img/np-glyph.svg` (concentric pulse-rings logo) + `img/agent-topology.svg` (4-agent pipeline on hex-mesh background, NetPulse house palette) — original visuals, no Anthropic-proprietary assets reproduced
+- `README.md` — how to view, file map, full font-swap recipe with copy-paste console snippet
+
+**Iteration workflow:**
+1. Serve locally: `cd static-mockup && python3 -m http.server 8765`
+   (background task, kept running across turns).
+2. Edit files in `static-mockup/`, never in `netpulse-ui/templates/`.
+3. Verify visually via Playwright MCP at `http://localhost:8765/`,
+   screenshot per change to `.playwright-mcp/np-*.png`.
+4. **Do not commit** while iterating. The whole sandbox is intentionally
+   untracked — keeps the design churn out of `git log` until it stabilises.
+
+**Substitution discipline.** Reference `anthropic.com` for structural
+conventions only (layout grid, type scale, spacing rhythm — functional
+factual specs). Every original-content slot uses an original NetPulse
+equivalent listed in `docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md` §6. No
+Anthropic logo, wordmark, custom typeface, body copy, or feature
+artwork appears in the mockup.
+
+**Exit criteria:** the user signals "clear the iteration" / "commit
+the mockup" / "port to Flask." At that point: commit `static-mockup/`
++ `docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md` + selected
+`.playwright-mcp/` verification screenshots in a single feature
+branch, then plan the port to `netpulse-ui/` as **Phase 14** (separate
+phase, separate redeploy, separate decision).
+
+**Memory captured:**
+- `~/.claude/memory/project_netpulse_static_mockup_iteration.md` (NEW) — workflow rules, file map, exit criteria.
+- `~/.claude/memory/project_top100_refinement.md` (UPDATED) — Phase 13 entry added.
+- Project `CLAUDE.md` (UPDATED) — "Active iteration mode" block added under §Current phase.
 
 ---
 
