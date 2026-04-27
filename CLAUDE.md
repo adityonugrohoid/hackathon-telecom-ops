@@ -25,6 +25,15 @@ HTML pages (no Flask, no backend) that mirror the live surface 1:1.
 Iterate visually there first; port to `netpulse-ui/templates/` only after
 the static mockup is approved. Source-of-truth references:
 
+- `landing-trial.html` (project root) — **canonical design reference**
+  for all static-mockup work (promoted 2026-04-27). Single self-contained
+  page establishing the warm editorial direction: cream paper + deep ink
+  + clay coral palette, Fraunces display + Inter body + JetBrains Mono
+  labels. All CSS, SVG, and JS inlined; only external dep is Google
+  Fonts. Calibrate every change in `static-mockup/` against this page —
+  spacing, hierarchy, micro-interactions, section archetypes (hero,
+  marquee, manifesto, quote band, asymmetric story grid, news list,
+  CTA band, multi-column footer)
 - `static-mockup/` — six pages: `index.html` (landing), `chat.html`
   (workspace mockup), `network-events.html`, `call-records.html`,
   `tickets.html`, `docs.html` (single-page comprehensive docs)
@@ -337,6 +346,7 @@ emojis in code or docs unless explicitly requested.
 ## Where to look
 
 - `README.md` — full project overview, architecture diagram, screenshots, deployment commands
+- `landing-trial.html` — canonical design reference for static-mockup work; warm editorial direction (cream paper + deep ink + clay coral) with Fraunces display + Inter body + JetBrains Mono labels; all CSS / SVG / JS inlined
 - `telecom_ops/agent.py` — the four sub-agents and the SequentialAgent root
 - `telecom_ops/tools.py` — `classify_issue` + `save_incident_ticket` (native ADK tools); `network_tools` and `cdr_nl_tools` toolset loaders for the MCP Toolbox
 - `telecom_ops/prompts.py` — sub-agent instruction templates

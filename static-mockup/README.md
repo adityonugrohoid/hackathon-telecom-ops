@@ -3,6 +3,18 @@
 A self-contained, no-backend HTML/CSS mockup of the redesigned NetPulse
 AI surface. Open any HTML file in a browser; nothing else to install.
 
+> **Canonical design reference:** [`../landing-trial.html`](../landing-trial.html)
+> is the single source of truth for the visual direction (promoted
+> 2026-04-27). Calibrate every change in this folder against it — the
+> warm editorial palette (cream paper + deep ink + clay coral),
+> Fraunces display + Inter body + JetBrains Mono labels, spacing /
+> hierarchy / micro-interactions, and the section archetypes (hero,
+> marquee, manifesto, quote band, asymmetric story grid, news list,
+> CTA band, multi-column footer). The six pages here are the
+> *application* of that direction to NetPulse-specific surfaces; the
+> NetPulse brand identity (pandan accent, np-glyph mark) remains
+> NetPulse's own.
+
 The design follows the spec in
 [`../docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md`](../docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md).
 All Anthropic-proprietary elements (logo, custom typefaces, brand copy,
