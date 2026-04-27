@@ -12,7 +12,12 @@
 {% elif result.row_count == 0 %}
   <div class="np-empty">No tickets yet</div>
 {% else %}
-  <div class="np-rowcount">{{ result.row_count }} tickets</div>
+  <div class="np-rowcount">
+    Showing {{ result.row_count }} of {{ result.total_count }} tickets
+    {%- if result.total_count > result.row_count %}
+      &middot; <span class="np-rowcount-hint">newest first &mdash; older tickets not displayed</span>
+    {% endif %}
+  </div>
   <table class="np-table">
     <thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
     <tbody>

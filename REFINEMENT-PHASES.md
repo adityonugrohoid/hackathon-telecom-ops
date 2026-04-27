@@ -23,8 +23,10 @@ Sequential runbook for the prototype refinement workstream. Each phase is groupe
 | **8. Ship** | ✅ **DONE** (2026-04-26) | ~1.5h | Cloud Run deploy | First production deploy of Phases 2-7 (rev `00004-sfn`); revs `00005-ns6` (env-typo fix), `00006-7v8` (heliodoron tokens), `00007-x7t` (pandan unification), `00008-kzk` (5s timeout + 3.1 previews), `00009-f2c` (multi-continent ladder), `00010-mqc` (Phase 9 round 2) carried Phase 9 polish |
 | **9. Post-deploy polish + robustness** | ✅ **DONE** (2026-04-26) | ~5h | source + deploys | Heliodoron identity v1 + round 2 (header darker, done-state pandan unification, impact-card extractor + layout fix), 5s hang timeout, region failover hardening, multi-continent ladder, Flash-Lite collapse for all 4 agents (resolves Pro-preview region-whitelist surprise) |
 | **10. Toolbox refactor + seed enrichment** | ✅ **DONE** (2026-04-26) | ~5h | source + 2 deploys + BQ/AlloyDB writes | 8 MCP tools collapsed to 2 universal parameterized (`network-toolbox-00005-...`); query_cdr parameterized (days_back/call_type/limit); seed extended to 10 cities (132 events, 500 CDRs); ALLOWED_SEVERITIES vocab bug fixed; setup_alloydb.py bulk-insert patched |
+| **11. AlloyDB AI NL2SQL + BigQuery analytical workload** | ✅ **DONE** (2026-04-26) | ~5h | source + 2 deploys + BQ/AlloyDB writes + DDL | NL2SQL replaces hand-written `query_cdr` (3 tools → 1 NL question); BQ table re-created DAY-partitioned + (region,severity)-clustered with 50 000 events + new `weekly_outage_trend` analytical tool; CDR seed grown 500 → 5 000 with anchor-clustered failures; `setup_alloydb_nl.py` (NEW) automates the 10-step AlloyDB AI provisioning |
+| **12. Vertex model-ladder failover + viewer UX polish** | ✅ **DONE** (2026-04-27) | ~3h | source + iterative deploys | Vertex region ladder swapped for **model ladder** (primary 10s → primary+0.5s 20s → `gemini-2.5-flash` GA fallback 30s); deferred Tier-2 viewer items shipped (§2.2 pagination context, §2.3 ARIA labels, §2.6 complaint cap); call-status pill on CDR viewer; chip-reset for ADK 2-LLM-call pattern; `⤳` → `↪`; Cloud Run Buildpacks-vs-Dockerfile regression fixed |
 
-**Single redeploy principle held for Phases 2-7** (one redeploy carried everything). Phase 9 ran in iterative polish-and-redeploy mode against a warm `min-instances=1` service — each iteration ~3-5 min, settling on revision `00010-mqc`. Phase 10 will redeploy two services (`network-toolbox` + `netpulse-ui`).
+**Single redeploy principle held for Phases 2-7** (one redeploy carried everything). Phase 9 ran in iterative polish-and-redeploy mode against a warm `min-instances=1` service — each iteration ~3-5 min, settling on revision `00010-mqc`. Phases 10/11 each redeployed two services (`network-toolbox` + `netpulse-ui`). Phase 12 was netpulse-ui only (no toolbox change), 6 redeploys (`00014-kc8` → `00019-t46`) including 2 broken Buildpacks builds before the Dockerfile path was restored.
 
 ---
 
@@ -368,15 +370,47 @@ Three deliverables that exercise the two judged dimensions Phase 10 left on the 
 
 ---
 
+## Phase 12 — Vertex model-ladder failover + viewer UX polish ✅ DONE
+
+**Started + Settled:** 2026-04-27 (single-day push)
+**Authorization:** Source + Cloud Run deploys — within post-2026-04-26 Freeze A operational lift, no per-change confirmation needed.
+
+A reactive phase: a production trace surfaced the structural break in the prior region-failover ladder, which forced a rewrite. Plus a sweep of three deferred Tier-2 viewer-UX items the audit had already flagged as low-effort + high-readability.
+
+- [x] **§12.1** Vertex AI failover redesign — model ladder replaces region ladder. Prior ladder had `global` 429 → `us-central1` 404 NOT_FOUND every time because `gemini-3.1-flash-lite-preview` is `global`-only on this project; every quota error became a hard demo failure. Replaced with `ATTEMPT_SCHEDULE`: attempt 1 (primary, 10s), attempt 2 (primary after 0.5s sleep, 20s), attempt 3 (`gemini-2.5-flash` GA fallback, 30s). All on `global`. Per-attempt loop mutates `llm_request.model` per attempt because parent `Gemini.generate_content_async` reads model from there. Three new self-tests (quota retry / timeout retry / persistent-429 swap) all pass. **Production trace 2026-04-27 05:18:14 walked the full ladder in 543ms** (`global 429 → 0.5s sleep → global 429 again → swap to gemini-2.5-flash → ok`); 05:31:10 ("Major dropped calls in Surabaya") swapped twice and the demo completed end-to-end with no user-visible failure.
+- [x] **§12.2** Chip-reset for ADK 2-LLM-call-per-agent pattern. ADK's tool-calling pattern means each agent makes 2 LLM calls (tool selection + tool-result interpretation), and each independently walks the schedule. Without resetting between walks, the chat-UI 'via' chip read as a confusing chain like `via primary ⤳ fallback ⤳ primary ⤳ fallback`. Added `dataset.settled` flag — set on every `ok`, reset on `failover`; on the next attempt event after settle, the chip is cleared and rebuilt so it reflects the path of the **most recent** LLM call.
+- [x] **§12.3** Failover chip separator `⤳` → `↪`. `↪` (U+21AA) is the canonical UI glyph for "redirected to / fell back to" (Slack, GitHub, mail clients) and matches the model-fallback semantic exactly.
+- [x] **§12.4** Call-status pill on `call_records` viewer. Bare-text `call_status` column was visually inconsistent with the existing severity / category pills on the other viewer tabs. Added 3 modifier classes reusing semantic tokens (completed → emerald, dropped → orange, failed → red) — no new colors invented.
+- [x] **§12.5** Cloud Run deploy fix — Dockerfile build from project root. Two consecutive deploys (`00014-kc8`, `00015-24q`) silently used Buildpacks instead of the root Dockerfile because the deploy command was issued from inside `netpulse-ui/`, so `--source .` resolved there and stripped `telecom_ops/` from the image. Every `/api/query` surfaced `ModuleNotFoundError: No module named 'telecom_ops'`; viewer routes worked because they don't import `telecom_ops`. Diagnosed by inspecting `gs://run-sources-...` zip uploads + Cloud Build steps. Fix: deploy with absolute `--source` path + `--clear-base-image` once (to flip back from Buildpacks). Captured as memory `~/.claude/memory/reference_gcloud_run_source_dockerfile.md` (NEW).
+- [x] **§12.6** Three deferred Tier-2 viewer items shipped together (low effort, high readability):
+  - **§2.2** Pagination context — `QueryResult` gained `total_count` + `limit` fields; all 3 query functions now run a `COUNT(*)` (with same WHERE filters) before the `SELECT … LIMIT`. Templates render `Showing N of TOTAL` with `(filtered)` indicator + `limit reached — refine filters to narrow` hint when `total_count > row_count`. Live verification: network-events shows `Showing 200 of 50000 · limit reached`.
+  - **§2.3** Form labels + ARIA — every `<select>` on `network_events.html` and `call_records.html` got an explicit `aria-label`; the `<form>` got an aria-label too. No screen-reader testing in scope; structural compliance only.
+  - **§2.6** Complaint length cap — `classify_issue` strips + caps complaint at 2000 chars (new `MAX_COMPLAINT_CHARS` constant), errors out on empty after stripping. Live trace `[classify_issue] category=network region=Surabaya len=31` confirms the path.
+
+**Six redeploys to settle:**
+1. `00014-kc8` — pagination + a11y + complaint cap shipped, **but Buildpacks regression** (telecom_ops missing).
+2. `00015-24q` — call-status pill shipped, **still Buildpacks** (regression undetected because viewer routes worked).
+3. `00016-qsq` — Dockerfile restored via `--clear-base-image`, agent endpoint healthy again.
+4. `00017-zf4` — model-ladder failover code shipped (region ladder removed).
+5. `00018-hgj` — chip-reset fix.
+6. `00019-t46` — `⤳` → `↪` separator swap.
+
+**Operational lessons captured in memory:**
+- `~/.claude/memory/reference_gcloud_run_source_dockerfile.md` (NEW) — Buildpacks-vs-Dockerfile auto-detect rules; absolute `--source` pinning; `--clear-base-image` requirement on flip-back.
+- `~/.claude/memory/reference_vertex_ai_dsq.md` §1c (UPDATED) — model-ladder pattern as the recommended successor to multi-region failover for projects with regionally-gated preview models.
+- `~/.claude/memory/protected_hackathon_deployment.md` (UPDATED) — current production revision pointer, Phase 12 deploy log.
+
+---
+
 ## Out of scope (deferred from this 5-day window)
 
 Items present in `REFINEMENT-AUDIT.md` but not committed to the 5-day window:
 
 | Group | Items |
 |---|---|
-| Tier 2 quality polish | §2.1 SSE heartbeat · §2.2 pagination · §2.3 a11y labels · §2.4 error classification · §2.5 region whitelist · §2.6 complaint length cap · §2.8 structured logs |
+| Tier 2 quality polish | §2.1 SSE heartbeat · §2.4 error classification · §2.8 structured logs *(§2.2 pagination, §2.3 a11y, §2.6 complaint cap shipped in Phase 12; §2.5 region whitelist resolved-via §11.1)* |
 | Big redesign extras | §5.1 three-pane workspace · §5.6 status workflow · §5.7 similar tickets · §5.8 root-cause checklist · §5.9 KPI strip · §5.10 empty states |
-| Tier 4 brainstorm | §4.1 parallel agents · §4.2 idempotency · §4.3 pytest suite · §4.4 demo seed panel (partly absorbed by §5.11) · §4.5 ticket counter |
+| Tier 4 brainstorm | §4.1 parallel agents · §4.3 pytest suite · §4.5 ticket counter *(§4.2 idempotency resolved-via §3.1+§9.4+§9.14+§1.2; §4.4 seed panel absorbed-by §5.11)* |
 | Multi-tenant SaaS | The full Variant C path — 8-12 days, post-Top-10 work |
 
 These remain in the master audit doc for post-Top-10 consideration.

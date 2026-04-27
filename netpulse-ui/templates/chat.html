@@ -531,15 +531,19 @@ function npOnLoad() {
 }
 window.addEventListener('DOMContentLoaded', npOnLoad);
 
-// §3.2 — per-attempt Vertex AI region telemetry. agent_runner emits one
+// §3.2 — per-attempt Vertex AI model-ladder telemetry. agent_runner emits one
 // `region_attempt` event per RegionFailoverGemini attempt with shape
-// `{type:'region_attempt', agent, region, outcome, message?}`. We progressively
+// `{type:'region_attempt', agent, region, outcome, message?}`. The `region`
+// field carries the MODEL NAME the attempt ran on (the field name is preserved
+// from the prior region-failover design to minimize SSE diff). We progressively
 // build a trace chip in the matching timeline entry's header:
-//   first ok → "via global"
-//   failover then ok → "via global ⤳ asia-southeast2"
-//   multiple failovers → "via global ⤳ asia-southeast2 ⤳ asia-southeast1"
+//   first ok                 → "via gemini-3.1-flash-lite-preview"
+//   429-retry then ok        → "via gemini-3.1-flash-lite-preview" (same model collapses)
+//   persistent 429 swaps     → "via gemini-3.1-flash-lite-preview ↪ gemini-2.5-flash"
 // The chip carries a 'failover' modifier class while a hop is mid-walk so the
-// chip reads as warning-tinted; a successful settle drops the modifier.
+// chip reads as warning-tinted; a successful settle drops the modifier and
+// flips dataset.settled='1' so the NEXT walk (ADK runs 2 LLM calls per agent)
+// resets the chip rather than appending to it.
 function npRenderRegionAttempt(ev) {
   if (!ev.agent || !ev.region) return;
   var entry = document.querySelector('.np-timeline-entry[data-agent="' + ev.agent + '"]');
@@ -547,6 +551,17 @@ function npRenderRegionAttempt(ev) {
   var chip = entry.querySelector('.np-region-trace');
   if (!chip) return;
   chip.hidden = false;
+  // ADK makes 2 LLM calls per agent (tool selection + tool-result interpretation),
+  // so each agent run produces TWO independent walks of ATTEMPT_SCHEDULE. Without
+  // resetting between walks the chip reads as one giant chain like
+  // "primary ↪ fallback ↪ primary ↪ fallback" which falsely suggests the wrapper
+  // bounced back to primary. The 'settled' flag is set on every 'ok' event; the
+  // next attempt event after a settle clears the chip and starts a fresh walk so
+  // the chip always reflects the path of the MOST RECENT LLM call.
+  if (chip.dataset.settled === '1') {
+    while (chip.firstChild) chip.removeChild(chip.firstChild);
+    chip.dataset.settled = '0';
+  }
   if (!chip.firstChild) {
     var prefix = document.createElement('span');
     prefix.className = 'np-region-trace-prefix';
@@ -557,7 +572,7 @@ function npRenderRegionAttempt(ev) {
     first.textContent = ev.region;
     chip.appendChild(first);
   } else {
-    // chip already has at least one region — append "⤳ region" only if the new
+    // chip already has at least one region — append "↪ region" only if the new
     // region differs from the last one already shown (defends against duplicate
     // events on the streaming-bypass branch).
     var existing = chip.querySelectorAll('.np-region-trace-region');
@@ -565,7 +580,7 @@ function npRenderRegionAttempt(ev) {
     if (!last || last.textContent !== ev.region) {
       var sep = document.createElement('span');
       sep.className = 'np-region-trace-sep';
-      sep.textContent = ' ⤳ ';  // ⤳
+      sep.textContent = ' ↪ ';  // U+21AA — "redirected to" (model-fallback semantic)
       chip.appendChild(sep);
       var next = document.createElement('span');
       next.className = 'np-region-trace-region';
@@ -575,8 +590,10 @@ function npRenderRegionAttempt(ev) {
   }
   if (ev.outcome === 'failover') {
     chip.classList.add('np-region-trace-failover');
+    chip.dataset.settled = '0';
   } else {
     chip.classList.remove('np-region-trace-failover');
+    chip.dataset.settled = '1';
   }
 }
 

@@ -19,6 +19,44 @@ NetPulse AI is functionally solid and the demo runs cleanly. Refinement is a pol
 
 ---
 
+## Status snapshot (2026-04-27)
+
+**Refinement work has progressed past the original audit.** Phases 8-12 shipped between 2026-04-26 and 2026-04-27, settling on revisions `netpulse-ui-00019-t46` + `network-toolbox-00010-cmd`. The **Master summary table** (and its **Phase 9/10/11/12 extension**) below carries an inline **Status** column on every row — scan there for ✅/⏸/🔄 per item ID. This section is the tier/phase rollup. Per-item execution narrative + verifications live in [`REFINEMENT-PHASES.md`](./REFINEMENT-PHASES.md); per-item rationale lives in §1-§5 (original audit) and the new "Phase 9 / 10 / 11 / 12" sections at the bottom of *this* document.
+
+**Status legend:**
+- ✅ **DONE** — shipped to production (verified)
+- ⏸ **DEFERRED** — tracked but not shipped in the 5-day window (post-Top-10 candidate)
+- 🔄 **RESOLVED via §X** — fulfilled or obsoleted by another shipped item; no separate work needed
+
+### Shipped vs deferred — by tier / phase
+
+The "Satisfied" column = ✅ + 🔄 (items whose intent is met, whether by direct work or by coverage from another shipped item).
+
+| Tier / Phase | Total | ✅ | 🔄 | ⏸ | Satisfied | Hit rate |
+|---|---:|---:|---:|---:|---:|---:|
+| Tier 1 — demo-blocking polish | 7 | 7 | 0 | 0 | 7 | 100% |
+| Tier 2 — quality + storytelling (incl. §5 redesign Tier-2 items) | 19 | 13 | 1 | 5 | 14 | 74% |
+| Tier 3 — innovation (Vertex AI region failover) | 2 | 2 | 0 | 0 | 2 | 100% |
+| Tier 4 — brainstorming queue (incl. §5 redesign Tier-4 items) | 10 | 0 | 2 | 8 | 2 | 20% |
+| **Original audit subtotal** | **38** | **22** | **3** | **13** | **25** | **66%** |
+| Phase 9 — post-deploy polish + robustness | 14 | 12 | 1 | 1 | 13 | 93% |
+| Phase 10 — toolbox refactor + seed enrichment | 6 | 6 | 0 | 0 | 6 | 100% |
+| Phase 11 — AlloyDB AI NL2SQL + BigQuery analytical workload | 3 | 3 | 0 | 0 | 3 | 100% |
+| Phase 12 — Vertex model-ladder failover + viewer UX polish | 5 | 5 | 0 | 0 | 5 | 100% |
+| **Post-audit subtotal** | **28** | **26** | **1** | **1** | **27** | **96%** |
+| **Grand total** | **66** | **48** | **4** | **14** | **52** | **79%** |
+
+### Resolved-via — informational
+
+These items were not directly implemented but are satisfied by other shipped work (or, in the case of §9.7, were findings rather than deliverables). All carry 🔄 in the Status column above.
+
+- **§2.5 Region whitelist in `query_cdr`** — `query_cdr` was deleted in **§11.1**. Region validation now happens through AlloyDB AI's `city_name` concept-type binding registered in `setup_alloydb_nl.py:associate_region_concept` — a structural enforcement point that's stronger than a Python whitelist would have been.
+- **§4.2 Idempotency keys on `save_incident_ticket`** — the original concern was retry-induced duplicates. **§3.1 / §9.4 / §9.14** failover design only retries *before* the underlying call returns success (cancellation-on-timeout), AND **§1.2** disables the Investigate button during a request. Duplicate writes from retries are now structurally impossible — no idempotency column needed.
+- **§4.4 Demo seed panel — clickable example complaints** — fully absorbed by **§5.11 landing chips**. The launch chips on `/` use `?seed=...&autorun=1` to pre-populate `/app`, which is exactly the in-app seed panel concept with a better entry point (judges meet the chips before reaching the workspace).
+- **§9.7 Pro-preview region-whitelist finding** — surfaced 2026-04-26 when `gemini-3.1-pro-preview` returned `404 NOT_FOUND` in non-`global` regions on this project, making the failover ladder a structural no-op for synthesis. **Resolved via §9.13** (collapse `MODEL_SYNTHESIS = MODEL_FAST` so all 4 agents run on `gemini-3.1-flash-lite-preview`, which is multi-region addressable end-to-end).
+
+---
+
 ## Master summary table
 
 Auth column legend:
@@ -27,50 +65,91 @@ Auth column legend:
 - **config** = Cloud Run config write only (no source)
 - **doc** = README / docs / screenshots only (no deploy)
 
-| ID | Item | Tier | Category | Severity | Effort | Auth | Files |
-|---|---|---|---|---|---|---|---|
-| 1.1 | Surface tool errors as chat card error state | 1 | UX | HIGH | M | src+deploy | `netpulse-ui/templates/chat.html`, `netpulse-ui/agent_runner.py` |
-| 1.2 | Disable Investigate button + spinner during request | 1 | UX | MEDIUM | S | src+deploy | `netpulse-ui/templates/chat.html` |
-| 1.3 | Client-side empty/whitespace input validation | 1 | UX | MEDIUM | S | src+deploy | `netpulse-ui/templates/chat.html` |
-| 1.4 | Tighten `network_investigator` output to enumerate ALL events | 1 | Prompt | HIGH | M | src+deploy | `telecom_ops/prompts.py` |
-| 1.5 | Validate `category` enum in `save_incident_ticket` | 1 | Tool | HIGH | S | src+deploy | `telecom_ops/tools.py` |
-| 1.6 | Set `minScale=1` on `netpulse-ui` (kill 7s cold start) | 1 | Config | HIGH | S | config | (Cloud Run) |
-| 1.7 | Raise `maxScale` on `network-toolbox` from 3 → 10 | 1 | Config | MEDIUM | S | config | (Cloud Run) |
-| 2.1 | SSE heartbeat every 5s during long agent calls | 2 | Observability | MEDIUM | S | src+deploy | `netpulse-ui/app.py`, `agent_runner.py` |
-| 2.2 | Pagination context on data viewer tabs | 2 | UX | MEDIUM | M | src+deploy | `netpulse-ui/data_queries.py`, `templates/*.html` |
-| 2.3 | Form labels + ARIA attributes on filter selects | 2 | UX/A11y | MEDIUM | S | src+deploy | `netpulse-ui/templates/network_events.html` etc. |
-| 2.4 | Error classification (network/LLM/DB) in card error state | 2 | UX | MEDIUM | M | src+deploy | `netpulse-ui/agent_runner.py`, `chat.html` |
-| 2.5 | Region whitelist in `query_cdr` | 2 | Tool | MEDIUM | S | src+deploy | `telecom_ops/tools.py` |
-| 2.6 | Complaint length cap + sanitization | 2 | Tool | MEDIUM | S | src+deploy | `telecom_ops/tools.py` |
-| 2.7 | Make hardcoded URLs env-driven (`TOOLBOX_URL`, project ID) | 2 | Tool/Config | HIGH | S | src+deploy | `telecom_ops/tools.py`, `netpulse-ui/data_queries.py` |
-| 2.8 | Structured logs with session correlation ID | 2 | Observability | HIGH | M | src+deploy | `netpulse-ui/agent_runner.py`, `telecom_ops/tools.py` |
-| 2.9 | "Quick Demo" section in README with example queries | 2 | Doc | MEDIUM | S | doc | `README.md` |
-| 2.10 | Architectural callouts above mermaid diagram | 2 | Doc | MEDIUM | S | doc | `README.md` |
-| 2.11 | SSE streaming GIF / animated screenshot in README | 2 | Doc | MEDIUM | M | doc | `README.md`, `docs/screenshots/` |
-| 2.12 | Schema contract + env-driven dataset names + reproducible seed pipeline (BYO-data foundation) | 2 | Tool/Doc/Reproducibility | HIGH | M | src+deploy | `docs/SCHEMA.md` (NEW), `docs/seed-data/*.csv` (NEW), `scripts/setup_bigquery.py` (NEW), `scripts/setup_byo.sh` (NEW), `setup_alloydb.py`, `telecom_ops/tools.py`, `netpulse-ui/data_queries.py`, `README.md` |
-| 3.1 | Vertex AI region failover (`global` default + ladder) | 3 | Innovation | HIGH | L | src+deploy+env | `telecom_ops/vertex_failover.py` (NEW), `agent.py`, `.env` |
-| 3.2 | Per-attempt region telemetry in chat cards | 3 | UX/Story | MEDIUM | M | src+deploy | `netpulse-ui/agent_runner.py`, `chat.html` |
-| 4.1 | Parallelize `network_investigator` + `cdr_analyzer` | 4 | Architecture | MEDIUM | L | src+deploy | `telecom_ops/agent.py` |
-| 4.2 | Idempotency keys on `save_incident_ticket` | 4 | Tool | LOW | M | src+deploy | `telecom_ops/tools.py`, `setup_alloydb.py` |
-| 4.3 | Minimal pytest suite for `tools.py` | 4 | Tests | LOW | L | src | `telecom_ops/tests/` (NEW) |
-| 4.4 | Demo seed panel — clickable example complaints | 4 | UX | MEDIUM | S | src+deploy | `netpulse-ui/templates/chat.html`, `app.py` |
-| 4.5 | Live ticket counter strip on chat page | 4 | UX | MEDIUM | M | src+deploy | `netpulse-ui/app.py`, `chat.html`, `data_queries.py` |
-| 5.0a | Design token foundation (curated from `heliodoron-ui-identity`) — prerequisite for the rest of §5 | 2 | UX/Foundation | HIGH | M | src+deploy | `static/tokens.css` (NEW), `static/style.css`, `templates/*.html` |
-| 5.1 | Three-pane ticket workspace layout (ServiceNow-inspired) | 2 | UX/Redesign | HIGH | L | src+deploy | `chat.html`, `style.css`, `app.py` |
-| 5.2 | Pipeline-as-timeline (PagerDuty-style vertical activity stream) | 2 | UX/Redesign | HIGH | M | src+deploy | `chat.html`, `style.css` |
-| 5.3 | Severity + Category badges with color coding | 2 | UX/Redesign | MEDIUM | S | src+deploy | `chat.html`, `style.css`, `agent_runner.py` |
-| 5.4 | "Recommended NOC actions" chip panel on ticket | 2 | UX/Redesign | MEDIUM | M | src+deploy | `chat.html`, `prompts.py` |
-| 5.5 | Customer-impact card (X affected, Y min, Z events) | 2 | UX/Redesign | HIGH | M | src+deploy | `chat.html`, `prompts.py`, `agent_runner.py` |
-| 5.6 | Acknowledge / Resolve action buttons + status workflow | 4 | UX/Redesign | MEDIUM | L | src+deploy | `chat.html`, `app.py`, `setup_alloydb.py` |
-| 5.7 | Similar past tickets sidebar (last 7 days, same cat+region) | 4 | UX/Redesign | MEDIUM | M | src+deploy | `data_queries.py`, `chat.html` |
-| 5.8 | Knowledge-base style "Likely root causes" checklist | 4 | UX/Redesign | MEDIUM | M | src+deploy | `prompts.py` or static map, `chat.html` |
-| 5.9 | KPI strip header (tickets opened/resolved today) | 4 | UX/Redesign | LOW | M | src+deploy | `app.py`, `chat.html`, `data_queries.py` |
-| 5.10 | Empty-state illustrations on data viewer tabs | 4 | UX/Redesign | LOW | S | src+deploy | `templates/*.html`, `style.css` |
-| 5.11 | Hero landing page + routing redesign (`/` → landing, `/app` → chat) | 2 | UX/Redesign | HIGH | M | src+deploy | `templates/landing.html` (NEW), `app.py`, `chat.html`, `style.css` |
+**Status column legend:** ✅ DONE (shipped to production) · ⏸ DEFERRED (post-Top-10 candidate) · 🔄 RESOLVED via §X (fulfilled or obsoleted by another shipped item)
 
-**Counts:** Tier 1 = 7 items · Tier 2 = 19 items (incl. token foundation 5.0a + 6 redesign items 5.1–5.5 + 5.11 + BYO-data foundation 2.12) · Tier 3 = 2 items · Tier 4 = 9 items (incl. 5 redesign items 5.6–5.10) · **Total = 37**
+| ID | Status | Item | Tier | Category | Severity | Effort | Auth | Files |
+|---|:-:|---|---|---|---|---|---|---|
+| 1.1 | ✅ | Surface tool errors as chat card error state | 1 | UX | HIGH | M | src+deploy | `netpulse-ui/templates/chat.html`, `netpulse-ui/agent_runner.py` |
+| 1.2 | ✅ | Disable Investigate button + spinner during request | 1 | UX | MEDIUM | S | src+deploy | `netpulse-ui/templates/chat.html` |
+| 1.3 | ✅ | Client-side empty/whitespace input validation | 1 | UX | MEDIUM | S | src+deploy | `netpulse-ui/templates/chat.html` |
+| 1.4 | ✅ | Tighten `network_investigator` output to enumerate ALL events | 1 | Prompt | HIGH | M | src+deploy | `telecom_ops/prompts.py` |
+| 1.5 | ✅ | Validate `category` enum in `save_incident_ticket` | 1 | Tool | HIGH | S | src+deploy | `telecom_ops/tools.py` |
+| 1.6 | ✅ | Set `minScale=1` on `netpulse-ui` (kill 7s cold start) | 1 | Config | HIGH | S | config | (Cloud Run) |
+| 1.7 | ✅ | Raise `maxScale` on `network-toolbox` from 3 → 10 | 1 | Config | MEDIUM | S | config | (Cloud Run) |
+| 2.1 | ⏸ | SSE heartbeat every 5s during long agent calls | 2 | Observability | MEDIUM | S | src+deploy | `netpulse-ui/app.py`, `agent_runner.py` |
+| 2.2 | ✅ | Pagination context on data viewer tabs | 2 | UX | MEDIUM | M | src+deploy | `netpulse-ui/data_queries.py`, `templates/*.html` |
+| 2.3 | ✅ | Form labels + ARIA attributes on filter selects | 2 | UX/A11y | MEDIUM | S | src+deploy | `netpulse-ui/templates/network_events.html` etc. |
+| 2.4 | ⏸ | Error classification (network/LLM/DB) in card error state | 2 | UX | MEDIUM | M | src+deploy | `netpulse-ui/agent_runner.py`, `chat.html` |
+| 2.5 | 🔄 | Region whitelist in `query_cdr` *(obsoleted by §11.1 — `query_cdr` deleted; AlloyDB AI `city_name` concept binds region validation)* | 2 | Tool | MEDIUM | S | src+deploy | `telecom_ops/tools.py` |
+| 2.6 | ✅ | Complaint length cap + sanitization | 2 | Tool | MEDIUM | S | src+deploy | `telecom_ops/tools.py` |
+| 2.7 | ✅ | Make hardcoded URLs env-driven (`TOOLBOX_URL`, project ID) | 2 | Tool/Config | HIGH | S | src+deploy | `telecom_ops/tools.py`, `netpulse-ui/data_queries.py` |
+| 2.8 | ⏸ | Structured logs with session correlation ID | 2 | Observability | HIGH | M | src+deploy | `netpulse-ui/agent_runner.py`, `telecom_ops/tools.py` |
+| 2.9 | ✅ | "Quick Demo" section in README with example queries | 2 | Doc | MEDIUM | S | doc | `README.md` |
+| 2.10 | ✅ | Architectural callouts above mermaid diagram | 2 | Doc | MEDIUM | S | doc | `README.md` |
+| 2.11 | ⏸ | SSE streaming GIF / animated screenshot in README | 2 | Doc | MEDIUM | M | doc | `README.md`, `docs/screenshots/` |
+| 2.12 | ✅ | Schema contract + env-driven dataset names + reproducible seed pipeline (BYO-data foundation) | 2 | Tool/Doc/Reproducibility | HIGH | M | src+deploy | `docs/SCHEMA.md` (NEW), `docs/seed-data/*.csv` (NEW), `scripts/setup_bigquery.py` (NEW), `scripts/setup_byo.sh` (NEW), `setup_alloydb.py`, `telecom_ops/tools.py`, `netpulse-ui/data_queries.py`, `README.md` |
+| 3.1 | ✅ | Vertex AI region failover (`global` default + ladder) | 3 | Innovation | HIGH | L | src+deploy+env | `telecom_ops/vertex_failover.py` (NEW), `agent.py`, `.env` |
+| 3.2 | ✅ | Per-attempt region telemetry in chat cards | 3 | UX/Story | MEDIUM | M | src+deploy | `netpulse-ui/agent_runner.py`, `chat.html` |
+| 4.1 | ⏸ | Parallelize `network_investigator` + `cdr_analyzer` | 4 | Architecture | MEDIUM | L | src+deploy | `telecom_ops/agent.py` |
+| 4.2 | 🔄 | Idempotency keys on `save_incident_ticket` *(obsoleted by §3.1 / §9.4 / §9.14 pre-tool retry design + §1.2 button disable)* | 4 | Tool | LOW | M | src+deploy | `telecom_ops/tools.py`, `setup_alloydb.py` |
+| 4.3 | ⏸ | Minimal pytest suite for `tools.py` | 4 | Tests | LOW | L | src | `telecom_ops/tests/` (NEW) |
+| 4.4 | 🔄 | Demo seed panel — clickable example complaints *(absorbed by §5.11 landing chips with `?seed=…&autorun=1` handoff)* | 4 | UX | MEDIUM | S | src+deploy | `netpulse-ui/templates/chat.html`, `app.py` |
+| 4.5 | ⏸ | Live ticket counter strip on chat page | 4 | UX | MEDIUM | M | src+deploy | `netpulse-ui/app.py`, `chat.html`, `data_queries.py` |
+| 5.0a | ✅ | Design token foundation (curated from `heliodoron-ui-identity`) — prerequisite for the rest of §5 | 2 | UX/Foundation | HIGH | M | src+deploy | `static/tokens.css` (NEW), `static/style.css`, `templates/*.html` |
+| 5.1 | ⏸ | Three-pane ticket workspace layout (ServiceNow-inspired) | 2 | UX/Redesign | HIGH | L | src+deploy | `chat.html`, `style.css`, `app.py` |
+| 5.2 | ✅ | Pipeline-as-timeline (PagerDuty-style vertical activity stream) | 2 | UX/Redesign | HIGH | M | src+deploy | `chat.html`, `style.css` |
+| 5.3 | ✅ | Severity + Category badges with color coding | 2 | UX/Redesign | MEDIUM | S | src+deploy | `chat.html`, `style.css`, `agent_runner.py` |
+| 5.4 | ✅ | "Recommended NOC actions" chip panel on ticket | 2 | UX/Redesign | MEDIUM | M | src+deploy | `chat.html`, `prompts.py` |
+| 5.5 | ✅ | Customer-impact card (X affected, Y min, Z events) | 2 | UX/Redesign | HIGH | M | src+deploy | `chat.html`, `prompts.py`, `agent_runner.py` |
+| 5.6 | ⏸ | Acknowledge / Resolve action buttons + status workflow | 4 | UX/Redesign | MEDIUM | L | src+deploy | `chat.html`, `app.py`, `setup_alloydb.py` |
+| 5.7 | ⏸ | Similar past tickets sidebar (last 7 days, same cat+region) | 4 | UX/Redesign | MEDIUM | M | src+deploy | `data_queries.py`, `chat.html` |
+| 5.8 | ⏸ | Knowledge-base style "Likely root causes" checklist | 4 | UX/Redesign | MEDIUM | M | src+deploy | `prompts.py` or static map, `chat.html` |
+| 5.9 | ⏸ | KPI strip header (tickets opened/resolved today) | 4 | UX/Redesign | LOW | M | src+deploy | `app.py`, `chat.html`, `data_queries.py` |
+| 5.10 | ⏸ | Empty-state illustrations on data viewer tabs | 4 | UX/Redesign | LOW | S | src+deploy | `templates/*.html`, `style.css` |
+| 5.11 | ✅ | Hero landing page + routing redesign (`/` → landing, `/app` → chat) | 2 | UX/Redesign | HIGH | M | src+deploy | `templates/landing.html` (NEW), `app.py`, `chat.html`, `style.css` |
+
+**Counts:** Tier 1 = 7 (7 ✅ / 0 🔄 / 0 ⏸) · Tier 2 = 19 (13 ✅ / 1 🔄 / 5 ⏸) · Tier 3 = 2 (2 ✅ / 0 🔄 / 0 ⏸) · Tier 4 = 10 (0 ✅ / 2 🔄 / 8 ⏸) · **Original audit total = 38 (22 ✅ / 3 🔄 / 13 ⏸)**
 
 **Effort budget:** Tier 1 = ~6h · Tier 2 = ~24h (incl. ~15h redesign + ~3.5h BYO-data foundation) · Tier 3 = ~6h · Tier 4 = ~16h. Realistic 5-day plan: Tier 1 + Tier 3 + UX-focused Tier 2 subset (token foundation + landing + timeline + badges + impact card + action chips) + BYO-data foundation (§2.7 env vars + §2.12 schema/seed) = ~30h work.
+
+### Master table — Phase 9/10/11 extensions
+
+Items below emerged during execution (post-2026-04-26 deploy) and are not in the original 2026-04-25 audit. Each shipped to production in the phase indicated. Per-item rationale + verification appears in the new Phase 9 / 10 / 11 sections below; the format here mirrors the master table for cross-referencing by ID.
+
+| ID | Status | Item | Phase | Category | Severity | Effort | Auth | Files |
+|---|:-:|---|---|---|---|---|---|---|
+| 9.1 | ✅ | Heliodoron visual identity v1 (sand neutrals + warm-gold + 3 fonts) | 9 | UX | HIGH | M | src+deploy | `static/tokens.css`, `templates/base.html` |
+| 9.2 | ✅ | Footer trim — remove "with Claude Code" link | 9 | Doc | LOW | XS | src+deploy | `templates/landing.html` |
+| 9.3 | ✅ | Pandan accent unification (single hue for source/tool tags) | 9 | UX | MEDIUM | S | src+deploy | `static/style.css` |
+| 9.4 | ✅ | 5s `asyncio.wait_for` per-attempt Vertex AI timeout (later 10s — see §9.14) | 9 | Robustness | HIGH | M | src+deploy | `telecom_ops/vertex_failover.py` |
+| 9.5 | ✅ | Per-agent model selection (Flash-Lite upstream, Pro-preview synthesis) | 9 | Performance | HIGH | S | src+deploy | `telecom_ops/agent.py` |
+| 9.6 | ✅ | Multi-continent region ladder (replace SE Asia with us-central1 / europe-west4 / asia-northeast1) | 9 | Robustness | HIGH | S | src+deploy | `telecom_ops/vertex_failover.py` |
+| 9.7 | 🔄 | Pro-preview region-whitelist finding (RESOLVED via §9.13) | 9 | Finding | — | — | — | (n/a — diagnostic) |
+| 9.8 | ✅ | Post-deploy doc polish (CLAUDE.md, README, REFINEMENT-PHASES.md, memory) | 9 | Doc | MEDIUM | S | doc | `CLAUDE.md`, `README.md`, `~/.claude/memory/*` |
+| 9.9 | ⏸ | SSE streaming GIF in README (supersedes §2.11) | 9 | Doc | MEDIUM | M | doc | `README.md`, `docs/screenshots/` |
+| 9.10 | ✅ | Header darker token (`--np-brand-deep` amber-bronze gradient anchor) | 9 | UX | MEDIUM | XS | src+deploy | `static/tokens.css`, `static/style.css` |
+| 9.11 | ✅ | Done-state pandan unification (timeline entry single green family) | 9 | UX | MEDIUM | XS | src+deploy | `static/style.css` |
+| 9.12 | ✅ | Customer-impact card extractor (recursive `JSON.parse`) + layout fix | 9 | UX | HIGH | S | src+deploy | `templates/chat.html` |
+| 9.13 | ✅ | `MODEL_SYNTHESIS = MODEL_FAST` collapse — all 4 agents on Flash-Lite | 9 | Robustness | HIGH | XS | src+deploy | `telecom_ops/agent.py` |
+| 9.14 | ✅ | `PER_ATTEMPT_TIMEOUT_S` 5s → 10s (Phase 11 false-positive fix) | 9 | Robustness | MEDIUM | XS | src+deploy | `telecom_ops/vertex_failover.py` |
+| 10.1 | ✅ | Universal-tools refactor of toolbox (8 → 2 parameterized tools) | 10 | Architecture | HIGH | M | src+deploy | `tools.yaml` (toolbox repo) |
+| 10.2 | ✅ | Native CDR tool optimization (parameterized `days_back`/`call_type`/`limit`) | 10 | Tool | HIGH | S | src+deploy | `telecom_ops/tools.py`, `prompts.py` *(later replaced by §11.1)* |
+| 10.3 | ✅ | Richer seed data — 10 cities, 132 events, 500 CDRs | 10 | Data | HIGH | M | src+writes | `docs/seed-data/`, `prompts.py`, `data_queries.py` *(later grown by §11.2 / §11.3)* |
+| 10.4 | ✅ | `setup_alloydb.py` multi-row INSERT VALUES (fix WAN executemany hang) | 10 | Tool | HIGH | S | src | `setup_alloydb.py` |
+| 10.5 | ✅ | `ALLOWED_SEVERITIES` vocab bug fix (low/medium/high → critical/major/minor) | 10 | Tool | HIGH | XS | src+deploy | `netpulse-ui/data_queries.py` |
+| 10.6 | ✅ | `netpulse-ui` redeploy + E2E smoke (Denpasar complaint, ticket #11) | 10 | Verification | MEDIUM | XS | deploy+test | (revision `netpulse-ui-00011-5ct`) |
+| 11.1 | ✅ | AlloyDB AI NL2SQL on `cdr_analyzer` (replaces parameterized `query_cdr`) | 11 | Innovation | HIGH | L | src+deploy+DB | `scripts/setup_alloydb_nl.py` (NEW), `tools.yaml`, `tools.py`, `agent.py`, `prompts.py` |
+| 11.2 | ✅ | BQ partition + cluster + 50k seed + `weekly_outage_trend` analytical tool | 11 | Innovation | HIGH | L | src+deploy+BQ writes | `scripts/setup_bigquery.py`, `scripts/generate_network_events.py` (NEW), `tools.yaml`, `prompts.py` |
+| 11.3 | ✅ | 5k CDR seed with anchor-clustered failures (per-tower bias) | 11 | Data | MEDIUM | M | src+AlloyDB writes | `scripts/generate_call_records.py` (NEW), `setup_alloydb.py --seed` |
+| 12.1 | ✅ | Vertex AI failover redesign — model ladder replaces region ladder | 12 | Robustness | HIGH | M | src+deploy | `telecom_ops/vertex_failover.py` |
+| 12.2 | ✅ | Chip-reset for ADK 2-LLM-call-per-agent pattern | 12 | UX | MEDIUM | XS | src+deploy | `netpulse-ui/templates/chat.html` |
+| 12.3 | ✅ | Failover chip separator `⤳` → `↪` (model-fallback semantic) | 12 | UX | LOW | XS | src+deploy | `netpulse-ui/templates/chat.html` |
+| 12.4 | ✅ | Call-status pill on `call_records` viewer (matches severity / category pattern) | 12 | UX | MEDIUM | XS | src+deploy | `netpulse-ui/templates/call_records.html`, `static/style.css` |
+| 12.5 | ✅ | Cloud Run deploy fix — Dockerfile build from project root (was Buildpacks from `netpulse-ui/`, stripped `telecom_ops/` from image) | 12 | Deploy | HIGH | XS | deploy | (no source change; deploy CWD + `--clear-base-image`) |
+
+**Counts (extensions):** Phase 9 = 14 (12 ✅ + 1 🔄 + 1 ⏸) · Phase 10 = 6 (6 ✅) · Phase 11 = 3 (3 ✅) · Phase 12 = 5 (5 ✅) · **Extension total = 28 (27 ✅ / 1 ⏸ + 1 🔄)**.
+
+**Combined catalog total:** 38 (original audit) + 28 (extensions) = **66 items** · **48 ✅ shipped** + **4 🔄 resolved-via** (§2.5 / §4.2 / §4.4 covered by other shipped items; §9.7 finding resolved by §9.13) + **14 ⏸ deferred** = **52 satisfied (79%)**.
 
 ---
 
@@ -252,6 +331,10 @@ Items in this tier elevate the demo from "works" to "production-grade". UI redes
 ---
 
 ### 2.5 Region whitelist in `query_cdr`
+
+**Status update (2026-04-27): 🔄 RESOLVED via §11.1.** The `query_cdr` Python function was deleted in Phase 11; the replacement (`query_cdr_nl` via AlloyDB AI NL2SQL) validates region values through the `city_name` concept-type binding registered in `setup_alloydb_nl.py:associate_region_concept`. AlloyDB AI rejects unknown city names structurally before SQL is generated — a stronger guarantee than a Python whitelist would have been. **No separate work needed.**
+
+**Original rationale (preserved for context):**
 
 **Why:** A typo like `region="Jakarti"` returns 0 rows silently. Confusing.
 
@@ -565,6 +648,10 @@ Items here are scoped possibilities, not committed work. Promoted to higher tier
 
 ### 4.2 Idempotency keys on `save_incident_ticket`
 
+**Status update (2026-04-27): 🔄 RESOLVED via §3.1 / §9.4 / §9.14 + §1.2.** The original concern was retry-induced duplicate ticket writes. Two shipped guarantees make this structurally impossible: (a) the Vertex AI failover wrapper only retries *before* the underlying call returns success — `asyncio.wait_for` cancels the in-flight request on timeout (§9.4 / §9.14) and the next region attempt fires a fresh call, so a successful `save_incident_ticket` write can never be re-issued; (b) §1.2 disables the Investigate button during a request, eliminating the user-side double-click case. **No separate work needed.**
+
+**Original rationale (preserved for context):**
+
 **Why:** The failover plan currently retries pre-tool, so duplicate writes are impossible. But if streaming retries are ever enabled (out of scope today), a UUID idempotency column would prevent duplicates.
 
 **Why deferred:** No present risk; preventive only.
@@ -580,6 +667,10 @@ Items here are scoped possibilities, not committed work. Promoted to higher tier
 ---
 
 ### 4.4 Demo seed panel — clickable example complaints
+
+**Status update (2026-04-27): 🔄 RESOLVED via §5.11.** The hero landing page ships launch chips that use `?seed=...&autorun=1` query handoff to pre-populate `/app` with a complaint and (optionally) auto-submit. This is functionally identical to the originally-planned in-app seed panel, with a better entry point: judges meet the chips before reaching the workspace, removing the need to type or navigate. **No separate in-app panel needed.**
+
+**Original rationale (preserved for context):**
 
 **Why:** 3-4 pre-populated example complaints displayed as clickable cards above the input. Judges can one-click a demo without typing.
 
@@ -1197,6 +1288,340 @@ Example chips link to `/app?seed=Major%20dropped%20calls%20in%20Surabaya`. The c
 - C) Auto-redirect `/` to `/app` if `?skip-landing=1` query param present (judges who already saw the hero).
 
 Recommendation: B with C as a small additional flag.
+
+---
+
+## Phase 9 — Post-deploy polish + robustness
+
+The first production deploy on 2026-04-26 (revision `00004-sfn`, carrying Phases 2-7) surfaced two classes of issue immediately: (a) visual identity v0 read as "generic Material" rather than something memorable, and (b) the chosen Gemini preview models exposed Vertex AI quirks (silent hangs in `global`, partial regional availability) that the original failover wrapper could not handle. Phase 9 ran as iterative polish-and-redeploy mode against the warm `min-instances=1` service across revisions `00006-7v8` → `00007-x7t` → `00008-kzk` → `00009-f2c` → `00010-mqc`. Items here capture each iteration as a discrete change so the rationale is preserved.
+
+### 9.1 Heliodoron visual identity v1
+
+**Why it matters:** §5.0a's default token palette was generic cool-gray + Material Blue. The hackathon brief rewards visual distinctness; switching to the curated Heliodoron sand-neutrals + warm-gold "surya" brand from `~/projects/heliodoron-ui-identity` gave NetPulse a recognizable visual voice without authoring an identity from scratch.
+
+**Files:** `static/tokens.css`, `templates/base.html`. Three font @imports added (`@fontsource-variable/geist`, `newsreader`, `jetbrains-mono` from jsdelivr CDN) replacing the system stacks. Heliodoron Indonesian accent palette (`--np-santan`, `--np-pandan`, `--np-tebu`, `--np-laut`, `--np-batik`, `--np-rosella`, `--np-terakota`) added for downstream use. Status ladder + per-category badges + per-backend palettes intentionally untouched in v1 to preserve semantic distinctness.
+
+**Test:** Live URL serves `tokens.css` 200 with the new palette; visual confirmation against Heliodoron tokens.css commit `0923dfb`. **Revision `00006-7v8`.**
+
+---
+
+### 9.2 Footer trim — remove "with Claude Code" link
+
+**Why it matters:** The original landing footer included "with Claude Code" attribution. Subtle for a personal-blog post, too on-the-nose for a hackathon submission where the originality of the build is being judged.
+
+**Files:** `templates/landing.html`. Now reads: `APAC GenAI Academy 2026 · Top 100 (#82) · Built by Adityo Nugroho.`
+
+**Rode revision `00006-7v8`.**
+
+---
+
+### 9.3 Pandan accent unification
+
+**Why it matters:** Two accent greens were leaking into the same UI surfaces (the heliodoron `--np-pandan` chosen in §9.1 next to leftover teal `#00bfa5` from earlier `--np-accent`). Per-backend `.np-source-tag.{adk,local,mcp,bq,alloydb,alloydb-write}` had drift-accumulated divergent colors.
+
+**Files:** `static/style.css`. Replaced the `linear-gradient(--np-primary → --np-accent)` text-clip on `.np-hero-accent` ("in seconds.") with a solid `var(--np-pandan)`. Replaced per-backend source-tag color overrides with a unified `color-mix(in oklab, var(--np-pandan) 14%, transparent)` background + `var(--np-pandan)` foreground. Backend `--c-*-bg/fg/accent` tokens preserved (still drive workspace banner backgrounds via downstream `color-mix()`).
+
+**Revision `00007-x7t`.**
+
+---
+
+### 9.4 5s `asyncio.wait_for` per-attempt Vertex AI timeout
+
+**Why it matters:** Production trace from revision `00005-ns6` at 05:48:22 UTC ran for **exactly 301s** (Cloud Run's default 300s request timeout) and was killed mid-pipeline. `network_investigator`'s second LLM call sent at 05:48:34.703 and **never received a response** — silent Vertex AI hang in `global`. The region-failover wrapper had no per-attempt deadline so it waited indefinitely. Without this fix, every silent hang becomes a 5-minute demo failure.
+
+**Files:** `telecom_ops/vertex_failover.py`. Added `PER_ATTEMPT_TIMEOUT_S = 5.0` and `asyncio.wait_for(_drain_one_attempt(), timeout=PER_ATTEMPT_TIMEOUT_S)` around each region attempt. On `TimeoutError`, the observer fires with `"failover"` + `"timeout after 5.0s"` and the wrapper advances to the next region. Cancellation propagates → aiohttp closes the socket so only one HTTP call is ever in flight per wrapper.
+
+**Test:** New `_self_test_failover_on_timeout` mocks `asyncio.Future()` in region 0 (resolved only by `wait_for`'s cancellation); test runtime ~5s. **Rode revision `00008-kzk`.** *(Later updated to 10s by §9.14.)*
+
+---
+
+### 9.5 Per-agent model selection
+
+**Why it matters:** Phase 8 deployed all 4 agents on `gemini-2.5-flash`. After §9.4 surfaced the cost of waiting (every silent hang = 5s lost), the upstream 3 agents were moved to `gemini-3.1-flash-lite-preview` (faster — 0.6-1.9s per call vs 2-4s on 2.5-flash) and the synthesis agent kept the more capable `gemini-3.1-pro-preview` for instruction-following fidelity on the final report. *Note: Pro-preview later proved `global`-only on this project — see §9.7 (resolved via §9.13).*
+
+**Files:** `telecom_ops/agent.py`. Added `MODEL_FAST = "gemini-3.1-flash-lite-preview"` and `MODEL_SYNTHESIS = "gemini-3.1-pro-preview"`; `_failover_model(owner, model_name)` factory passes the right model per agent.
+
+**Rode revision `00008-kzk`.**
+
+---
+
+### 9.6 Multi-continent region ladder
+
+**Why it matters:** The original `RANKED_REGIONS = ("global", "asia-southeast2", "asia-southeast1", "us-central1")` was geographically optimal but `gemini-3.1-pro-preview` returned `400 FAILED_PRECONDITION` in both Singapore and Jakarta. With Pro-preview in the synthesis path (per §9.5), the failover ladder needed regions where it actually worked.
+
+**Files:** `telecom_ops/vertex_failover.py`. Swapped to `("global", "us-central1", "europe-west4", "asia-northeast1")` — three continents, all known accessible for Gemini preview models on this project. Self-tests adjusted to match new ordering.
+
+**Revision `00009-f2c`.**
+
+---
+
+### 9.7 🔄 Pro-preview region-whitelist finding (RESOLVED via §9.13)
+
+**Finding:** Even after the multi-continent ladder swap (§9.6), `gemini-3.1-pro-preview` on `plated-complex-491512-n6` only returned 200 OK in `global` — `us-central1` returned `404 NOT_FOUND` ("Publisher Model not found or your project does not have access"). This made the failover ladder a structural no-op for the synthesis agent: any failover attempt would land on a 404 immediately. The 5s timeout would fire (real silent hang in `global`), the wrapper would advance to `us-central1`, and the 404 would propagate as a hard error rather than continuing the ladder.
+
+**Status:** No code change made for §9.7 in isolation — captured here as the diagnostic that drove §9.13.
+
+---
+
+### 9.8 Post-deploy doc polish
+
+**Why it matters:** Cumulative changes in §9.1-§9.6 made the existing CLAUDE.md / README / phase docs stale on multiple non-obvious choices (region failover details, preview model rationale, deploy resource tables).
+
+**Files:** `CLAUDE.md` (project), `README.md` (region paragraph + lessons + deploy resource tables), `REFINEMENT-PHASES.md`, `~/.claude/memory/reference_vertex_ai_dsq.md`, NEW `~/.claude/memory/reference_vertex_ai_preview_models.md`, `~/.claude/memory/MEMORY.md` (index), `~/.claude/memory/project_top100_refinement.md`.
+
+**Shipped as commit `61f06ca` PR #10.**
+
+---
+
+### 9.9 ⏸ SSE streaming GIF in README (DEFERRED)
+
+**Why deferred:** Recording a screen-capture GIF of the live pipeline animation requires a live browser session against the deployed UI. No source-only path; needs the user's recording loop. The new region chip from §3.2 + heliodoron palette from §9.1 make this a richer asset, so this should be recorded after Phase 11 settles to capture the final state.
+
+**Supersedes:** §2.11 — same ask, same blocker.
+
+---
+
+### 9.10 Header darker token
+
+**Why it matters:** The hero header's gradient `--np-primary-dark → --np-primary` (warm-gold) was visually light against the white text and white logo plate. Needed a heavier anchor to read as "structural top-of-page surface."
+
+**Files:** `static/tokens.css` — added `--np-brand-deep: oklch(38% 0.110 55)` (deep amber-bronze, retains warm-gold hue while ~30% darker L*). `static/style.css` — `.np-header` gradient swapped from `--np-primary-dark → --np-primary` to `--np-brand-deep → --np-brand-interactive`. White text + white logo plate clear WCAG AA easily on the new anchor.
+
+**Rode revision `00010-mqc`.**
+
+---
+
+### 9.11 Done-state pandan unification
+
+**Why it matters:** Sister polish to §9.3 — the `.np-timeline-entry.done` dot, content border-left, and status pill were still using leftover teal `--np-accent` (#00bfa5).
+
+**Files:** `static/style.css`. Switched all three to `--np-pandan` (oklch 60% 0.085 135). Now the "DONE" pill, dot, and source-tag badges read as one green family instead of two visually-dissonant greens.
+
+**Rode revision `00010-mqc`.**
+
+---
+
+### 9.12 Customer-impact card extractor + layout fix
+
+**Why it matters:** §5.5 shipped the impact card but it silently degraded to `[]` rows on every run — only the headline count rendered, not the per-severity breakdown. Root cause traced through `toolbox_core/itransport.py:51` (`tool_invoke -> str`) + `google.adk.flows.llm_flows.functions.__build_response_event:700` (`if not isinstance(function_result, dict): function_result = {'result': function_result}`): MCP toolbox tools return JSON-encoded *strings*, ADK wraps as `{"result": "<string>"}`, so `tool_response.result.result` arrives at the chat UI as a STRING not an Array. The original `npExtractRows` only walked `Array.isArray` shapes.
+
+**Files:** `templates/chat.html`. `npExtractRows` now `JSON.parse`s strings recursively before checking `Array.isArray`. Layout redesign: grid (icon-left + body-right) with headline row (big affected count) + meta row (events · elapsed · sev badges); each meta wrapper hides itself when its data is missing (no more dangling `--` placeholder for `since onset`). `npComputeImpact` also tolerates `total_affected` (aggregate-summary tool output) and parses `event_time`/`timestamp` columns alongside `started_at`.
+
+**Rode revision `00010-mqc`.**
+
+---
+
+### 9.13 `MODEL_SYNTHESIS = MODEL_FAST` collapse
+
+**Why it matters:** Resolves §9.7. Collapses all 4 agents onto `gemini-3.1-flash-lite-preview` (multi-region addressable). The earlier per-agent split from §9.5 was structurally sound but Pro-preview's `global`-only restriction on this project meant the failover ladder was a no-op for synthesis. Flash-Lite for synthesis sacrifices some instruction-following fidelity but keeps the failover ladder structurally usable end-to-end.
+
+**Files:** `telecom_ops/agent.py`. Failover self-tests still pass (matcher 5/5 + quota failover + hang failover). Revert option documented in CLAUDE.md: `MODEL_SYNTHESIS = "gemini-2.5-pro"` (GA + multi-region) if production traces show synthesis quality is insufficient.
+
+**Revision `00010-mqc`.**
+
+---
+
+### 9.14 `PER_ATTEMPT_TIMEOUT_S` 5s → 10s
+
+**Why it matters:** Phase 11 production trace surfaced a false-positive: `network_investigator` summarising a 15.5 KB `weekly_outage_trend` response on `global` exceeded the 5s deadline at 5.05s, the wrapper marked it as a hang and failed over to `us-central1`, where Flash-Lite was unavailable (404 NOT_FOUND), surfacing as a hard demo failure. 5s was tight for the original Phase 9 workload but became insufficient once Phase 11 added the 50-row `weekly_outage_trend` rollup.
+
+**Files:** `telecom_ops/vertex_failover.py` — `PER_ATTEMPT_TIMEOUT_S: float = 10.0`; updated docstring with the trace explanation; self-test docstring `~5s` → `~10s`. CLAUDE.md non-obvious-choice block + README current-tense references swept from "5s timeout" to "10s timeout".
+
+**Test:** Re-ran the same complaint that triggered the false-positive → ticket #18 in 32s, no false-positive timeout. **Shipped as PR #14, revision `netpulse-ui-00013-5md`.**
+
+---
+
+## Phase 10 — Toolbox refactor + seed enrichment
+
+After Phase 9 settled the deploy + visual identity layer, the next bottleneck was the MCP Toolbox surface area. The original toolbox carried 8 hand-written BigQuery tools (5 per-city outage queries + `query_network_events` catch-all + `query_critical_outages` + `query_affected_customers_summary`) and a hardcoded 20-row LIMIT on the AlloyDB CDR tool. Adding a city meant adding tools; widening the time window meant editing the hardcoded SQL. Phase 10 collapsed the toolbox to 2 universal parameterized tools, parameterized the CDR tool similarly, and grew the seed data 4× across 5 new cities. A pre-existing severity-vocab bug surfaced during seed prep and was fixed inline.
+
+### 10.1 Universal-tools refactor (8 tools → 2 parameterized)
+
+**Why it matters:** A judge inspecting the toolbox manifest sees the abstraction quality of the agent surface; 8 special-case tools reads as "demo wiring," 2 universal parameterized tools reads as "deployable platform." The refactor needed three deploy iterations to discover four real BigQuery + toolbox-core runtime constraints (captured in `~/.claude/memory/reference_mcp_toolbox_universal_tools.md`):
+1. The SDK ignores backend `default:` for `required: false` params.
+2. BQ rejects null INT64 binds at dry-run.
+3. BQ rejects null STRING binds at execute.
+4. BQ `LIMIT` accepts only an integer literal or a single parameter — no expressions like `IFNULL(@limit, 50)`.
+
+**Final shape:** Every param `required: true` + `default:` sentinel (`"*"` for strings, `36500` for `days_back`, `50` for `limit`); SQL uses sentinel comparison (`@region = '*' OR region = @region`) instead of nullable binds.
+
+**Files:** `~/projects/genai-hackathon/track2-network-status/toolbox-service/tools.yaml`. Two tools shipped: `query_network_events(region, severity, event_type, days_back, limit)` and `query_affected_customers_summary(region, days_back)`. `NETWORK_INVESTIGATOR_INSTRUCTION` updated to tell the agent to ALWAYS pass all params using sentinels for "no filter."
+
+**Deployed:** `network-toolbox-00006-bsm`.
+
+---
+
+### 10.2 Native CDR tool optimization (parameterized)
+
+**Why it matters:** The pre-Phase-11 `query_cdr` Python tool was hardcoded to `LIMIT 20` and only accepted `region` + `status_filter`. Real complaints reference time windows ("recent" / "last week" / "this month") and call types (voice vs sms vs data). Parameterizing exposed the surface the agent prompt could realistically exercise.
+
+**Files:** `telecom_ops/tools.py:query_cdr` — added `days_back` (validated 1..365) and `call_type` (optional voice|sms|data) params; `LIMIT` defaults to 50 (clamped 1..200). `prompts.py:CDR_ANALYZER_INSTRUCTION` rewritten to enumerate the new params with usage hints. *Later replaced wholesale by §11.1 (NL2SQL).*
+
+---
+
+### 10.3 Richer seed data — 10 cities, 132 events, 500 CDRs
+
+**Why it matters:** Phase 9 settled with 5 cities (Jakarta/Surabaya/Bandung/Medan/Semarang) × 30 events × 50 CDRs. The geographic narrative ("any Indonesian metro") needed more cities; the per-tower failure narrative ("which tower is failing in Denpasar?") needed more CDRs per region. Cell tower IDs use IATA airport codes for new cities (YOG, DPS, MKS, PLM, BPN).
+
+**Files:** `docs/seed-data/network_events.csv` (30 → 132 events, date range 2026-01-08 → 2026-05-12 incl. 5 future maintenance windows); `docs/seed-data/call_records.csv` (50 → 500 CDRs, distribution 320 completed / 118 dropped / 62 failed; failed/dropped clustered around outage anchors per city for storytelling); `NETWORK_INVESTIGATOR_INSTRUCTION` + `CLASSIFIER_INSTRUCTION` city list extended; `netpulse-ui/data_queries.py:ALLOWED_REGIONS` extended to 10 cities. *Later grown by §11.2 (50k events) and §11.3 (5k CDRs).*
+
+---
+
+### 10.4 `setup_alloydb.py` multi-row INSERT VALUES
+
+**Why it matters:** The CDR seed reload via `setup_alloydb.py --seed` hung indefinitely on the original `conn.execute(insert_sql, payload_list_of_500_dicts)`. SQLAlchemy + pg8000 turn that into 500 round-trips over the AlloyDB public-IP path; over WAN that consistently exceeded any reasonable timeout.
+
+**Files:** `setup_alloydb.py:truncate_and_load`. Replaced with a single multi-row `INSERT ... VALUES (..), (..), ...` statement built from the payload list — one network round-trip for the entire batch.
+
+**Test:** Reseed dropped from "indefinite hang" to <120s. Necessary fix for any BYO seed >100 rows.
+
+---
+
+### 10.5 `ALLOWED_SEVERITIES` vocab bug fix
+
+**Why it matters:** Pre-existing bug surfaced during seed prep. `netpulse-ui/data_queries.py:36` had `ALLOWED_SEVERITIES = {"low","medium","high","critical"}` but live BigQuery + `docs/SCHEMA.md:35` use `{"critical","major","minor"}`. The `/network-events` viewer's severity dropdown silently filtered to nothing for `major`/`minor` rows.
+
+**Files:** `netpulse-ui/data_queries.py:36`. Fixed inline with the seed enrichment.
+
+**Test:** Verified via `bq query "SELECT severity, COUNT(*) FROM ... GROUP BY severity"` returning only `minor/major/critical` — vocab now matches.
+
+---
+
+### 10.6 `netpulse-ui` redeploy + E2E smoke (Denpasar complaint)
+
+**Why it matters:** New prompts + ALLOWED_REGIONS + universal toolbox shape needed end-to-end validation against a freshly-seeded city not in the original 5.
+
+**Files:** revision `netpulse-ui-00011-5ct`.
+
+**Test:** Complaint *"Customer reports failed calls in Denpasar"* exercised:
+- classifier → `category=network, region=Denpasar`
+- network_investigator → `query_network_events(region='Denpasar', severity='*', event_type='*', days_back=36500, limit=10)` returns 10 events including 3 critical submarine cable damage incidents (EVT069, EVT064, EVT061)
+- cdr_analyzer → `query_cdr(region='Denpasar', status_filter='')` returns 50 CDRs; LLM correctly correlates 22 dropped/failed calls clustered around March-19 + April-17 outage anchors (matching the generator's intentional clustering)
+- response_formatter → ticket #11
+- All 4 agents first-try in `global`, no failovers, no timeouts, total runtime well under the 5s per-attempt budget. Sentinel pattern (`*`/36500/50) confirmed end-to-end.
+
+---
+
+## Phase 11 — AlloyDB AI NL2SQL + BigQuery analytical workload
+
+Phase 10 settled the toolbox refactor + seed enrichment, but two judged dimensions remained underexploited: **AlloyDB AI was on but unused** (the `alloydb_ai_nl` v1.0.9 extension was *available but not installed*; the `default_llm_model=gemini-2.5-flash-lite` instance flag was a no-op for the agents) and **BigQuery did not earn its store slot** (132 rows in 14 KB; both BQ tools were point lookups or tiny GROUP BYs that AlloyDB's row store would serve in single-digit ms). Phase 11 closed both gaps in a single 2026-04-26 push, ahead of the 2026-04-30 Top-10 cut. Plan: `~/.claude/plans/witty-giggling-clover.md`. Driven by user choices: Path B (Toolbox-native NL invocation) + grow CDR seed to 5000 rows.
+
+### 11.1 AlloyDB AI NL2SQL on `cdr_analyzer`
+
+**Why it matters:** The hand-written parameterized `query_cdr` from §10.2 worked but kept the AlloyDB AI surface entirely unused. Replacing it with NL2SQL exercises (a) the `alloydb_ai_nl` extension, (b) the `gemini-2.5-flash` model registered via `google_ml.create_model`, (c) Vertex AI from inside the AlloyDB instance's region. Demo narrative also improves: agents pose English questions and the data layer translates — a stronger "agentic platform" story than "agent calls a SQL string."
+
+**Setup:** `scripts/setup_alloydb_nl.py` (NEW, ~330 lines, 10 idempotent steps): extension install (CASCADE), model registration via `google_ml.create_model`, configuration create + bind to model via `g_manage_configuration change_model`, `register_table_view` for `public.call_records`, `add_general_context` (5 lines: cities, enums, tower scheme, time hints), `generate_schema_context` (3-5 min blocking LLM step) + `apply_generated_schema_context`, `associate_concept_type` for the `region` column → built-in `city_name`, `create_value_index`, 4 templates (tolerated to fail because `add_template` always validates SQL), and the `netpulse_nl_reader` read-only role with `SELECT` on `call_records` + `EXECUTE` on the `alloydb_ai_nl` schema. **Toolbox** connects as that read-only role — destructive NL is blocked structurally, not by prompt.
+
+**Tool wiring:**
+- `tools.yaml` adds `alloydb-postgres` source `alloydb-cdr` + tool `query_cdr_nl` of `kind: postgres-sql` (NOT `kind: alloydb-ai-nl` — toolbox v0.23.0's native adapter sends `param_names => ARRAY[]::TEXT[]` even when no nlConfigParameters are declared, and AlloyDB AI rejects empty text-arrays with `Invalid PSV named parameters`; workaround calls `execute_nl_query('netpulse_cdr_config', $1)` directly via postgres-sql).
+- `tools.py` deletes the 60-line `query_cdr` function and adds `cdr_nl_tools` loader.
+- `agent.py` swaps `cdr_analyzer.tools` from `[query_cdr]` to `cdr_nl_tools`.
+- `prompts.py` rewrites `CDR_ANALYZER_INSTRUCTION` for the NL question pattern with per-category examples.
+
+**Five non-obvious gotchas** captured in `~/.claude/memory/reference_alloydb_ai_nl_setup.md`:
+1. Toolbox v0.23.0 alloydb-ai-nl adapter PSV empty-array bug — workaround via postgres-sql.
+2. `default_llm_model` instance flag silently ignored without `google_ml.create_model` registration.
+3. `add_template` always validates SQL; `$1` placeholders fail. Templates are optional polish.
+4. `associate_concept_type` requires pre-existing concept types (built-ins: `city_name`, `country_name`, `date`, `full_person_name`, `generic_entity_name`, `region_name`, `ssn`).
+5. BigQuery `TIMESTAMP_SUB` rejects `WEEK` for TIMESTAMP arguments — multiply into days (`INTERVAL N * 7 DAY`).
+
+**Files:** `scripts/setup_alloydb_nl.py` (NEW), `tools.yaml` (toolbox repo), `telecom_ops/tools.py`, `telecom_ops/agent.py`, `telecom_ops/prompts.py`, `setup_byo.sh` (added `--nl-setup` flag).
+
+**Test:** Direct `SELECT alloydb_ai_nl.get_sql('netpulse_cdr_config', 'How many dropped calls in Denpasar in the last 14 days?')` returns clean SQL (`WHERE call_status='dropped' AND region='Denpasar'`) in 1.8s; `execute_nl_query` as `netpulse_nl_reader` returns `{'dropped_calls_count': 15}`.
+
+---
+
+### 11.2 BQ DAY-partition + clustering + 50k seed + `weekly_outage_trend`
+
+**Why it matters:** Three coordinated changes that make BigQuery earn its slot:
+1. Re-create `network_events` as **DAY-partitioned on `started_at` and clustered by `(region, severity)`** (BigQuery does not allow partition changes in place, so destructive `--recreate` flag).
+2. Grow seed 132 → **50,000 events** over 6 months (2025-11-01 → 2026-04-30) with realistic time-series shape.
+3. Add `weekly_outage_trend(region, weeks_back, limit)` analytical tool that returns per-week `event_count`, `critical_count`, `major_count`, `total_affected`, `avg_mttr_minutes` — the partition pruning keeps a 12-week scan at ~25 KB instead of 6 MB unfiltered.
+
+**Generator:** `scripts/generate_network_events.py` (NEW, ~210 lines, deterministic `Random(20260426)`; 70/22/5/3 mix of maintenance / degradation / outage / restoration; final distribution `{maintenance: 35221, degradation: 10833, outage: 2446, restoration: 1500}`). Reload: `scripts/setup_bigquery.py --seed --recreate` (the new `--recreate` flag drops + recreates the table to apply the partition spec).
+
+**Tool wiring:** `tools.yaml` adds `weekly_outage_trend` to `telecom_network_toolset`; `prompts.py:NETWORK_INVESTIGATOR_INSTRUCTION` extended with a third tool block. SQL: `WHERE event_type IN ('outage', 'degradation') AND started_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @weeks_back * 7 DAY) AND (@region = '*' OR region = @region) GROUP BY week_start, region ORDER BY week_start DESC, total_affected DESC LIMIT @limit`.
+
+**Files:** `scripts/setup_bigquery.py` (added `--recreate` flag, partition spec), `scripts/generate_network_events.py` (NEW), `tools.yaml` (toolbox repo), `telecom_ops/prompts.py`, `docs/seed-data/network_events.csv` (regenerated).
+
+**Test:** `bq show ... | jq '{numRows, timePartitioning, clustering}'` confirms 50,000 rows, DAY partition on `started_at`, clustering on `(region, severity)`. `bq query --dry_run` for 7-day window reports 24,944 bytes processed (vs ~6 MB unfiltered) — partition pruning works.
+
+---
+
+### 11.3 5k CDR seed with anchor-clustered failures
+
+**Why it matters:** 500 CDRs across 10 cities is ~50 per city — not enough for the per-tower failure narrative ("which tower in Denpasar is failing?") to produce statistically interesting answers. Grew seed 500 → **5,000 rows** with anchor-clustered failures so NL queries return non-trivial winners.
+
+**Generator:** `scripts/generate_call_records.py` (NEW, ~200 lines, deterministic `Random(20260426)`; 60/25/15 mix of completed / dropped / failed; ~50% of dropped land on towers 1-2 per city; ~50% of failed land on towers 3-4; phone pool: 50 callers (`0812*`) × 50 receivers (`0813*`); final distribution `{completed: 3000, dropped: 1250, failed: 750}`). Reload via `setup_alloydb.py --seed` (the §10.4 multi-row INSERT handles 5k rows in <120s with no modification).
+
+**Files:** `scripts/generate_call_records.py` (NEW), `docs/seed-data/call_records.csv` (regenerated).
+
+**Test:** Per-region top-tower counts after reseed — DPS-002 has 41 dropped vs DPS-005's 11 (clustering bias landed). Three demo complaints on the live UI generated tickets #12 (Denpasar/network), #13 (Jakarta/network — used `weekly_outage_trend`), #14 (Surabaya/network/hardware). Per-run latency 16s / 15s / 16s — within the 15s ±1s demo budget.
+
+---
+
+## Phase 12 — Vertex model-ladder failover + viewer UX polish
+
+A 2026-04-27 push driven by a production trace that exposed the structural break in the prior region-failover ladder, plus a sweep of three deferred Tier-2 viewer-UX items the audit had marked LOW-cost / HIGH-readability. Five items shipped across `netpulse-ui-00014-kc8` → `00019-t46`.
+
+### 12.1 Vertex AI failover redesign — model ladder replaces region ladder
+
+**Why it matters:** Production trace 2026-04-27 04:03:03 UTC on `netpulse-ui-00015-24q` showed the prior multi-continent region ladder hitting its structural limit: `global` 429 RESOURCE_EXHAUSTED → wrapper failed over to `us-central1` → `404 NOT_FOUND` because `gemini-3.1-flash-lite-preview` is `global`-only on this project. Every single quota error became a hard demo failure because the failover destination didn't have the model. The ladder advanced regions but the model pool stayed throttled.
+
+**Files:** `telecom_ops/vertex_failover.py` (full rewrite, lines 1-481), `CLAUDE.md` (architecture + non-obvious-choices paragraphs).
+
+**Change:**
+1. Replaced `RANKED_REGIONS` constant with `REGION = "global"` (single endpoint).
+2. Replaced `PER_ATTEMPT_TIMEOUT_S` (single 10s) with `ATTEMPT_SCHEDULE: tuple[Attempt, ...]` — a 3-row `NamedTuple` ladder: `Attempt(model=None, timeout_s=10.0, pre_sleep_s=0.0)` / `Attempt(model=None, timeout_s=20.0, pre_sleep_s=0.5)` / `Attempt(model=FALLBACK_MODEL, timeout_s=30.0, pre_sleep_s=0.0)` where `FALLBACK_MODEL = "gemini-2.5-flash"`.
+3. Per-attempt loop mutates `llm_request.model` because ADK's parent `Gemini.generate_content_async` reads model from there, not from `self.model` (verified by `inspect.getsource`).
+4. Stripped `_active_region`, `_set_active_region`, `_build_client_for(region)` machinery — single client cached for `global`.
+5. Observer payload: the `region` field now carries the **model name** (semantic abuse kept to minimize SSE/frontend diff).
+6. Three self-tests: `_self_test_quota_retry_same_model` (429 on attempt 1 → succeed on attempt 2, same primary), `_self_test_timeout_retry_same_model` (`asyncio.Future()` hang on attempt 1 → succeed on attempt 2), `_self_test_persistent_429_swaps_to_fallback` (429 on attempts 1+2 → succeed on attempt 3, fallback model).
+
+**Verification:** All 3 self-tests pass locally. Production trace 2026-04-27 05:18:14 walked the full ladder in 543ms (`global 429 → 0.5s sleep → global 429 again → swap to gemini-2.5-flash → ok`); 05:31:10 ("Major dropped calls in Surabaya") swapped twice (both LLM calls of network_investigator) and the demo completed end-to-end with no user-visible failure. Worst-case wall clock per agent: 60.5s, well under Cloud Run's 300s.
+
+### 12.2 Chip-reset for ADK 2-LLM-call-per-agent pattern
+
+**Why it matters:** ADK's tool-calling pattern means each agent makes 2 LLM calls (tool selection + tool-result interpretation). Each call independently walks `ATTEMPT_SCHEDULE`. Without resetting between walks, the chat-UI 'via' chip read as a confusing chain like `via primary ⤳ fallback ⤳ primary ⤳ fallback`, falsely suggesting the wrapper bounced back to the primary. Captured visually in the Network Investigator entry on the Surabaya run.
+
+**Files:** `netpulse-ui/templates/chat.html` (`npRenderRegionAttempt` function).
+
+**Change:** Added `dataset.settled` flag — set to `'1'` on every `ok` event, reset to `'0'` on `failover`. On the next attempt event arriving after settle, the chip is cleared and rebuilt from scratch so it reflects the path of the **most recent** LLM call. Two same-model retries within one walk still collapse via the existing dedupe (`if last.textContent !== ev.region`); the new behavior only kicks in across ADK's call boundaries.
+
+**Verification:** Manual replay of 4 scenarios (happy / single-retry-no-swap / model-swap / mixed) produces the expected single-walk chip every time.
+
+### 12.3 Failover chip separator `⤳` → `↪` (model-fallback semantic)
+
+**Why it matters:** `⤳` (U+2933 wave arrow) is visually vague — reads as "approximately" or "informal then". `↪` (U+21AA "rightwards arrow with hook") is the canonical UI glyph for "redirected to / fell back to" (Slack, GitHub, mail clients). Matches the model-fallback semantic exactly.
+
+**Files:** `netpulse-ui/templates/chat.html` (`sep.textContent = ' ↪ '` + 3 doc-comment occurrences).
+
+**Verification:** `curl -s /app | grep -oE '↪|⤳'` on `netpulse-ui-00019-t46` returns `↪` only; no leftover wave arrows.
+
+### 12.4 Call-status pill on `call_records` viewer
+
+**Why it matters:** The Call Records viewer rendered `call_status` as bare text while Network Events badged `severity` and Incident Tickets badged `category`. Visual inconsistency made the call-status column harder to scan in the demo.
+
+**Files:** `netpulse-ui/templates/call_records.html` (table cell renderer), `netpulse-ui/static/style.css` (3 new modifier classes).
+
+**Change:** Added `<span class="np-badge np-badge-call-{value}">` rendering pattern matching the existing severity/category pills, plus 3 modifier classes (`np-badge-call-completed` → `--np-status-resolved` emerald, `np-badge-call-dropped` → `--np-status-major` orange, `np-badge-call-failed` → `--np-status-critical` red) reusing semantic tokens — no new colors invented.
+
+**Verification:** Live page on `netpulse-ui-00015-24q` rendered 130 completed (emerald) / 38 dropped (orange) / 32 failed (red) pills in the default unfiltered view (200 row LIMIT cap).
+
+### 12.5 Cloud Run deploy fix — Dockerfile build from project root
+
+**Why it matters:** Two consecutive deploys (`netpulse-ui-00014-kc8`, `00015-24q`) silently used **Buildpacks** instead of the root `Dockerfile`, because the deploy command was issued from inside `netpulse-ui/` so `--source .` resolved there — and Buildpacks built a Python image from netpulse-ui/ in isolation without `telecom_ops/`. Result: every `/api/query` call surfaced `ModuleNotFoundError: No module named 'telecom_ops'` from the cross-package import in `agent_runner.py`. Viewer routes worked (they don't import `telecom_ops`) so the regression was invisible to the smoke tests that hit `/network-events`, `/call-records`, `/tickets`.
+
+**Files:** None (deploy procedure change only).
+
+**Change:**
+1. Compared zip uploads across revisions (`gs://run-sources-.../services/netpulse-ui/*.zip`): the last known-good `00010-mqc` zip contained the whole project root (`Dockerfile`, `telecom_ops/`, `netpulse-ui/`, `scripts/`); `00014` + `00015` zips contained only netpulse-ui/ contents. Confirmed Buildpacks ran by inspecting the Cloud Build steps: `serverless-runtimes/google-24-full/builder/universal` instead of a Dockerfile build.
+2. Future deploys must use `--source /home/adityonugrohoid/projects/hackathon-telecom-ops` (absolute path) so source resolution doesn't depend on shell CWD.
+3. Switching back from Buildpacks to Dockerfile required `--clear-base-image` once (the Buildpacks deploys had set a base-image annotation for auto security patches). Subsequent Dockerfile deploys don't need it.
+
+**Captured as memory:** `~/.claude/memory/reference_gcloud_run_source_dockerfile.md` (NEW) — the auto-detect priority, the absolute-path fix, the `--clear-base-image` requirement.
+
+**Verification:** `00016-qsq` redeploy banner read "Building using Dockerfile"; `/api/query` SSE stream emitted `region_attempt` events with `agent: classifier` etc. — confirming `from telecom_ops.agent import root_agent` resolved.
 
 ---
 
