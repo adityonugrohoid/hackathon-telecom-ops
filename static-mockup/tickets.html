@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Incident Tickets · NetPulse AI</title>
+  <link rel="icon" type="image/svg+xml" href="img/np-glyph.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="np-page">
+
+  <header class="np-header">
+    <a href="index.html" class="np-brand">
+      <img src="img/np-glyph.svg" alt="" class="np-brand-glyph">
+      <span>NETPULSE&nbsp;AI</span>
+    </a>
+    <nav class="np-nav" aria-label="Primary">
+      <a href="chat.html"           class="np-nav-link">Workspace</a>
+      <a href="network-events.html" class="np-nav-link">Network Events</a>
+      <a href="call-records.html"   class="np-nav-link">Call Records</a>
+      <a href="tickets.html"        class="np-nav-link is-active">Tickets</a>
+      <a href="docs.html"           class="np-nav-link">Docs</a>
+      <a href="index.html" class="np-btn np-btn-secondary">← Home</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2 style="margin-top: var(--np-space-7); font-size: var(--np-fs-display-l);">Incident Tickets</h2>
+
+    <div class="np-source-banner is-alloy-w">
+      <span class="np-source-tag is-alloy-w">ALLOYDB&nbsp;WRITE</span>
+      Reading live from <strong>AlloyDB</strong> (PostgreSQL 17) ·
+      <code>incident_tickets</code> table
+      · written by <code>response_formatter</code> agent via <code>save_incident_ticket</code>
+    </div>
+
+    <div class="np-rowcount">
+      Showing 6 of 74 tickets ·
+      <span class="np-rowcount-hint">newest first — older tickets not displayed</span>
+    </div>
+
+    <table class="np-table">
+      <thead>
+        <tr>
+          <th>ticket_id</th><th>category</th><th>region</th>
+          <th>description</th><th>status</th><th>created_at</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>74</td>
+          <td><span class="np-badge np-badge-cat-network">network</span></td>
+          <td>Surabaya</td>
+          <td>Multiple customers in SUB-002 service area report calls cutting out mid-conversation since 07:30 local.</td>
+          <td><span class="np-badge np-badge-status-open">open</span></td>
+          <td>2026-04-27 12:31</td>
+        </tr>
+        <tr>
+          <td>73</td>
+          <td><span class="np-badge np-badge-cat-network">network</span></td>
+          <td>Denpasar</td>
+          <td>Customer reports total signal loss at tower DPS-014 area, scheduled maintenance overran window.</td>
+          <td><span class="np-badge np-badge-status-resolved">resolved</span></td>
+          <td>2026-04-27 04:48</td>
+        </tr>
+        <tr>
+          <td>72</td>
+          <td><span class="np-badge np-badge-cat-billing">billing</span></td>
+          <td>Jakarta</td>
+          <td>Customer disputes double-charge for the 50&nbsp;GB data top-up purchased on 2026-04-25.</td>
+          <td><span class="np-badge np-badge-status-open">open</span></td>
+          <td>2026-04-26 22:14</td>
+        </tr>
+        <tr>
+          <td>71</td>
+          <td><span class="np-badge np-badge-cat-network">network</span></td>
+          <td>Bandung</td>
+          <td>Repeated SMS delivery failures over the last 3 hours from BDO-003 service area.</td>
+          <td><span class="np-badge np-badge-status-resolved">resolved</span></td>
+          <td>2026-04-26 19:52</td>
+        </tr>
+        <tr>
+          <td>70</td>
+          <td><span class="np-badge np-badge-cat-hardware">hardware</span></td>
+          <td>Medan</td>
+          <td>Customer-side modem fault flagged by repeated reauth failures on KNO-002 backhaul.</td>
+          <td><span class="np-badge np-badge-status-resolved">resolved</span></td>
+          <td>2026-04-26 11:08</td>
+        </tr>
+        <tr>
+          <td>69</td>
+          <td><span class="np-badge np-badge-cat-service">service</span></td>
+          <td>Yogyakarta</td>
+          <td>Slow data after 6 PM local — congestion pattern matches expected peak-hour load on JOG-002.</td>
+          <td><span class="np-badge np-badge-status-open">open</span></td>
+          <td>2026-04-26 09:30</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top: var(--np-space-5); font-family: var(--np-font-serif); color: var(--np-slate-light); font-size: var(--np-fs-paragraph-xs);">
+      Tickets carry four free-text columns omitted from this overview table
+      for readability: <code>related_events</code>, <code>cdr_findings</code>,
+      and <code>recommendation</code> (each populated by the
+      <code>response_formatter</code> agent at write time). Open the
+      <a href="chat.html" style="color: var(--np-pandan-deep);">workspace</a>
+      to see the full structure of a freshly written ticket.
+    </p>
+
+  </main>
+</div>
+
+<footer class="np-footer">
+  <div class="np-page">
+    <div class="np-footer-bottom">
+      <span>© 2026 Adityo Nugroho · NetPulse AI</span>
+      <a href="docs.html">Documentation →</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

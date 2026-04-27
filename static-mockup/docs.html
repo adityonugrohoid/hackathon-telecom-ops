@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation · NetPulse AI</title>
+  <link rel="icon" type="image/svg+xml" href="img/np-glyph.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="np-page">
+
+  <header class="np-header">
+    <a href="index.html" class="np-brand">
+      <img src="img/np-glyph.svg" alt="" class="np-brand-glyph">
+      <span>NETPULSE&nbsp;AI</span>
+    </a>
+    <nav class="np-nav" aria-label="Primary">
+      <a href="chat.html"           class="np-nav-link">Workspace</a>
+      <a href="network-events.html" class="np-nav-link">Network Events</a>
+      <a href="call-records.html"   class="np-nav-link">Call Records</a>
+      <a href="tickets.html"        class="np-nav-link">Tickets</a>
+      <a href="docs.html"           class="np-nav-link is-active">Docs</a>
+      <a href="index.html" class="np-btn np-btn-secondary">← Home</a>
+    </nav>
+  </header>
+
+  <div class="np-docs-shell">
+
+    <!-- TABLE OF CONTENTS -->
+    <aside class="np-toc" aria-label="Documentation table of contents">
+      <h3>On this page</h3>
+      <ol>
+        <li><a href="#about">1. About NetPulse AI</a></li>
+        <li><a href="#how-it-works">2. How it works</a></li>
+        <li><a href="#architecture">3. Architecture</a></li>
+        <li><a href="#stack">4. Tech stack</a></li>
+        <li><a href="#schema">5. Schema reference</a></li>
+        <li><a href="#byo">6. Bring your own data</a></li>
+        <li><a href="#alloydb-ai">7. AlloyDB AI NL2SQL</a></li>
+        <li><a href="#vertex">8. Vertex failover ladder</a></li>
+        <li><a href="#phase-history">9. Phase history</a></li>
+        <li><a href="#roadmap">10. Roadmap &amp; future work</a></li>
+      </ol>
+    </aside>
+
+    <!-- DOC BODY -->
+    <article class="np-doc-content">
+
+      <h2 id="about">1. About NetPulse AI</h2>
+      <p>
+        <strong>NetPulse AI</strong> is a multi-agent telecom operations
+        assistant. A natural-language complaint goes in — for example,
+        <em>"Major dropped calls in Surabaya since this morning"</em> — and
+        a structured incident ticket comes out, complete with related
+        network events, CDR findings, and a recommended NOC action.
+      </p>
+      <p>
+        It was built for the <strong>APAC GenAI Academy 2026
+        Hackathon</strong>. The prototype ranked #82 in the Top 100 cut
+        (announced 2026-04-23) and was refined against the Top 10 deadline
+        of 2026-04-30.
+      </p>
+
+      <div class="np-callout">
+        <strong>Live demo.</strong> The
+        <a href="chat.html">Workspace page</a> mocks a complete agent run
+        end-to-end: the four sub-agents, the impact rollup, the saved
+        ticket, and the recommended NOC action chips.
+      </div>
+
+      <h2 id="how-it-works">2. How it works</h2>
+      <p>
+        A single Sequential ADK agent runs four <code>LlmAgent</code>
+        sub-agents in order:
+      </p>
+      <ol>
+        <li>
+          <strong>Classifier</strong> — extracts the issue category
+          (<code>billing</code>, <code>network</code>, <code>hardware</code>,
+          <code>service</code>, <code>general</code>) and the affected
+          region from the raw complaint.
+        </li>
+        <li>
+          <strong>Network investigator</strong> — queries BigQuery for
+          recent events in the region, optionally rolling them up into a
+          weekly trend via the <code>weekly_outage_trend</code> tool.
+        </li>
+        <li>
+          <strong>CDR analyzer</strong> — poses one English question to
+          AlloyDB AI; the database translates it into SQL, executes against
+          the call-detail-records table under a read-only role, and returns
+          rows.
+        </li>
+        <li>
+          <strong>Response formatter</strong> — synthesises both findings
+          into a single ticket, writes it to AlloyDB, and returns the
+          assigned <code>ticket_id</code>.
+        </li>
+      </ol>
+      <p>
+        Each agent picks its own model through a wrapper that walks a
+        3-attempt model ladder on quota or timeout failures (see
+        <a href="#vertex">§8</a>). End-to-end runs target ≤15 s; current
+        production traces sit around 10 s.
+      </p>
+
+      <h2 id="architecture">3. Architecture</h2>
+      <p>
+        Two Cloud Run services, one BigQuery dataset, one AlloyDB
+        cluster, one MCP Toolbox bridge:
+      </p>
+      <pre><code>┌─────────────────────────┐         ┌────────────────────────┐
+│  netpulse-ui (Flask)    │  HTTP   │   network-toolbox      │
+│  /, /app, /api/query    │ ──────▶ │   (MCP Toolbox)        │
+│  Sequential agent       │         │   tools.yaml           │
+└──────────┬──────────────┘         └──────────┬─────────────┘
+           │                                   │
+           │ Vertex AI                         │
+           ▼                                   ▼
+┌─────────────────────────┐         ┌────────────────────────┐
+│  Vertex Gemini (global) │         │  BigQuery              │
+│  3-attempt model ladder │         │  network_events table  │
+│  global → global → GA   │         │  (50K rows, partitioned)│
+└─────────────────────────┘         └────────────────────────┘
+                                                │
+                                                ▼
+                                    ┌────────────────────────┐
+                                    │  AlloyDB (us-central1) │
+                                    │  call_records          │
+                                    │  incident_tickets      │
+                                    │  + AlloyDB AI NL2SQL   │
+                                    └────────────────────────┘</code></pre>
+      <p>
+        The Flask UI wraps the same root agent as <code>adk web</code>
+        and adds an SSE event stream so the workspace timeline can render
+        each agent's progress incrementally.
+      </p>
+
+      <h2 id="stack">4. Tech stack</h2>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Choice</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Agents</td><td>Google ADK (<code>SequentialAgent</code> + <code>LlmAgent</code>)</td><td>Native sub-agent orchestration, free SSE-friendly streaming events.</td></tr>
+          <tr><td>LLM</td><td>Vertex AI Gemini 3.1 Flash-Lite preview, 2.5 Flash GA fallback</td><td>Per-agent model selection, separate quota buckets, escalating timeouts.</td></tr>
+          <tr><td>Tool bridge</td><td>MCP Toolbox (Cloud Run)</td><td>Single-binary translates ADK tool calls into BigQuery + AlloyDB queries with whitelisted SQL.</td></tr>
+          <tr><td>Analytical store</td><td>BigQuery — DAY-partitioned, clustered by <code>(region, severity)</code></td><td>50,000-event seed, partition pruning keeps weekly rollups cheap.</td></tr>
+          <tr><td>Operational store</td><td>AlloyDB (PostgreSQL 17) + AlloyDB AI</td><td>Writes incident tickets, hosts NL2SQL config for the CDR analyzer.</td></tr>
+          <tr><td>UI</td><td>Flask + vanilla JS + SSE</td><td>One small process, no build step, deploys to Cloud Run from a single Dockerfile.</td></tr>
+          <tr><td>Hosting</td><td>Cloud Run (us-central1, global Vertex endpoint)</td><td>Min/max instances 1-3, CPU boost, no CPU throttle.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="schema">5. Schema reference</h2>
+      <p>
+        NetPulse is dataset-driven. The contract surface is
+        <strong>three tables across two stores</strong>: one BigQuery
+        table the network investigator reads, one AlloyDB table the CDR
+        analyzer reads, and one AlloyDB table the response formatter
+        writes.
+      </p>
+
+      <h3>5.1 Environment overrides</h3>
+      <table>
+        <thead><tr><th>Variable</th><th>Default</th><th>Controls</th></tr></thead>
+        <tbody>
+          <tr><td><code>GOOGLE_CLOUD_PROJECT</code></td><td><em>required</em></td><td>GCP project that owns the BigQuery dataset</td></tr>
+          <tr><td><code>BQ_DATASET</code></td><td><code>telecom_network</code></td><td>BigQuery dataset name</td></tr>
+          <tr><td><code>BQ_NETWORK_TABLE</code></td><td><code>network_events</code></td><td>BigQuery table name within the dataset</td></tr>
+          <tr><td><code>AL_CALL_TABLE</code></td><td><code>call_records</code></td><td>AlloyDB table the CDR analyzer reads</td></tr>
+          <tr><td><code>AL_TICKET_TABLE</code></td><td><code>incident_tickets</code></td><td>AlloyDB table the response formatter writes</td></tr>
+          <tr><td><code>DATABASE_URL</code></td><td><em>required</em></td><td>SQLAlchemy + pg8000 URL pointing at AlloyDB or any Postgres 13+</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.2 BigQuery — <code>network_events</code></h3>
+      <p>Read by <code>network_investigator</code> via the MCP Toolbox.</p>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>event_id</code></td>             <td>STRING</td>    <td>yes</td><td>Stable identifier, e.g. <code>EVT001</code></td></tr>
+          <tr><td><code>event_type</code></td>           <td>STRING</td>    <td>yes</td><td><code>outage</code> · <code>degradation</code> · <code>restoration</code> · <code>maintenance</code></td></tr>
+          <tr><td><code>region</code></td>               <td>STRING</td>    <td>yes</td><td>Shared vocabulary with <code>call_records.region</code></td></tr>
+          <tr><td><code>severity</code></td>             <td>STRING</td>    <td>yes</td><td><code>critical</code> · <code>major</code> · <code>minor</code></td></tr>
+          <tr><td><code>description</code></td>          <td>STRING</td>    <td>yes</td><td>One-sentence event summary</td></tr>
+          <tr><td><code>started_at</code></td>           <td>TIMESTAMP</td> <td>yes</td><td>UTC; partition key</td></tr>
+          <tr><td><code>resolved_at</code></td>          <td>TIMESTAMP</td> <td>no</td><td>NULL while ongoing</td></tr>
+          <tr><td><code>affected_customers</code></td>   <td>INTEGER</td>   <td>yes</td><td>Summed by the impact rollup</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3 AlloyDB — <code>call_records</code></h3>
+      <p>Read by <code>cdr_analyzer</code> via AlloyDB AI NL2SQL.</p>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>call_id</code></td>          <td>SERIAL PK</td><td>yes</td><td>Auto-assigned</td></tr>
+          <tr><td><code>caller_number</code></td>    <td>TEXT</td>     <td>yes</td><td>E.164-ish, e.g. <code>08121234001</code></td></tr>
+          <tr><td><code>receiver_number</code></td>  <td>TEXT</td>     <td>yes</td><td>Same convention</td></tr>
+          <tr><td><code>call_type</code></td>        <td>TEXT</td>     <td>yes</td><td><code>voice</code> · <code>sms</code> · <code>data</code></td></tr>
+          <tr><td><code>duration_seconds</code></td> <td>INT</td>      <td>yes</td><td><code>0</code> for failed/dropped calls</td></tr>
+          <tr><td><code>data_usage_mb</code></td>    <td>NUMERIC</td>  <td>yes</td><td><code>0</code> for voice/sms</td></tr>
+          <tr><td><code>call_date</code></td>        <td>TIMESTAMP</td><td>yes</td><td>UTC</td></tr>
+          <tr><td><code>region</code></td>           <td>TEXT</td>     <td>yes</td><td>Same vocabulary as <code>network_events.region</code></td></tr>
+          <tr><td><code>cell_tower_id</code></td>    <td>TEXT</td>     <td>yes</td><td>e.g. <code>SUB-002</code> (IATA prefix)</td></tr>
+          <tr><td><code>call_status</code></td>      <td>TEXT</td>     <td>yes</td><td><code>completed</code> · <code>dropped</code> · <code>failed</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.4 AlloyDB — <code>incident_tickets</code></h3>
+      <p>The only table NetPulse provisions itself, written by <code>response_formatter</code>.</p>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>ticket_id</code></td>      <td>SERIAL PK</td><td>yes</td><td>Returned to chat UI for display</td></tr>
+          <tr><td><code>category</code></td>       <td>TEXT</td>     <td>yes</td><td><code>billing</code> · <code>network</code> · <code>hardware</code> · <code>service</code> · <code>general</code></td></tr>
+          <tr><td><code>region</code></td>         <td>TEXT</td>     <td>yes</td><td>Same vocabulary across all 3 tables</td></tr>
+          <tr><td><code>description</code></td>    <td>TEXT</td>     <td>yes</td><td>One-sentence summary of the customer complaint</td></tr>
+          <tr><td><code>related_events</code></td> <td>TEXT</td>     <td>yes</td><td>Concise list of related network events (or <code>none</code>)</td></tr>
+          <tr><td><code>cdr_findings</code></td>   <td>TEXT</td>     <td>yes</td><td>Concise list of CDR findings (or <code>none</code>)</td></tr>
+          <tr><td><code>recommendation</code></td> <td>TEXT</td>     <td>yes</td><td>Suggested next action for the NOC</td></tr>
+          <tr><td><code>status</code></td>         <td>TEXT</td>     <td>no</td><td>Default <code>open</code></td></tr>
+          <tr><td><code>created_at</code></td>     <td>TIMESTAMP</td><td>no</td><td>Default <code>NOW()</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.5 Cross-table invariants</h3>
+      <ol>
+        <li>
+          <strong>Region vocabulary is shared</strong> across all three
+          tables. The classifier extracts a region from the complaint;
+          the investigator and analyzer filter by it; the formatter
+          persists it. Mismatched vocabularies silently return zero rows
+          and the ticket loses operational context.
+        </li>
+        <li>
+          <strong>Category vocabulary is fixed</strong> by the agent
+          contract. Five values only:
+          <code>billing</code> · <code>network</code> ·
+          <code>hardware</code> · <code>service</code> ·
+          <code>general</code>.
+        </li>
+      </ol>
+
+      <h2 id="byo">6. Bring your own data</h2>
+      <p>
+        NetPulse will work against <em>any</em> dataset that matches the
+        contract above. The bootstrap is a single shell script:
+      </p>
+      <pre><code>export GOOGLE_CLOUD_PROJECT=your-project
+export DATABASE_URL=postgresql+pg8000://postgres:&lt;pwd&gt;@&lt;host&gt;:5432/postgres
+bash scripts/setup_byo.sh --seed</code></pre>
+      <p>It runs two idempotent steps:</p>
+      <ol>
+        <li>
+          <code>scripts/setup_bigquery.py --recreate --seed</code> —
+          creates <code>$BQ_DATASET.$BQ_NETWORK_TABLE</code> with
+          DAY-partition on <code>started_at</code> and clustering on
+          <code>(region, severity)</code>, then loads
+          <code>docs/seed-data/network_events.csv</code> via WRITE_TRUNCATE.
+        </li>
+        <li>
+          <code>setup_alloydb.py --seed</code> — creates
+          <code>$AL_CALL_TABLE</code> and <code>$AL_TICKET_TABLE</code>,
+          then loads <code>docs/seed-data/call_records.csv</code> and
+          <code>docs/seed-data/incident_tickets.csv</code> using a single
+          multi-row <code>INSERT VALUES</code> per file (one round-trip
+          even at 5,000 rows).
+        </li>
+      </ol>
+
+      <h3>6.1 Loading your own CSVs</h3>
+      <p>
+        Replace the three CSVs in <code>docs/seed-data/</code> with your
+        own files, keeping the column order from <a href="#schema">§5</a>.
+        Then re-run <code>setup_byo.sh --seed</code>. No code changes
+        required as long as the column names and types match.
+      </p>
+
+      <h3>6.2 Renaming tables / datasets</h3>
+      <p>
+        Override the env vars in <a href="#schema">§5.1</a> before
+        bootstrap. The agents and the data viewer tabs both consume the
+        same env-driven names, so a single set of overrides retargets the
+        entire stack. Example:
+      </p>
+      <pre><code>export BQ_DATASET=acme_telco
+export BQ_NETWORK_TABLE=outages_2026
+export AL_CALL_TABLE=cdr_acme
+export AL_TICKET_TABLE=tickets_acme
+bash scripts/setup_byo.sh --seed</code></pre>
+
+      <div class="np-callout">
+        <strong>Vocabulary drift is the #1 cause of empty results.</strong>
+        If your dataset uses different region names (e.g. province codes
+        instead of city names), update the classifier prompt in
+        <code>telecom_ops/prompts.py</code> so the extracted region matches
+        your data. Without that step, the investigator and CDR analyzer
+        will filter against the wrong strings and return zero rows.
+      </div>
+
+      <h2 id="alloydb-ai">7. AlloyDB AI NL2SQL</h2>
+      <p>
+        The CDR analyzer does not write hand-authored SQL. It calls
+        <code>query_cdr_nl(question)</code> with one English question;
+        the toolbox runs:
+      </p>
+      <pre><code>SELECT alloydb_ai_nl.execute_nl_query(
+  'netpulse_cdr_config',
+  $1
+) AS result;</code></pre>
+      <p>
+        The configuration <code>netpulse_cdr_config</code> is registered
+        once via <code>scripts/setup_alloydb_nl.py</code>. That script is
+        idempotent and walks ten steps:
+      </p>
+      <ol>
+        <li>Install the <code>alloydb_ai_nl</code> extension</li>
+        <li>Register a Vertex Gemini model via <code>google_ml.create_model</code></li>
+        <li>Create the NL config and bind the model</li>
+        <li>Register <code>public.call_records</code> as a table view</li>
+        <li>Add general-context strings (enums, region values, tower-ID format)</li>
+        <li>Generate schema context (LLM call, 3-5 minutes, blocking)</li>
+        <li>Apply the generated context</li>
+        <li>Associate <code>call_status</code> with a concept type</li>
+        <li>Build the value index</li>
+        <li>Create the <code>netpulse_nl_reader</code> read-only role</li>
+      </ol>
+      <p>
+        The structural protection against destructive NL is the role —
+        not the prompt. Even if the LLM emits a <code>DROP TABLE</code>,
+        the role only has <code>SELECT</code> on <code>call_records</code>
+        and <code>EXECUTE</code> on the <code>alloydb_ai_nl</code> helper
+        functions, so the call errors out cleanly.
+      </p>
+
+      <h2 id="vertex">8. Vertex failover ladder</h2>
+      <p>
+        Every Vertex call goes through a small wrapper at
+        <code>telecom_ops/vertex_failover.py</code> that walks a
+        <strong>3-attempt model ladder</strong> at the single
+        <code>global</code> endpoint. Each attempt has its own timeout
+        and an optional pre-sleep:
+      </p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Model</th><th>Timeout</th><th>Pre-sleep</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>primary (e.g. <code>gemini-3.1-flash-lite-preview</code>)</td><td>10 s</td><td>0 s</td></tr>
+          <tr><td>2</td><td>primary (retry)</td><td>20 s</td><td>0.5 s</td></tr>
+          <tr><td>3</td><td><code>gemini-2.5-flash</code> (GA fallback)</td><td>30 s</td><td>0 s</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Worst-case wall clock per agent: 60.5 s, well under Cloud Run's
+        300 s request timeout. The ladder swaps <em>models</em>, not
+        regions, because preview models are gated to specific regions per
+        project — region failover used to advance from <code>global</code>
+        429 to <code>us-central1</code> 404 NOT_FOUND every time.
+      </p>
+
+      <h2 id="phase-history">9. Phase history</h2>
+      <ul>
+        <li><strong>Phase 8</strong> (2026-04-26) — single Cloud Run redeploy carried Phases 2-7 to production.</li>
+        <li><strong>Phase 9</strong> (2026-04-26) — UI polish: heliodoron tokens, footer trim, pandan accent unification, impact-card extractor.</li>
+        <li><strong>Phase 10</strong> (2026-04-26) — MCP Toolbox refactor 8 tools → 2 universal parameterized tools; seed enriched to 10 cities, 132 events, 500 CDRs.</li>
+        <li><strong>Phase 11</strong> (2026-04-26) — AlloyDB AI NL2SQL replaces hand-written CDR SQL; BigQuery seed grown 132 → 50,000 events; <code>weekly_outage_trend</code> analytical tool added; partition + cluster applied.</li>
+        <li><strong>Phase 12</strong> (2026-04-27) — Vertex region failover swapped for model-ladder failover; viewer UX polish: pagination, ARIA on filter selects, complaint length cap, call-status pill.</li>
+      </ul>
+
+      <h2 id="roadmap">10. Roadmap &amp; future work</h2>
+
+      <h3>10.1 Custom schema support</h3>
+      <p>
+        The schema in <a href="#schema">§5</a> is opinionated to the
+        Indonesian-telecom hackathon dataset. The next major step is to
+        let an operator point NetPulse at <em>their own</em> schema
+        without rewriting agent prompts:
+      </p>
+      <ul>
+        <li>
+          <strong>Schema-aware classifier prompt.</strong> Today the
+          classifier knows the 5 categories and 10 regions. Future:
+          extract these from a YAML schema descriptor at boot, so a new
+          deployment can declare its own category enum and region list.
+        </li>
+        <li>
+          <strong>Tool generation from schema descriptor.</strong>
+          Generate the MCP Toolbox <code>tools.yaml</code> entries for
+          <code>query_network_events</code>, <code>query_cdr_nl</code>,
+          and <code>save_incident_ticket</code> from the same descriptor.
+          One source of truth, no drift between prompts and SQL.
+        </li>
+        <li>
+          <strong>Pluggable analytical rollups.</strong>
+          <code>weekly_outage_trend</code> assumes a <code>started_at</code>
+          partition column. Future: declare partition + clustering keys in
+          the schema descriptor and synthesise the rollup tool from those.
+        </li>
+        <li>
+          <strong>Automatic AlloyDB AI registration.</strong> Run
+          <code>setup_alloydb_nl.py</code> automatically against
+          whichever table is declared as the CDR source, including the
+          general-context strings derived from the schema's enum columns.
+        </li>
+      </ul>
+
+      <h3>10.2 Other directions on the queue</h3>
+      <ul>
+        <li>Vector search on historical tickets to surface the closest prior incident.</li>
+        <li>Multi-tenant routing (one deployment, many telcos, isolated AlloyDB databases).</li>
+        <li>Streaming responses through to the chat UI (currently <code>stream=False</code> to keep the failover ladder safe).</li>
+        <li>Replay mode: re-run a session against new prompts or models for regression testing.</li>
+        <li>Open-source the MCP Toolbox config + setup scripts as a reference template for other ADK + AlloyDB AI projects.</li>
+      </ul>
+
+      <div class="np-callout">
+        <strong>Want to contribute?</strong> NetPulse AI is built solo
+        for the hackathon, but the schema descriptor + tool generation
+        roadmap above is exactly the kind of refactor that benefits from
+        outside eyes. Open an issue on the repo describing the data
+        shape you want to point NetPulse at, and we'll prioritise the
+        descriptor format around real cases.
+      </div>
+
+    </article>
+
+  </div>
+
+</div>
+
+<footer class="np-footer">
+  <div class="np-page">
+    <div class="np-footer-grid">
+      <div>
+        <img src="img/np-glyph.svg" alt="NetPulse AI" class="np-footer-glyph">
+      </div>
+      <div>
+        <h4 class="np-footer-col-title">Product</h4>
+        <ul class="np-footer-list">
+          <li><a href="chat.html">Workspace</a></li>
+          <li><a href="network-events.html">Network events</a></li>
+          <li><a href="call-records.html">Call records</a></li>
+          <li><a href="tickets.html">Incident tickets</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="np-footer-col-title">Build</h4>
+        <ul class="np-footer-list">
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#schema">Schema reference</a></li>
+          <li><a href="#byo">Bring your own data</a></li>
+          <li><a href="#roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="np-footer-col-title">Project</h4>
+        <ul class="np-footer-list">
+          <li><a href="#about">About NetPulse AI</a></li>
+          <li><a href="#stack">Tech stack</a></li>
+          <li><a href="#phase-history">Phase history</a></li>
+          <li><a href="#">GitHub repository</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="np-footer-bottom">
+      <span>© 2026 Adityo Nugroho · Built for the APAC GenAI Academy 2026 with Claude Code</span>
+      <a href="#">GitHub →</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

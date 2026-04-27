@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetPulse AI — Telecom incidents that ticket themselves</title>
+  <link rel="icon" type="image/svg+xml" href="img/np-glyph.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="np-page">
+
+  <!-- HEADER -->
+  <header class="np-header">
+    <a href="index.html" class="np-brand">
+      <img src="img/np-glyph.svg" alt="" class="np-brand-glyph">
+      <span>NETPULSE&nbsp;AI</span>
+    </a>
+    <nav class="np-nav" aria-label="Primary">
+      <a href="chat.html"           class="np-nav-link">Workspace</a>
+      <a href="network-events.html" class="np-nav-link">Network Events</a>
+      <a href="call-records.html"   class="np-nav-link">Call Records</a>
+      <a href="tickets.html"        class="np-nav-link">Tickets</a>
+      <a href="docs.html"           class="np-nav-link">Docs</a>
+      <a href="chat.html" class="np-btn">Open Workspace →</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="np-hero">
+    <h1>
+      Telecom <a href="chat.html" class="np-hero-headline-link">incidents</a>
+      that <a href="chat.html" class="np-hero-headline-link">ticket themselves</a>.
+    </h1>
+    <p class="np-hero-sub">
+      NetPulse AI watches Indonesian telecom networks and turns a customer
+      complaint into a structured incident ticket in under 15&nbsp;seconds.
+      Built on Google ADK, AlloyDB AI, and Vertex Gemini for the APAC GenAI
+      Academy 2026.
+    </p>
+  </section>
+
+  <!-- FEATURE CARD -->
+  <section class="np-feature">
+    <div class="np-feature-body">
+      <h2 class="np-feature-title">NetPulse Live Demo</h2>
+      <p class="np-feature-sub">
+        Pick a complaint, watch four ADK sub-agents handle it — classifier,
+        network investigator, CDR analyzer, response formatter — and see the
+        ticket land with a customer-impact rollup and a NOC action playbook.
+      </p>
+      <a href="chat.html" class="np-btn np-btn-pill">Run a demo →</a>
+    </div>
+    <div class="np-feature-visual">
+      <img src="img/agent-topology.svg" alt="Four-agent ADK pipeline diagram">
+    </div>
+  </section>
+
+  <!-- LATEST RELEASES -->
+  <h2 class="np-section-label">Latest releases</h2>
+  <section class="np-releases">
+    <article class="np-release">
+      <h3 class="np-release-title">Phase 12 — Vertex model-ladder failover</h3>
+      <p class="np-release-lede">
+        Region failover swapped for a 3-attempt model ladder at the
+        <code>global</code> Vertex endpoint, with escalating timeouts and a
+        GA fallback that has its own quota bucket.
+      </p>
+      <dl class="np-release-meta">
+        <dt>Date</dt>     <dd>April 27, 2026</dd>
+        <dt>Category</dt> <dd>Engineering</dd>
+      </dl>
+      <a href="docs.html#phase-history" class="np-release-cta">Read the post →</a>
+    </article>
+
+    <article class="np-release">
+      <h3 class="np-release-title">Phase 11 — AlloyDB AI NL2SQL on CDR</h3>
+      <p class="np-release-lede">
+        Hand-written CDR SQL replaced by AlloyDB AI Natural Language. The
+        CDR analyzer now poses one English question; AlloyDB AI translates,
+        executes, and returns rows under a read-only role.
+      </p>
+      <dl class="np-release-meta">
+        <dt>Date</dt>     <dd>April 26, 2026</dd>
+        <dt>Category</dt> <dd>Architecture</dd>
+      </dl>
+      <a href="docs.html#alloydb-ai" class="np-release-cta">Read the post →</a>
+    </article>
+
+    <article class="np-release">
+      <h3 class="np-release-title">Top 100 — APAC GenAI Academy</h3>
+      <p class="np-release-lede">
+        NetPulse AI was selected into the Top 100 of the APAC GenAI Academy
+        2026 (#82). Refined prototype submitted ahead of the April 30
+        Top-10 cut.
+      </p>
+      <dl class="np-release-meta">
+        <dt>Date</dt>     <dd>April 23, 2026</dd>
+        <dt>Category</dt> <dd>Milestone</dd>
+      </dl>
+      <a href="docs.html#about" class="np-release-cta">Read the story →</a>
+    </article>
+  </section>
+
+  <!-- MISSION RAIL -->
+  <section class="np-mission">
+    <p class="np-mission-statement">
+      NetPulse AI is built to give Indonesian network operators a single
+      pane of glass — from raw customer complaint to actionable NOC
+      ticket — in seconds, not hours.
+    </p>
+    <ul class="np-mission-list">
+      <li><a href="docs.html#architecture">Architecture overview</a>           <span class="np-meta">Documentation</span></li>
+      <li><a href="docs.html#schema">Data contract &amp; schema</a>            <span class="np-meta">Documentation</span></li>
+      <li><a href="docs.html#byo">Bring your own data</a>                      <span class="np-meta">How-to</span></li>
+      <li><a href="network-events.html">Live data viewer</a>                   <span class="np-meta">Demo</span></li>
+      <li><a href="docs.html#roadmap">Roadmap &amp; future work</a>            <span class="np-meta">Project</span></li>
+    </ul>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="np-footer">
+  <div class="np-page">
+    <div class="np-footer-grid">
+      <div>
+        <img src="img/np-glyph.svg" alt="NetPulse AI" class="np-footer-glyph">
+      </div>
+      <div>
+        <h4 class="np-footer-col-title">Product</h4>
+        <ul class="np-footer-list">
+          <li><a href="chat.html">Workspace</a></li>
+          <li><a href="network-events.html">Network events</a></li>
+          <li><a href="call-records.html">Call records</a></li>
+          <li><a href="tickets.html">Incident tickets</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="np-footer-col-title">Build</h4>
+        <ul class="np-footer-list">
+          <li><a href="docs.html#architecture">Architecture</a></li>
+          <li><a href="docs.html#schema">Schema reference</a></li>
+          <li><a href="docs.html#byo">Bring your own data</a></li>
+          <li><a href="docs.html#roadmap">Roadmap</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="np-footer-col-title">Project</h4>
+        <ul class="np-footer-list">
+          <li><a href="docs.html#about">About NetPulse AI</a></li>
+          <li><a href="docs.html#stack">Tech stack</a></li>
+          <li><a href="docs.html#phase-history">Phase history</a></li>
+          <li><a href="#">GitHub repository</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="np-footer-bottom">
+      <span>© 2026 Adityo Nugroho · Built for the APAC GenAI Academy 2026 with Claude Code</span>
+      <a href="#">GitHub →</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

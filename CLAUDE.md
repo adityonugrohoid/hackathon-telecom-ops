@@ -19,6 +19,39 @@ NetPulse AI was selected into the **Top 100** of the APAC GenAI Academy
 2026 (ranked #82, announced 2026-04-23). The hackathon is now in the
 **Prototype Refinement Phase** — refined prototype due **2026-04-30**.
 
+**Active iteration mode (started 2026-04-27): static-mockup UI tweak loop.**
+All UI design iteration happens in `static-mockup/` — six self-contained
+HTML pages (no Flask, no backend) that mirror the live surface 1:1.
+Iterate visually there first; port to `netpulse-ui/templates/` only after
+the static mockup is approved. Source-of-truth references:
+
+- `static-mockup/` — six pages: `index.html` (landing), `chat.html`
+  (workspace mockup), `network-events.html`, `call-records.html`,
+  `tickets.html`, `docs.html` (single-page comprehensive docs)
+- `static-mockup/css/style.css` — single stylesheet, all design tokens
+  + 11 `.np-type-*` role classes; **heliodoron 3-layer font system**
+  (raw stacks → semantic aliases → role classes) — swap typefaces in
+  3 lines without touching any component CSS, see the file's top
+  comment block for the recipe
+- `static-mockup/img/np-glyph.svg` + `agent-topology.svg` — original
+  NetPulse visuals, no Anthropic-proprietary assets
+- `static-mockup/README.md` — how to view, file map, font-swap recipe
+- `docs/DESIGN-SPEC-ANTHROPIC-INSPIRED.md` — extracted design system
+  + 14-row substitution table mapping every Anthropic-proprietary
+  element to an original NetPulse equivalent
+
+**Iteration workflow:** serve locally with
+`cd static-mockup && python3 -m http.server 8765`, iterate, screenshot
+via Playwright MCP, refine. Files are intentionally **untracked** until
+the iteration loop is closed — do not commit until the user signals
+"clear the iteration." Stays out of git history while the design churns.
+
+**Note on workflow:** during this iteration mode, never auto-port
+mockup changes to `netpulse-ui/templates/`. The static mockup is the
+design sandbox; the Flask app is production. Two separate decisions:
+"design approved" (static mockup is good) and "ship to prod" (port to
+Flask + redeploy). The user will signal both explicitly.
+
 **Phase 8 (Ship) shipped 2026-04-26** — single consolidated Cloud Run
 redeploy carried Phases 2-7 to production (rev `00004-sfn`); subsequent
 revisions `00005-ns6` (env-var typo fix), `00006-7v8` (heliodoron tokens
