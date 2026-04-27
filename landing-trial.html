@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lumen — Frontier AI, drafted with care</title>
+<meta name="description" content="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  /* ==========================================================
+     Reset + tokens
+     ========================================================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Paper / ink — warm editorial palette */
+    --paper: #F4F0E6;
+    --paper-2: #ECE4D1;
+    --paper-3: #E0D5BA;
+    --ink: #141413;
+    --ink-2: #2C2A26;
+    --ink-3: #5A554D;
+    --muted: #8A8378;
+    --hairline: #DDD3BB;
+    --hairline-soft: #ECE4D1;
+    --accent: #CC785C;
+    --accent-deep: #A85738;
+    --accent-soft: #F4DACB;
+    --accent-tint: #FBEFE6;
+    --white: #FAF7EE;
+    --black: #0A0A09;
+
+    --max: 1340px;
+    --gutter: 28px;
+    --r-sm: 6px;
+    --r: 14px;
+    --r-lg: 22px;
+    --r-xl: 32px;
+
+    --shadow: 0 1px 2px rgba(20,20,19,.05), 0 8px 24px rgba(20,20,19,.04);
+    --shadow-lift: 0 2px 4px rgba(20,20,19,.07), 0 18px 44px rgba(20,20,19,.07);
+
+    --t-fast: 160ms cubic-bezier(.2,.7,.3,1);
+    --t: 280ms cubic-bezier(.2,.7,.3,1);
+    --t-slow: 540ms cubic-bezier(.2,.7,.3,1);
+  }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* Subtle paper grain so the background reads like a printed sheet,
+     not a flat color */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.07 0 0 0 0 0.06 0 0 0 0.045 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+    opacity: .55;
+    mix-blend-mode: multiply;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; border: 0; background: transparent; color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+  ::selection { background: var(--accent); color: var(--paper); }
+
+  /* ==========================================================
+     Type system
+     ========================================================== */
+  .display {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: .98;
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+  }
+  .display em {
+    font-style: italic;
+    font-feature-settings: "ss01";
+    font-variation-settings: "opsz" 144, "SOFT" 60;
+  }
+  .serif { font-family: 'Fraunces', serif; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+  }
+  .eyebrow.accent { color: var(--accent-deep); }
+
+  /* ==========================================================
+     Layout helpers
+     ========================================================== */
+  .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+    position: relative;
+  }
+  .stack > * + * { margin-top: var(--stack, 16px); }
+
+  /* ==========================================================
+     Buttons
+     ========================================================== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    transition: background var(--t-fast), color var(--t-fast),
+                border-color var(--t-fast), transform var(--t-fast),
+                box-shadow var(--t);
+    white-space: nowrap;
+  }
+  .btn .arrow {
+    width: 14px; height: 14px;
+    transition: transform var(--t);
+  }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: 0 1px 2px rgba(20,20,19,.18), 0 6px 18px rgba(20,20,19,.14);
+  }
+  .btn-primary:hover {
+    background: var(--accent-deep);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+  }
+  .btn-secondary:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    height: 40px;
+    padding: 0 14px;
+  }
+  .btn-ghost:hover { color: var(--accent-deep); }
+  .btn-paper {
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .btn-paper:hover {
+    background: var(--white);
+    transform: translateY(-1px);
+  }
+
+  /* ==========================================================
+     Utility / announcement bar
+     ========================================================== */
+  .utility {
+    position: relative;
+    z-index: 30;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+  }
+  .utility .row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    height: 38px;
+    padding: 0 var(--gutter);
+    flex-wrap: wrap;
+  }
+  .utility .pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+  .utility .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(204,120,92,.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(204,120,92,.6); }
+    70% { box-shadow: 0 0 0 9px rgba(204,120,92,0); }
+    100% { box-shadow: 0 0 0 0 rgba(204,120,92,0); }
+  }
+  .utility a {
+    color: var(--paper);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+    transition: color var(--t-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .utility a:hover { color: var(--accent-soft); text-decoration: underline; }
+
+  /* ==========================================================
+     Top navigation
+     ========================================================== */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background: rgba(244,240,230,0.85);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--t), background var(--t);
+  }
+  .nav.scrolled { border-color: var(--hairline); }
+  .nav .row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 28px;
+    height: 72px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+  .brand .mark {
+    width: 28px; height: 28px;
+    color: var(--accent-deep);
+    transition: transform var(--t);
+  }
+  .brand:hover .mark { transform: rotate(45deg); }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-self: center;
+  }
+  .nav-links a {
+    position: relative;
+    padding: 8px 12px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+    transition: color var(--t-fast);
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    left: 12px; right: 12px; bottom: 4px;
+    height: 1px;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--t);
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+
+  .nav-cta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .menu-toggle {
+    display: none;
+    width: 44px; height: 44px;
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+  }
+  .menu-toggle:hover { background: var(--paper-2); }
+
+  /* ==========================================================
+     Hero
+     ========================================================== */
+  .hero {
+    position: relative;
+    padding: 120px 0 72px;
+    overflow: hidden;
+  }
+  .hero .wrap {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .hero-text { max-width: 720px; }
+  .hero-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+    padding: 6px 6px 6px 14px;
+    background: var(--paper-2);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+  }
+  .hero-meta .tag {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .hero h1.display {
+    font-size: clamp(48px, 7.4vw, 104px);
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+  .hero h1 .accent-mark {
+    color: var(--accent-deep);
+    font-style: italic;
+    font-weight: 500;
+    position: relative;
+    display: inline-block;
+  }
+  .hero h1 .accent-mark::after {
+    content: '';
+    position: absolute;
+    left: -2%;
+    right: -4%;
+    bottom: -2px;
+    height: 9px;
+    background: var(--accent-soft);
+    z-index: -1;
+    border-radius: 4px;
+    transform: skew(-2deg);
+  }
+
+  .hero-lede {
+    font-size: 18px;
+    color: var(--ink-3);
+    max-width: 560px;
+    margin-bottom: 36px;
+    font-weight: 400;
+  }
+
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 52px;
+  }
+
+  .hero-meta-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    border-top: 1px solid var(--hairline);
+    padding-top: 28px;
+    max-width: 600px;
+  }
+  .hero-stat {
+    border-right: 1px solid var(--hairline);
+    padding-right: 18px;
+  }
+  .hero-stat:last-child { border-right: 0; padding-left: 18px; }
+  .hero-stat:nth-child(2) { padding-left: 18px; }
+  .hero-stat .num {
+    font-family: 'Fraunces', serif;
+    font-size: 38px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .hero-stat .num em {
+    color: var(--accent-deep);
+    font-style: italic;
+  }
+  .hero-stat .num .unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .hero-stat .label {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    line-height: 1.4;
+  }
+
+  /* Hero visual: faux product card */
+  .hero-visual {
+    position: relative;
+    perspective: 1400px;
+  }
+  .hero-card {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    background: var(--white);
+    border-radius: var(--r-xl);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-lift);
+    overflow: hidden;
+    transform: rotate(-1.2deg);
+  }
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--r-xl);
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 80% 0%, rgba(204,120,92,.15), transparent 55%),
+      radial-gradient(ellipse at 0% 100%, rgba(204,120,92,.08), transparent 60%);
+  }
+  .hero-card .strip {
+    height: 36px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+  }
+  .hero-card .strip .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--paper-3);
+  }
+  .hero-card .strip .url {
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--paper-2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    flex: 1;
+    max-width: 280px;
+  }
+  .hero-card .body {
+    padding: 28px 32px 32px;
+    height: calc(100% - 36px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+  }
+  .hero-card .pill {
+    align-self: flex-start;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: var(--accent-tint);
+    color: var(--accent-deep);
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--accent-soft);
+  }
+  .hero-card h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .hero-card p {
+    font-size: 14px;
+    color: var(--ink-3);
+    line-height: 1.55;
+  }
+  .hero-card .reply {
+    margin-top: auto;
+    padding: 14px 16px;
+    background: var(--paper);
+    border-radius: var(--r);
+    border: 1px solid var(--hairline);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .hero-card .reply .caret {
+    color: var(--accent-deep);
+    animation: caret 1s steps(2) infinite;
+  }
+  @keyframes caret { 50% { opacity: 0; } }
+
+  .hero-mini-card {
+    position: absolute;
+    z-index: 2;
+    bottom: -22px;
+    right: -18px;
+    width: 220px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--r-lg);
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow-lift);
+    transform: rotate(2deg);
+  }
+  .hero-mini-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-soft);
+    margin-bottom: 10px;
+  }
+  .hero-mini-card .v {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .hero-mini-card .bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.1);
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .hero-mini-card .bar > span {
+    display: block;
+    height: 100%;
+    width: 78%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+    border-radius: inherit;
+  }
+  .hero-mini-card .foot {
+    font-size: 11px;
+    opacity: .65;
+  }
+
+  /* Decorative geometric blot */
+  .hero-blot {
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    top: -40px;
+    right: -160px;
+    z-index: 0;
+    color: var(--accent);
+    opacity: .12;
+    animation: spin 70s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ==========================================================
+     Logo strip — implied trust row
+     ========================================================== */
+  .marquee {
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    padding: 28px 0;
+    background: var(--paper);
+  }
+  .marquee .row {
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .marquee .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    margin-right: 12px;
+  }
+  .marquee .word {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    opacity: .72;
+    transition: opacity var(--t), color var(--t);
+  }
+  .marquee .word:hover { opacity: 1; color: var(--ink); }
+  .marquee .word.italic { font-style: italic; }
+  .marquee .word.caps { letter-spacing: .22em; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; }
+
+  /* ==========================================================
+     Section header (re-used)
+     ========================================================== */
+  section { position: relative; }
+  .section-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 32px;
+    padding-top: 96px;
+    padding-bottom: 56px;
+  }
+  .section-head .lead { max-width: 720px; }
+  .section-head .eyebrow { margin-bottom: 18px; display: block; }
+  .section-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 4.6vw, 64px);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .section-head h2 em { color: var(--accent-deep); font-style: italic; }
+  .section-head .meta {
+    align-self: end;
+    text-align: right;
+  }
+  .section-head .meta a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 2px;
+    transition: color var(--t-fast), border-color var(--t-fast);
+  }
+  .section-head .meta a:hover { color: var(--accent-deep); border-color: var(--accent-deep); }
+
+  /* ==========================================================
+     Products — 4-card grid with featured first card
+     ========================================================== */
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 380px;
+    gap: 18px;
+  }
+  .pcard {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--hairline);
+    background: var(--white);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--t), box-shadow var(--t);
+  }
+  .pcard:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+  .pcard.featured {
+    grid-column: span 2;
+    grid-row: span 2;
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    padding: 36px 36px 32px;
+  }
+  .pcard.featured .pcard-eyebrow { color: var(--accent-soft); }
+  .pcard.featured h3 { color: var(--paper); }
+  .pcard.featured p { color: rgba(244,240,230,.7); }
+  .pcard.tall { grid-row: span 2; }
+  .pcard-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent-deep);
+    margin-bottom: 14px;
+  }
+  .pcard h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .pcard.featured h3 { font-size: 44px; }
+  .pcard p {
+    font-size: 14.5px;
+    color: var(--ink-3);
+    line-height: 1.55;
+    max-width: 320px;
+  }
+  .pcard.featured p { font-size: 17px; max-width: 480px; }
+  .pcard .pcard-foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .pcard .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: inherit;
+    transition: gap var(--t);
+  }
+  .pcard .link svg { width: 14px; height: 14px; }
+  .pcard:hover .link { gap: 12px; }
+
+  .pcard .visual {
+    position: absolute;
+    pointer-events: none;
+  }
+  .pcard.featured .visual {
+    inset: auto -40px -40px auto;
+    width: 320px;
+    height: 320px;
+    opacity: .85;
+  }
+  .pcard.tall .visual {
+    inset: auto 0 0 0;
+    height: 200px;
+  }
+  .pcard.short .visual {
+    inset: auto -20px -20px auto;
+    width: 160px;
+    height: 160px;
+  }
+
+  /* Visual: chat bubbles inside featured card */
+  .featured-bubbles {
+    position: absolute;
+    right: 32px;
+    bottom: 28px;
+    width: 320px;
+    pointer-events: none;
+    opacity: .96;
+  }
+  .featured-bubbles .b {
+    background: rgba(244,240,230,.08);
+    border: 1px solid rgba(244,240,230,.15);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: rgba(244,240,230,.7);
+    backdrop-filter: blur(4px);
+  }
+  .featured-bubbles .b.user {
+    background: rgba(204,120,92,.18);
+    border-color: rgba(204,120,92,.35);
+    color: var(--accent-soft);
+    margin-left: 36px;
+  }
+  .featured-bubbles .b.assistant { margin-right: 24px; }
+
+  /* ==========================================================
+     Manifesto / two-column statement
+     ========================================================== */
+  .manifesto {
+    padding: 96px 0 96px;
+    border-top: 1px solid var(--hairline);
+  }
+  .manifesto .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 96px;
+    align-items: start;
+  }
+  .manifesto h2.display {
+    font-size: clamp(40px, 5.6vw, 80px);
+    line-height: 1;
+    color: var(--ink);
+    letter-spacing: -0.025em;
+  }
+  .manifesto h2 em { color: var(--accent-deep); }
+  .manifesto .copy {
+    padding-top: 14px;
+  }
+  .manifesto .copy p {
+    font-size: 17px;
+    color: var(--ink-2);
+    line-height: 1.65;
+    margin-bottom: 18px;
+    max-width: 560px;
+  }
+  .manifesto .copy p:first-child::first-letter {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 64px;
+    float: left;
+    line-height: .85;
+    margin: 6px 10px -2px 0;
+    color: var(--accent-deep);
+  }
+  .manifesto .signoff {
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .signoff .avatar {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    display: grid;
+    place-items: center;
+    color: var(--paper);
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .signoff .who { font-weight: 500; font-size: 14.5px; color: var(--ink); }
+  .signoff .role { font-size: 13px; color: var(--ink-3); }
+
+  /* ==========================================================
+     Pull quote band
+     ========================================================== */
+  .quote-band {
+    padding: 96px 0;
+    background:
+      linear-gradient(180deg, transparent, var(--paper-2)),
+      var(--paper-2);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    text-align: center;
+    position: relative;
+  }
+  .quote-band::before, .quote-band::after {
+    content: '';
+    position: absolute;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, var(--accent-tint), transparent 65%);
+    z-index: 0;
+    opacity: .6;
+  }
+  .quote-band::before { top: -40px; left: 4%; }
+  .quote-band::after { bottom: -40px; right: 4%; }
+  .quote-band .wrap { position: relative; z-index: 1; }
+  .quote-band .glyph {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 96px;
+    color: var(--accent-deep);
+    line-height: 1;
+    margin-bottom: -40px;
+    display: block;
+  }
+  .quote-band blockquote {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(28px, 3.6vw, 48px);
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    max-width: 1000px;
+    margin: 0 auto 36px;
+  }
+  .quote-band blockquote em {
+    font-style: italic;
+    color: var(--accent-deep);
+  }
+  .quote-band cite {
+    font-style: normal;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .quote-band cite::before {
+    content: '';
+    width: 28px; height: 1px;
+    background: var(--ink-3);
+  }
+
+  /* ==========================================================
+     Customer stories — asymmetric grid
+     ========================================================== */
+  .stories {
+    padding-bottom: 24px;
+  }
+  .stories-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 18px;
+  }
+  .story {
+    grid-column: span 2;
+    background: var(--white);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-lg);
+    padding: 26px 26px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 320px;
+    transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+  }
+  .story:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--paper-3);
+  }
+  .story.lg { grid-column: span 3; }
+  .story.tone-ink {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .story.tone-ink .wordmark { color: var(--paper); }
+  .story.tone-ink .pull { color: var(--paper); }
+  .story.tone-ink .meta { color: rgba(244,240,230,.65); }
+  .story.tone-coral {
+    background: var(--accent-tint);
+    border-color: var(--accent-soft);
+  }
+  .story .wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .story .wordmark.serif-i { font-style: italic; font-weight: 400; }
+  .story .wordmark.caps {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 14px;
+  }
+  .story .wordmark.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    font-size: 16px;
+  }
+  .story .pull {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    flex: 1;
+  }
+  .story.lg .pull { font-size: 28px; }
+  .story .meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--ink-3);
+    padding-top: 16px;
+    border-top: 1px solid currentColor;
+    border-color: var(--hairline);
+  }
+  .story.tone-ink .meta { border-color: rgba(244,240,230,.18); }
+  .story.tone-coral .meta { border-color: var(--accent-soft); }
+  .story .meta .who strong { color: inherit; font-weight: 600; display: block; }
+  .story .meta .arrow {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    display: grid;
+    place-items: center;
+    transition: background var(--t), color var(--t), transform var(--t);
+  }
+  .story:hover .meta .arrow {
+    background: var(--ink);
+    color: var(--paper);
+    transform: rotate(-45deg);
+  }
+  .story.tone-ink:hover .meta .arrow {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  /* ==========================================================
+     Research grid
+     ========================================================== */
+  .research {
+    border-top: 1px solid var(--hairline);
+    margin-top: 96px;
+  }
+  .research-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  .article {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    cursor: pointer;
+  }
+  .article .thumb {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r);
+    border: 1px solid var(--hairline);
+    overflow: hidden;
+    position: relative;
+    transition: transform var(--t);
+  }
+  .article:hover .thumb { transform: translateY(-3px); }
+  .article .thumb svg { width: 100%; height: 100%; display: block; }
+  .article .meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+  .article .meta .cat { color: var(--accent-deep); }
+  .article .meta .sep {
+    width: 14px; height: 1px;
+    background: var(--ink-3);
+  }
+  .article h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 1.18;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    transition: color var(--t-fast);
+  }
+  .article:hover h3 { color: var(--accent-deep); }
+  .article p {
+    font-size: 14.5px;
+    color: var(--ink-3);
+    line-height: 1.55;
+    max-width: 380px;
+  }
+
+  /* ==========================================================
+     News list
+     ========================================================== */
+  .news {
+    margin-top: 96px;
+    border-top: 1px solid var(--hairline);
+  }
+  .news-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .news-item {
+    display: grid;
+    grid-template-columns: 140px 160px 1fr auto;
+    align-items: center;
+    gap: 28px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--hairline);
+    transition: background var(--t-fast), padding var(--t-fast);
+  }
+  .news-item:hover { background: var(--paper-2); padding-left: 12px; padding-right: 12px; }
+  .news-item .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .news-item .cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+    justify-self: start;
+  }
+  .news-item .cat.coral {
+    color: var(--accent-deep);
+    border-color: var(--accent-soft);
+    background: var(--accent-tint);
+  }
+  .news-item .cat.ink {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+  .news-item .title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.18;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+  }
+  .news-item .arrow {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline);
+    display: grid;
+    place-items: center;
+    color: var(--ink-2);
+    transition: all var(--t);
+  }
+  .news-item:hover .arrow {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    transform: rotate(-45deg);
+  }
+
+  /* ==========================================================
+     CTA banner
+     ========================================================== */
+  .cta-band {
+    margin: 120px 0 0;
+    background: var(--ink);
+    color: var(--paper);
+    overflow: hidden;
+    position: relative;
+  }
+  .cta-band .wrap {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 48px;
+    align-items: center;
+    padding-top: 96px;
+    padding-bottom: 96px;
+    position: relative;
+    z-index: 1;
+  }
+  .cta-band h2.display {
+    font-size: clamp(40px, 5.6vw, 76px);
+    line-height: 1;
+    color: var(--paper);
+    margin-bottom: 24px;
+  }
+  .cta-band h2 em { color: var(--accent); }
+  .cta-band p {
+    font-size: 17px;
+    color: rgba(244,240,230,.65);
+    margin-bottom: 32px;
+    max-width: 520px;
+  }
+  .cta-band .ctas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .cta-band .visual {
+    position: relative;
+    height: 320px;
+  }
+  .cta-band .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px dashed rgba(204,120,92,.4);
+    animation: spin 60s linear infinite;
+  }
+  .cta-band .ring::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    top: -7px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 24px var(--accent);
+  }
+  .cta-band .ring.r2 {
+    inset: 36px;
+    animation-direction: reverse;
+    animation-duration: 90s;
+    border-color: rgba(244,240,230,.15);
+  }
+  .cta-band .ring.r3 {
+    inset: 80px;
+    border-color: rgba(244,240,230,.08);
+    animation-duration: 120s;
+  }
+  .cta-band .core {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+  }
+
+  /* ==========================================================
+     Footer
+     ========================================================== */
+  footer.foot {
+    padding: 80px 0 36px;
+    background: var(--paper);
+    color: var(--ink-2);
+    border-top: 1px solid var(--hairline);
+  }
+  .foot .grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 64px;
+  }
+  .foot-brand .brand { font-size: 28px; }
+  .foot-brand .brand .mark { width: 36px; height: 36px; }
+  .foot-brand p {
+    margin-top: 18px;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink-3);
+    max-width: 320px;
+    line-height: 1.4;
+  }
+  .foot-col h5 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+    margin-bottom: 18px;
+    font-weight: 500;
+  }
+  .foot-col ul { list-style: none; }
+  .foot-col li { margin-bottom: 10px; }
+  .foot-col a {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    transition: color var(--t-fast);
+  }
+  .foot-col a:hover { color: var(--accent-deep); }
+
+  .foot-base {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 32px;
+    align-items: center;
+    padding-top: 32px;
+    border-top: 1px solid var(--hairline);
+    font-size: 13px;
+    color: var(--ink-3);
+    flex-wrap: wrap;
+  }
+  .foot-legal {
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .foot-legal a {
+    color: var(--ink-3);
+    transition: color var(--t-fast);
+  }
+  .foot-legal a:hover { color: var(--ink); }
+  .foot-social { display: flex; gap: 6px; justify-content: flex-end; }
+  .foot-social a {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline);
+    display: grid;
+    place-items: center;
+    color: var(--ink-2);
+    transition: all var(--t-fast);
+  }
+  .foot-social a:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  /* Big watermark wordmark */
+  .watermark {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(120px, 22vw, 320px);
+    letter-spacing: -0.04em;
+    line-height: .8;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--paper-3);
+    text-stroke: 1px var(--paper-3);
+    margin-top: 24px;
+    user-select: none;
+    text-align: center;
+  }
+
+  /* ==========================================================
+     Reveal animations on load
+     ========================================================== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: reveal var(--t-slow) ease-out forwards;
+  }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .d-1 { animation-delay: 80ms; }
+  .d-2 { animation-delay: 180ms; }
+  .d-3 { animation-delay: 280ms; }
+  .d-4 { animation-delay: 380ms; }
+  .d-5 { animation-delay: 480ms; }
+  .d-6 { animation-delay: 580ms; }
+
+  /* ==========================================================
+     Responsive
+     ========================================================== */
+  @media (max-width: 1080px) {
+    .hero .wrap { grid-template-columns: 1fr; gap: 40px; }
+    .hero { padding-top: 80px; }
+    .manifesto .row { gap: 48px; }
+    .products-grid { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 320px; }
+    .pcard.featured { grid-column: span 2; grid-row: span 1; }
+    .stories-grid { grid-template-columns: repeat(2, 1fr); }
+    .story, .story.lg { grid-column: span 1; }
+    .research-grid { grid-template-columns: repeat(2, 1fr); }
+    .cta-band .wrap { grid-template-columns: 1fr; padding-top: 64px; padding-bottom: 64px; }
+    .cta-band .visual { display: none; }
+    .foot .grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    :root { --gutter: 20px; }
+    .nav-links, .nav-cta .btn-ghost { display: none; }
+    .menu-toggle { display: inline-grid; }
+    .hero { padding: 56px 0 48px; }
+    .hero h1.display { font-size: clamp(40px, 11vw, 72px); }
+    .hero-meta-row { grid-template-columns: 1fr; gap: 14px; }
+    .hero-stat { border-right: 0; border-bottom: 1px solid var(--hairline); padding: 0 0 14px !important; }
+    .hero-stat:last-child { border-bottom: 0; padding: 14px 0 0 !important; }
+    .manifesto .row { grid-template-columns: 1fr; gap: 24px; }
+    .section-head { grid-template-columns: 1fr; padding-top: 64px; padding-bottom: 32px; }
+    .section-head .meta { text-align: left; }
+    .products-grid { grid-template-columns: 1fr; grid-auto-rows: auto; }
+    .pcard, .pcard.featured { grid-column: auto; grid-row: auto; min-height: 320px; }
+    .stories-grid { grid-template-columns: 1fr; }
+    .research-grid { grid-template-columns: 1fr; }
+    .news-item { grid-template-columns: 1fr auto; gap: 8px; }
+    .news-item .date, .news-item .cat { grid-column: 1; }
+    .news-item .title { grid-column: 1 / -1; }
+    .news-item .arrow { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+    .foot .grid { grid-template-columns: 1fr; gap: 32px; }
+    .foot-base { grid-template-columns: 1fr; text-align: center; }
+    .foot-social { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     UTILITY BAR
+     ============================================================ -->
+<div class="utility">
+  <div class="row">
+    <span class="pulse"><span class="dot"></span> New paper</span>
+    <span style="opacity:.85">Lorem ipsum dolor sit amet — a study on consectetur adipiscing elit</span>
+    <a href="#research">Read the paper
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 6h6M6 3l3 3-3 3"/>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<!-- ============================================================
+     NAVIGATION
+     ============================================================ -->
+<header class="nav" id="nav">
+  <div class="wrap row">
+    <a href="#" class="brand">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <circle cx="16" cy="16" r="13.5"/>
+        <path d="M5 16 Q 16 4 27 16"/>
+        <circle cx="16" cy="16" r="3" fill="currentColor" stroke="none"/>
+      </svg>
+      <span>Lumen</span>
+    </a>
+
+    <nav class="nav-links">
+      <a href="#products">Studio</a>
+      <a href="#products">API</a>
+      <a href="#stories">Solutions</a>
+      <a href="#research">Research</a>
+      <a href="#manifesto">Commitments</a>
+      <a href="#news">Newsroom</a>
+      <a href="#">Learn</a>
+    </nav>
+
+    <div class="nav-cta">
+      <a href="#" class="btn btn-ghost">Sign in</a>
+      <a href="#" class="btn btn-primary">
+        Try Lumen
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+      <button class="menu-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 6h14M3 10h14M3 14h14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section class="hero">
+  <svg class="hero-blot" viewBox="0 0 200 200" fill="none">
+    <path d="M100 8 C 140 30, 180 50, 188 100 C 192 150, 150 188, 100 192 C 50 188, 8 150, 12 100 C 20 50, 60 30, 100 8 Z" stroke="currentColor" stroke-width=".4" fill="currentColor" fill-opacity=".15"/>
+    <path d="M100 30 C 130 44, 162 58, 168 100 C 170 138, 138 168, 100 170 C 62 168, 30 138, 32 100 C 38 58, 70 44, 100 30 Z" stroke="currentColor" stroke-width=".4" fill="none"/>
+    <circle cx="100" cy="100" r="42" stroke="currentColor" stroke-width=".5" fill="none"/>
+    <circle cx="100" cy="100" r="12" fill="currentColor" fill-opacity=".4"/>
+  </svg>
+
+  <div class="wrap">
+    <div class="hero-text">
+      <span class="hero-meta reveal d-1">
+        <span class="tag">v3.4</span>
+        Lumen Atlas — lorem ipsum patientia
+      </span>
+
+      <h1 class="display reveal d-2">
+        Frontier AI,<br>
+        <em class="accent-mark">drafted</em><br>
+        with care.
+      </h1>
+
+      <p class="hero-lede reveal d-3">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+        eiusmod tempor incididunt ut labore et dolore magna aliqua —
+        ut enim ad minim veniam.
+      </p>
+
+      <div class="hero-ctas reveal d-4">
+        <a href="#" class="btn btn-primary">
+          Talk to Atlas
+          <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+        <a href="#" class="btn btn-secondary">Build with the API</a>
+        <a href="#" class="btn btn-ghost">
+          Watch the keynote
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="7" cy="7" r="5.5"/>
+            <path d="M5.6 4.8 L9.4 7 L5.6 9.2 Z" fill="currentColor"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="hero-meta-row reveal d-5">
+        <div class="hero-stat">
+          <div class="num">3<em>×</em><span class="unit">faster</span></div>
+          <div class="label">Lorem ipsum dolor sit amet on long-context tasks</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">98<em>.4</em><span class="unit">%</span></div>
+          <div class="label">Consectetur on adversarial benchmark suite</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num">200<span class="unit">k tokens</span></div>
+          <div class="label">In-context capacity per request, per agent</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero visual: faux product window -->
+    <div class="hero-visual reveal d-3">
+      <div class="hero-card">
+        <div class="strip">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="url">lumen.ai/atlas</span>
+        </div>
+        <div class="body">
+          <span class="pill">Atlas · drafting</span>
+          <h3>Sketch a customer email re: lorem ipsum credit policy</h3>
+          <p>Tone: warm, concise. Length: 5–7 lines. Avoid jargon. Reference clause 3.2 only if relevant.</p>
+
+          <div class="reply">
+            <strong style="color:var(--accent-deep)">draft 01</strong><br>
+            Dear Ms. Aurelia, sed do eiusmod tempor incididunt ut labore
+            et dolore magna aliqua. Per our credit policy update on
+            quarter four, ut enim ad minim veniam ullamco laboris.<span class="caret">▍</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-mini-card">
+        <div class="label">Trust score</div>
+        <div class="v">A+ <em style="font-style:italic;color:var(--accent)">/ 9.4</em></div>
+        <div class="bar"><span></span></div>
+        <div class="foot">Lorem ipsum across 14 evals</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     LOGO MARQUEE
+     ============================================================ -->
+<div class="marquee">
+  <div class="wrap row">
+    <span class="label">Trusted by teams at</span>
+    <span class="word">Northwind&amp;Co</span>
+    <span class="word italic">Parallax</span>
+    <span class="word caps">VERIDIA</span>
+    <span class="word">Hexagon Labs</span>
+    <span class="word italic">Kestrel&nbsp;Health</span>
+    <span class="word caps">MESA</span>
+    <span class="word">Quill Press</span>
+    <span class="word italic">Telluride</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     PRODUCTS GRID
+     ============================================================ -->
+<section id="products">
+  <div class="wrap">
+    <header class="section-head reveal d-1">
+      <div class="lead">
+        <span class="eyebrow accent">/ 01 — Products</span>
+        <h2 class="serif">A small <em>family of tools.</em><br>Built to feel like one.</h2>
+      </div>
+      <div class="meta">
+        <a href="#">See everything we ship
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="products-grid">
+      <!-- Featured: Atlas chat -->
+      <a href="#" class="pcard featured reveal d-1">
+        <span class="pcard-eyebrow">Atlas · the assistant</span>
+        <h3>Lorem ipsum dolor sit amet, <em style="font-style:italic;color:var(--accent-soft)">a kinder draft</em>.</h3>
+        <p>Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. A long-context assistant tuned for careful, capable writing.</p>
+
+        <div class="featured-bubbles">
+          <div class="b assistant">› Drafting a measured response — one moment.</div>
+          <div class="b user">Make it gentler. Mention clause 3.2 only if it helps.</div>
+          <div class="b assistant">Done. Three options ready in canvas.</div>
+        </div>
+
+        <div class="pcard-foot">
+          <span class="link">Open Atlas
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M3 7h8M7 3l4 4-4 4"/>
+            </svg>
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(244,240,230,.45); letter-spacing:.14em; text-transform:uppercase;">v3.4 · stable</span>
+        </div>
+      </a>
+
+      <!-- Tall: API -->
+      <a href="#" class="pcard tall reveal d-2">
+        <span class="pcard-eyebrow">Conduit · API</span>
+        <h3>Build measured systems with one rate-limited endpoint.</h3>
+        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+
+        <svg class="visual" viewBox="0 0 320 200" fill="none" preserveAspectRatio="xMaxYMax slice">
+          <g stroke="var(--hairline)" stroke-width="1">
+            <path d="M0 80 L60 80 L80 60 L160 60 L180 80 L260 80 L280 100 L320 100"/>
+            <path d="M0 140 L40 140 L60 120 L120 120 L140 140 L240 140 L260 120 L320 120"/>
+          </g>
+          <g fill="var(--accent)">
+            <circle cx="80" cy="60" r="3"/><circle cx="180" cy="80" r="3"/>
+            <circle cx="260" cy="80" r="3"/><circle cx="120" cy="120" r="3"/>
+            <circle cx="240" cy="140" r="3"/>
+          </g>
+          <g fill="var(--ink)" font-family="JetBrains Mono" font-size="9" font-weight="500">
+            <text x="80" y="50">/v3/messages</text>
+            <text x="180" y="50">/v3/tools</text>
+            <text x="120" y="112">/v3/embed</text>
+          </g>
+        </svg>
+
+        <div class="pcard-foot" style="margin-top:auto;">
+          <span class="link">Read the docs
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M3 7h8M7 3l4 4-4 4"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Short: Code -->
+      <a href="#" class="pcard short reveal d-3">
+        <span class="pcard-eyebrow">Forge · for code</span>
+        <h3>Pair-programming, with a long memory.</h3>
+        <p>Excepteur sint occaecat cupidatat non proident.</p>
+        <svg class="visual" viewBox="0 0 160 160" fill="none">
+          <rect x="14" y="14" width="132" height="132" rx="14" fill="var(--paper-2)" stroke="var(--hairline)"/>
+          <g font-family="JetBrains Mono" font-size="9" fill="var(--ink-3)">
+            <text x="24" y="36">› def lorem(x):</text>
+            <text x="32" y="50" fill="var(--accent-deep)">return ipsum(x)</text>
+            <text x="24" y="68">› lorem(42)</text>
+            <text x="24" y="86" fill="var(--ink-2)" font-weight="500">→ "dolor sit amet"</text>
+            <text x="24" y="108">› ▍</text>
+          </g>
+          <circle cx="130" cy="130" r="6" fill="var(--accent)"/>
+        </svg>
+        <div class="pcard-foot">
+          <span class="link">Install Forge
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M3 7h8M7 3l4 4-4 4"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Short: Enterprise -->
+      <a href="#" class="pcard short reveal d-4">
+        <span class="pcard-eyebrow">Bureau · for teams</span>
+        <h3>SSO, audit, and the same model your engineers use.</h3>
+        <p>Duis aute irure dolor in reprehenderit voluptate velit.</p>
+        <svg class="visual" viewBox="0 0 160 160" fill="none">
+          <g stroke="var(--hairline)" fill="var(--paper-2)">
+            <rect x="20" y="44" width="40" height="40" rx="8"/>
+            <rect x="62" y="32" width="40" height="40" rx="8"/>
+            <rect x="104" y="44" width="40" height="40" rx="8"/>
+            <rect x="40" y="86" width="40" height="40" rx="8" fill="var(--accent-tint)" stroke="var(--accent-soft)"/>
+            <rect x="84" y="86" width="40" height="40" rx="8"/>
+          </g>
+          <g fill="var(--ink-3)" font-family="JetBrains Mono" font-size="8" text-anchor="middle">
+            <text x="40" y="68">SSO</text>
+            <text x="82" y="56">RBAC</text>
+            <text x="124" y="68">SOC2</text>
+            <text x="60" y="110">AUDIT</text>
+            <text x="104" y="110">VPC</text>
+          </g>
+        </svg>
+        <div class="pcard-foot">
+          <span class="link">Talk to sales
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M3 7h8M7 3l4 4-4 4"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     MANIFESTO
+     ============================================================ -->
+<section id="manifesto" class="manifesto">
+  <div class="wrap row">
+    <h2 class="display">
+      We move<br>
+      slowly,<br>
+      <em>on purpose.</em>
+    </h2>
+
+    <div class="copy">
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+        eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+        enim ad minim veniam, quis nostrud exercitation ullamco laboris
+        nisi ut aliquip ex ea commodo consequat.
+      </p>
+      <p>
+        Duis aute irure dolor in reprehenderit in voluptate velit esse
+        cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+        cupidatat non proident, sunt in culpa qui officia deserunt
+        mollit anim id est laborum.
+      </p>
+      <p>
+        Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+        accusantium doloremque laudantium, totam rem aperiam, eaque
+        ipsa quae ab illo inventore veritatis et quasi architecto.
+      </p>
+
+      <div class="signoff">
+        <div class="avatar">D</div>
+        <div>
+          <div class="who">Dorothea Whitcombe</div>
+          <div class="role">Co-founder &amp; chief scientist</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     QUOTE BAND
+     ============================================================ -->
+<section class="quote-band">
+  <div class="wrap">
+    <span class="glyph">“</span>
+    <blockquote>
+      The work of building <em>useful, interpretable</em> intelligence
+      should resemble the work of <em>building good cities</em> — slow,
+      argued-over, and largely <em>about the people</em> who will live there.
+    </blockquote>
+    <cite>From the 2025 lorem ipsum manifesto, p. 14</cite>
+  </div>
+</section>
+
+<!-- ============================================================
+     CUSTOMER STORIES
+     ============================================================ -->
+<section id="stories" class="stories">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 02 — In the wild</span>
+        <h2 class="serif">Teams that bet on us, <em>quietly winning.</em></h2>
+      </div>
+      <div class="meta">
+        <a href="#">See all case studies
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="stories-grid">
+      <a href="#" class="story lg tone-ink">
+        <div class="wordmark">Northwind &amp; Co</div>
+        <div class="pull">
+          “We replaced four pipelines with a single Atlas-backed flow.
+          Lorem ipsum saved roughly 38 engineer-weeks in the first
+          quarter.”
+        </div>
+        <div class="meta">
+          <div class="who"><strong>Caleb Ainsworth</strong>VP Eng — Financial services</div>
+          <span class="arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 10 L10 4 M5 4h5v5"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="#" class="story tone-coral">
+        <div class="wordmark caps">VERIDIA</div>
+        <div class="pull">“Sed ut perspiciatis unde omnis. Ten-day pilot, three-month rollout.”</div>
+        <div class="meta">
+          <div class="who"><strong>Mira Voss</strong>Head of Ops — Logistics</div>
+          <span class="arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 10 L10 4 M5 4h5v5"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="#" class="story">
+        <div class="wordmark serif-i">Parallax</div>
+        <div class="pull">“At enim ad minim veniam, ullamco laboris nisi ut aliquip ex ea commodo.”</div>
+        <div class="meta">
+          <div class="who"><strong>Ines Marrot</strong>Director — Public sector</div>
+          <span class="arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 10 L10 4 M5 4h5v5"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="#" class="story">
+        <div class="wordmark mono">hexagon/labs</div>
+        <div class="pull">“Tempora cum soluta nobis est. Our compliance team finally trusts a model.”</div>
+        <div class="meta">
+          <div class="who"><strong>Theo Saint-Pierre</strong>CTO — Pharma</div>
+          <span class="arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 10 L10 4 M5 4h5v5"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="#" class="story lg">
+        <div class="wordmark">Kestrel <span style="color:var(--accent-deep)">·</span> Health</div>
+        <div class="pull">
+          “Atlas reads our case notes the way a careful junior clinician
+          would. It defers when it should — that was lorem ipsum, the
+          deal-maker.”
+        </div>
+        <div class="meta">
+          <div class="who"><strong>Dr. Anwen Brevard</strong>Chief Medical Informatics Officer</div>
+          <span class="arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 10 L10 4 M5 4h5v5"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+
+      <a href="#" class="story">
+        <div class="wordmark serif-i">Telluride</div>
+        <div class="pull">“Quod enim repellat consectetur quasi. Cut response time by 71% on tier-1.”</div>
+        <div class="meta">
+          <div class="who"><strong>Olu Ade-Bryant</strong>VP Customer — Travel</div>
+          <span class="arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 10 L10 4 M5 4h5v5"/>
+            </svg>
+          </span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     RESEARCH
+     ============================================================ -->
+<section id="research" class="research">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 03 — From the lab</span>
+        <h2 class="serif">Recent <em>research,</em> in the open.</h2>
+      </div>
+      <div class="meta">
+        <a href="#">All papers and notes
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="research-grid">
+      <article class="article">
+        <div class="thumb" style="background:linear-gradient(135deg,#2C2A26,#141413);">
+          <svg viewBox="0 0 400 300" fill="none" preserveAspectRatio="xMidYMid slice">
+            <g stroke="var(--accent)" stroke-width="1" opacity=".55">
+              <path d="M0 220 Q 100 180 200 200 T 400 180"/>
+              <path d="M0 240 Q 100 200 200 220 T 400 200"/>
+              <path d="M0 260 Q 100 220 200 240 T 400 220"/>
+            </g>
+            <g fill="var(--accent-soft)">
+              <circle cx="80" cy="190" r="3"/>
+              <circle cx="180" cy="170" r="3"/>
+              <circle cx="280" cy="180" r="3"/>
+              <circle cx="350" cy="160" r="3"/>
+            </g>
+            <text x="32" y="60" font-family="Fraunces" font-size="40" font-weight="500" fill="var(--paper)" font-style="italic">scaling</text>
+            <text x="32" y="100" font-family="Fraunces" font-size="40" font-weight="500" fill="var(--paper)">laws, ’26</text>
+          </svg>
+        </div>
+        <div class="meta">
+          <span class="cat">Capabilities</span>
+          <span class="sep"></span>
+          <span>Apr 14 · 2026</span>
+        </div>
+        <h3>On scaling laws beyond the loremscape: a measured update.</h3>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+      </article>
+
+      <article class="article">
+        <div class="thumb" style="background:linear-gradient(135deg,#F4DACB,#FBEFE6);">
+          <svg viewBox="0 0 400 300" fill="none" preserveAspectRatio="xMidYMid slice">
+            <g stroke="var(--accent-deep)" stroke-width="1.2">
+              <circle cx="200" cy="150" r="100"/>
+              <circle cx="200" cy="150" r="68" stroke-dasharray="4 4"/>
+              <circle cx="200" cy="150" r="36"/>
+            </g>
+            <circle cx="200" cy="50" r="6" fill="var(--accent-deep)"/>
+            <circle cx="200" cy="118" r="3" fill="var(--accent-deep)"/>
+            <circle cx="200" cy="150" r="14" fill="var(--ink)"/>
+            <text x="200" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-2)" letter-spacing="2">INTERPRETABILITY · 2026</text>
+          </svg>
+        </div>
+        <div class="meta">
+          <span class="cat">Interpretability</span>
+          <span class="sep"></span>
+          <span>Apr 02 · 2026</span>
+        </div>
+        <h3>Tracing influence: how a single token earns its weight.</h3>
+        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat per omnia.</p>
+      </article>
+
+      <article class="article">
+        <div class="thumb" style="background:var(--paper-2); border:1px solid var(--hairline);">
+          <svg viewBox="0 0 400 300" fill="none" preserveAspectRatio="xMidYMid slice">
+            <g stroke="var(--ink)" stroke-width="1">
+              <line x1="40" y1="60" x2="360" y2="60"/>
+              <line x1="40" y1="100" x2="320" y2="100"/>
+              <line x1="40" y1="140" x2="280" y2="140"/>
+              <line x1="40" y1="180" x2="240" y2="180"/>
+              <line x1="40" y1="220" x2="200" y2="220"/>
+            </g>
+            <g fill="var(--ink)">
+              <rect x="40" y="55" width="120" height="10"/>
+              <rect x="40" y="95" width="80" height="10"/>
+              <rect x="40" y="135" width="60" height="10"/>
+              <rect x="40" y="175" width="40" height="10"/>
+              <rect x="40" y="215" width="20" height="10"/>
+            </g>
+            <rect x="40" y="55" width="6" height="170" fill="var(--accent-deep)"/>
+            <text x="40" y="40" font-family="Fraunces" font-style="italic" font-size="22" font-weight="500" fill="var(--ink)">policy / governance</text>
+          </svg>
+        </div>
+        <div class="meta">
+          <span class="cat">Policy</span>
+          <span class="sep"></span>
+          <span>Mar 27 · 2026</span>
+        </div>
+        <h3>A practical framework for evaluating frontier-model deployments.</h3>
+        <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     NEWS LIST
+     ============================================================ -->
+<section id="news" class="news">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 04 — Newsroom</span>
+        <h2 class="serif">Field <em>notes</em> &amp; updates.</h2>
+      </div>
+      <div class="meta">
+        <a href="#">Subscribe to the newsletter
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="news-list">
+      <a href="#" class="news-item">
+        <span class="date">Apr 26 · 2026</span>
+        <span class="cat coral">Announcement</span>
+        <span class="title">Atlas v3.4 ships with longer memory and a quieter reasoning trace.</span>
+        <span class="arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M4 10 L10 4 M5 4h5v5"/>
+          </svg>
+        </span>
+      </a>
+      <a href="#" class="news-item">
+        <span class="date">Apr 20 · 2026</span>
+        <span class="cat ink">Society</span>
+        <span class="title">Our submission to the Loremshire AI advisory council, in full.</span>
+        <span class="arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M4 10 L10 4 M5 4h5v5"/>
+          </svg>
+        </span>
+      </a>
+      <a href="#" class="news-item">
+        <span class="date">Apr 11 · 2026</span>
+        <span class="cat">Engineering</span>
+        <span class="title">A small grammar for tool-use: the case for predictable JSON.</span>
+        <span class="arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M4 10 L10 4 M5 4h5v5"/>
+          </svg>
+        </span>
+      </a>
+      <a href="#" class="news-item">
+        <span class="date">Apr 03 · 2026</span>
+        <span class="cat">Product</span>
+        <span class="title">Forge for code now reviews PRs alongside the team — and signs its work.</span>
+        <span class="arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M4 10 L10 4 M5 4h5v5"/>
+          </svg>
+        </span>
+      </a>
+      <a href="#" class="news-item">
+        <span class="date">Mar 22 · 2026</span>
+        <span class="cat coral">Research</span>
+        <span class="title">Reading between the layers: an essay on careful interpretability.</span>
+        <span class="arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M4 10 L10 4 M5 4h5v5"/>
+          </svg>
+        </span>
+      </a>
+      <a href="#" class="news-item" style="border-bottom:0;">
+        <span class="date">Mar 14 · 2026</span>
+        <span class="cat">Hiring</span>
+        <span class="title">We&rsquo;re hiring across alignment, infrastructure, and design — quietly, deliberately.</span>
+        <span class="arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M4 10 L10 4 M5 4h5v5"/>
+          </svg>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     CTA BAND
+     ============================================================ -->
+<section class="cta-band">
+  <div class="wrap">
+    <div>
+      <h2 class="display">
+        Build something<br>
+        you'd be<br>
+        <em>proud to ship.</em>
+      </h2>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+        eiusmod tempor incididunt ut labore et dolore magna aliqua.
+      </p>
+      <div class="ctas">
+        <a href="#" class="btn btn-paper">
+          Try Atlas free
+          <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+        <a href="#" class="btn" style="background:transparent;color:var(--paper);border:1px solid rgba(244,240,230,.4);">
+          Get an API key
+        </a>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="ring"></div>
+      <div class="ring r2"></div>
+      <div class="ring r3"></div>
+      <div class="core">
+        <svg width="80" height="80" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="16" cy="16" r="13.5"/>
+          <path d="M5 16 Q 16 4 27 16"/>
+          <circle cx="16" cy="16" r="3" fill="currentColor"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="grid">
+      <div class="foot-brand">
+        <a href="#" class="brand">
+          <svg class="mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" style="color:var(--accent-deep);">
+            <circle cx="16" cy="16" r="13.5"/>
+            <path d="M5 16 Q 16 4 27 16"/>
+            <circle cx="16" cy="16" r="3" fill="currentColor"/>
+          </svg>
+          <span>Lumen</span>
+        </a>
+        <p>“Lorem ipsum dolor sit amet, with patience and good documentation.”</p>
+      </div>
+
+      <div class="foot-col">
+        <h5>Products</h5>
+        <ul>
+          <li><a href="#">Atlas</a></li>
+          <li><a href="#">Conduit API</a></li>
+          <li><a href="#">Forge for code</a></li>
+          <li><a href="#">Bureau (teams)</a></li>
+          <li><a href="#">Pricing</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Research</h5>
+        <ul>
+          <li><a href="#">Papers</a></li>
+          <li><a href="#">Notebook</a></li>
+          <li><a href="#">Evals</a></li>
+          <li><a href="#">Open datasets</a></li>
+          <li><a href="#">Residency</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Newsroom</a></li>
+          <li><a href="#">Press kit</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="#">Documentation</a></li>
+          <li><a href="#">Status</a></li>
+          <li><a href="#">Trust &amp; safety</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Acceptable use</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-base">
+      <span>© 2026 Lumen Research, PBC.</span>
+      <div class="foot-legal">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Cookies</a>
+        <a href="#">Responsible scaling</a>
+      </div>
+      <div class="foot-social">
+        <a href="#" aria-label="Twitter">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="LinkedIn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+        </a>
+        <a href="#" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="watermark" aria-hidden="true">Lumen</div>
+  </div>
+</footer>
+
+<script>
+  // Sticky-nav border on scroll
+  const nav = document.getElementById('nav');
+  const update = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+
+  // Subtle parallax on the hero blot
+  const blot = document.querySelector('.hero-blot');
+  if (blot && window.matchMedia('(min-width: 720px)').matches) {
+    window.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 14;
+      const y = (e.clientY / window.innerHeight - 0.5) * 14;
+      blot.style.translate = `${x}px ${y}px`;
+    });
+  }
+</script>
+</body>
+</html>
