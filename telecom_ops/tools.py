@@ -45,6 +45,8 @@ VALID_CATEGORIES: frozenset[str] = frozenset(
     {"billing", "network", "hardware", "service", "general"}
 )
 
+MAX_COMPLAINT_CHARS = 2000
+
 
 # --- Native ADK tools ------------------------------------------------------
 
@@ -65,13 +67,23 @@ def classify_issue(
         reasoning: One-sentence rationale for the chosen category.
 
     Returns:
-        Dict with status, category, and region for confirmation.
+        Dict with status, category, and region for confirmation, or
+        status='error' with a message when the complaint is empty.
     """
-    tool_context.state["complaint"] = complaint
+    cleaned = (complaint or "").strip()[:MAX_COMPLAINT_CHARS]
+    if not cleaned:
+        msg = "complaint is empty after stripping whitespace"
+        logger.warning("[classify_issue] %s", msg)
+        return {"status": "error", "message": msg}
+
+    tool_context.state["complaint"] = cleaned
     tool_context.state["category"] = category
     tool_context.state["region"] = region
     tool_context.state["reasoning"] = reasoning
-    logger.info("[classify_issue] category=%s region=%s", category, region)
+    logger.info(
+        "[classify_issue] category=%s region=%s len=%d",
+        category, region, len(cleaned),
+    )
     return {"status": "success", "category": category, "region": region}
 
 

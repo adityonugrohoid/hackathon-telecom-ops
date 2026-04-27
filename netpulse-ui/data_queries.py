@@ -47,11 +47,25 @@ _bq_client: bigquery.Client | None = None
 
 @dataclass
 class QueryResult:
-    """Generic table-shaped query result for a Jinja template."""
+    """Generic table-shaped query result for a Jinja template.
+
+    Attributes:
+        columns: Ordered column names matching keys in each row dict.
+        rows: List of row dicts (already template-safe via _stringify).
+        row_count: Length of `rows` (rows actually returned, post-LIMIT).
+        total_count: Total matching rows in the source table (pre-LIMIT,
+            post-filters). Lets templates render "Showing N of TOTAL"
+            so users know when LIMIT truncated the result.
+        limit: The LIMIT applied to this query, surfaced for the same
+            "showing N of TOTAL — increase limit or refine filters" UX hint.
+        error: Populated only when the query failed; rows + counts are empty.
+    """
 
     columns: list[str] = field(default_factory=list)
     rows: list[dict[str, Any]] = field(default_factory=list)
     row_count: int = 0
+    total_count: int = 0
+    limit: int = 0
     error: str | None = None
 
 
@@ -125,21 +139,28 @@ def bq_network_events(
         where.append("event_type = @event_type")
         params.append(bigquery.ScalarQueryParameter("event_type", "STRING", event_type))
 
-    sql = (
-        f"SELECT * FROM `{GCP_PROJECT}.{BQ_DATASET}.{BQ_NETWORK_TABLE}` "
-        f"WHERE {' AND '.join(where)} "
+    where_clause = " AND ".join(where)
+    table_ref = f"`{GCP_PROJECT}.{BQ_DATASET}.{BQ_NETWORK_TABLE}`"
+    count_sql = f"SELECT COUNT(*) AS n FROM {table_ref} WHERE {where_clause}"
+    select_sql = (
+        f"SELECT * FROM {table_ref} "
+        f"WHERE {where_clause} "
         f"ORDER BY started_at DESC LIMIT {int(limit)}"
     )
+    job_config = bigquery.QueryJobConfig(query_parameters=params)
 
     try:
-        job = client.query(
-            sql,
-            job_config=bigquery.QueryJobConfig(query_parameters=params),
-        )
-        result = job.result()
+        total = next(iter(client.query(count_sql, job_config=job_config).result())).n
+        result = client.query(select_sql, job_config=job_config).result()
         cols = [field.name for field in result.schema]
         rows = [{c: _stringify(row[c]) for c in cols} for row in result]
-        return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+        return QueryResult(
+            columns=cols,
+            rows=rows,
+            row_count=len(rows),
+            total_count=int(total),
+            limit=int(limit),
+        )
     except Exception as exc:  # noqa: BLE001
         logger.exception("bq_network_events failed")
         return QueryResult(error=f"BigQuery error: {exc}")
@@ -180,26 +201,38 @@ def alloydb_call_records(
         "cell_tower_id",
         "call_status",
     ]
-    sql = f"SELECT {', '.join(cols)} FROM {AL_CALL_TABLE} WHERE 1=1"
+    where = "WHERE 1=1"
     params: dict[str, str] = {}
     if region in ALLOWED_REGIONS:
-        sql += " AND region = :region"
+        where += " AND region = :region"
         params["region"] = region
     if call_status in ALLOWED_CALL_STATUSES:
-        sql += " AND call_status = :call_status"
+        where += " AND call_status = :call_status"
         params["call_status"] = call_status
     if call_type in ALLOWED_CALL_TYPES:
-        sql += " AND call_type = :call_type"
+        where += " AND call_type = :call_type"
         params["call_type"] = call_type
-    sql += f" ORDER BY call_date DESC LIMIT {int(limit)}"
+
+    count_sql = f"SELECT COUNT(*) FROM {AL_CALL_TABLE} {where}"
+    select_sql = (
+        f"SELECT {', '.join(cols)} FROM {AL_CALL_TABLE} {where} "
+        f"ORDER BY call_date DESC LIMIT {int(limit)}"
+    )
 
     try:
         with eng.connect() as conn:
-            result = conn.execute(sqlalchemy.text(sql), params)
+            total = conn.execute(sqlalchemy.text(count_sql), params).scalar_one()
+            result = conn.execute(sqlalchemy.text(select_sql), params)
             rows = [
                 {c: _stringify(getattr(row, c)) for c in cols} for row in result
             ]
-        return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+        return QueryResult(
+            columns=cols,
+            rows=rows,
+            row_count=len(rows),
+            total_count=int(total),
+            limit=int(limit),
+        )
     except Exception as exc:  # noqa: BLE001
         logger.exception("alloydb_call_records failed")
         return QueryResult(error=f"AlloyDB error: {exc}")
@@ -222,18 +255,26 @@ def alloydb_incident_tickets(limit: int = 100) -> QueryResult:
         "status",
         "created_at",
     ]
-    sql = (
+    count_sql = f"SELECT COUNT(*) FROM {AL_TICKET_TABLE}"
+    select_sql = (
         f"SELECT {', '.join(cols)} FROM {AL_TICKET_TABLE} "
         f"ORDER BY ticket_id DESC LIMIT {int(limit)}"
     )
 
     try:
         with eng.connect() as conn:
-            result = conn.execute(sqlalchemy.text(sql))
+            total = conn.execute(sqlalchemy.text(count_sql)).scalar_one()
+            result = conn.execute(sqlalchemy.text(select_sql))
             rows = [
                 {c: _stringify(getattr(row, c)) for c in cols} for row in result
             ]
-        return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+        return QueryResult(
+            columns=cols,
+            rows=rows,
+            row_count=len(rows),
+            total_count=int(total),
+            limit=int(limit),
+        )
     except Exception as exc:  # noqa: BLE001
         logger.exception("alloydb_incident_tickets failed")
         return QueryResult(error=f"AlloyDB error: {exc}")

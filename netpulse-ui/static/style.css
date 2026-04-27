@@ -615,6 +615,10 @@ body {
   margin-bottom: var(--space-2);
   font-size: 13px;
 }
+.np-rowcount-hint {
+  color: var(--np-error);
+  font-weight: 500;
+}
 .np-table {
   width: 100%;
   border-collapse: collapse;
@@ -683,6 +687,11 @@ body {
 .np-badge-status-new          { background: color-mix(in srgb, var(--np-primary)         12%, transparent); color: var(--np-primary-dark);   border-color: color-mix(in srgb, var(--np-primary)         35%, transparent); }
 .np-badge-status-acknowledged { background: color-mix(in srgb, var(--np-status-major)    12%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    35%, transparent); }
 .np-badge-status-resolved     { background: color-mix(in srgb, var(--np-status-resolved) 12%, transparent); color: var(--np-status-resolved); border-color: color-mix(in srgb, var(--np-status-resolved) 35%, transparent); }
+
+/* Call status badges (call_records.call_status enum: completed | dropped | failed) */
+.np-badge-call-completed { background: color-mix(in srgb, var(--np-status-resolved) 14%, transparent); color: var(--np-status-resolved); border-color: color-mix(in srgb, var(--np-status-resolved) 40%, transparent); }
+.np-badge-call-dropped   { background: color-mix(in srgb, var(--np-status-major)    14%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    40%, transparent); }
+.np-badge-call-failed    { background: color-mix(in srgb, var(--np-status-critical) 14%, transparent); color: var(--np-status-critical); border-color: color-mix(in srgb, var(--np-status-critical) 40%, transparent); }
 
 /* Region badge — neutral tone, just for visual grouping in the ticket card */
 .np-badge-region {

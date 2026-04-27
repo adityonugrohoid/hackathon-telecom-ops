@@ -77,6 +77,26 @@ parameter — no expressions. Final shape: every param `required: true`
 + `default:` sentinel (`"*"` for strings, `36500` for days_back, `50`
 for limit), SQL uses sentinel comparison instead of nullable binds.
 
+**Phase 12 ✅ DONE 2026-04-27** — Vertex failover redesign: region ladder
+swapped for a model ladder. Production trace on rev `00015-24q` showed
+the structural break: `global` 429 RESOURCE_EXHAUSTED → wrapper failed
+over to `us-central1` → 404 NOT_FOUND because Flash-Lite-preview is
+global-only on this project. The new `ATTEMPT_SCHEDULE` in
+`vertex_failover.py` walks 3 attempts at the single `global` endpoint:
+attempt 1 (primary, 10s), attempt 2 (primary after 0.5s sleep, 20s),
+attempt 3 (`gemini-2.5-flash` GA fallback, 30s). Each model has its own
+quota bucket so the GA fallback is a real escape hatch — the demo never
+hard-fails on quota pressure. Three self-tests pass: quota-retry stays
+on primary, timeout-retry stays on primary, persistent-429 swaps to
+fallback. Live on rev `netpulse-ui-00017-…` (Cloud Run redeploy from
+project root with `--clear-base-image` to flip Buildpacks → Dockerfile;
+the prior buildpacks deploys had been stripping `telecom_ops/` from the
+image, surfacing as `ModuleNotFoundError: No module named 'telecom_ops'`
+on every `/api/query` call). Observer payload field `region` now carries
+the model name (semantic abuse kept to minimize SSE/frontend diff); the
+chat 'via' chip renders model names instead of region names — same CSS,
+same dedupe behavior, retries on the same model collapse to one hop.
+
 **Freeze A operational lift (2026-04-26).** User explicitly lifted all
 Freeze A operational restrictions on `plated-complex-491512-n6`, keeping
 only the project-billing link to `018C72-72D309-CBD42A` frozen. Cloud Run
@@ -105,13 +125,17 @@ region / severity badge set on the saved ticket, and a static
 category → recommended-NOC-actions chip panel — all driven client-side
 from the existing SSE event stream. Both deploy to Cloud Run. Each
 sub-agent picks its own model through the `RegionFailoverGemini` wrapper
-in `telecom_ops/vertex_failover.py` — three upstream agents on a fast
-Flash-class variant, the synthesis agent on a Pro-class variant — and
-the wrapper walks a multi-continent region ladder
-(`global → us-central1 → europe-west4 → asia-northeast1`) on
-`RESOURCE_EXHAUSTED` 429 *or* a 10s silent-hang timeout, with the next
-attempt cancelling the prior in-flight call so only one HTTP request
-is ever live per agent.
+in `telecom_ops/vertex_failover.py` — all four agents currently share
+`MODEL_FAST = "gemini-3.1-flash-lite-preview"`. The wrapper targets the
+single `global` Vertex endpoint and walks a 3-attempt **model ladder**
+on `RESOURCE_EXHAUSTED` 429 *or* per-attempt `asyncio.TimeoutError`:
+attempt 1 (primary, 10s), attempt 2 (primary after 0.5s sleep, 20s),
+attempt 3 (`gemini-2.5-flash` GA fallback, 30s). Each attempt cancels
+the prior in-flight call so only one HTTP request is ever live per agent.
+The model ladder replaced the prior multi-continent region ladder, which
+became structurally unusable once preview models shipped with per-project
+regional gating: `global` 429 → `us-central1` always 404'd because
+Flash-Lite-preview is global-only on this project.
 
 ## Non-obvious choices to preserve
 
@@ -131,33 +155,40 @@ These look optional but each one is load-bearing for a reason:
   forever waiting on a half-dead socket. We hit this during a demo gap.
   Both `telecom_ops/tools.py` and `netpulse-ui/data_queries.py` set it.
 
-- **Vertex AI region failover + 10s hang timeout** in
-  `telecom_ops/vertex_failover.py`. Default region is `global` (Google's
-  multi-region routing pool); on `RESOURCE_EXHAUSTED` 429 *or* on
-  `asyncio.TimeoutError` from the per-attempt 10s `wait_for`, each
-  `LlmAgent` independently rebuilds its `genai.Client` against the next
-  region in `RANKED_REGIONS` (`global → us-central1 → europe-west4 →
-  asia-northeast1`). The ladder is **multi-continent** — APAC entries
-  were swapped for a non-SE-Asia region (Tokyo) after asia-southeast1/2
-  returned 400 FAILED_PRECONDITION on `gemini-3.1-pro-preview`. The 10s
-  timeout is critical: a previously frozen run on 2026-04-26 hung for
-  Cloud Run's full 300s request timeout because the wrapper had no way
-  to detect a TCP socket that never returned a response. Now `wait_for`
-  cancels the in-flight coroutine on timeout, the underlying aiohttp
-  client closes the socket, and the next region attempt fires — only one
-  HTTP call is ever in flight per wrapper. The original budget was 5 s
-  but a Phase 11 production trace (network_investigator summarising a
-  15.5 KB weekly_outage_trend response on `global`) false-positive-timed-
-  out at 5.05 s; raised to 10 s. The failover ladder is `global`-only-
-  usable for `gemini-3.1-flash-lite-preview` on this project (other
-  regions return `404 NOT_FOUND`), so a false-positive timeout surfaces
-  as a hard failure — not a successful failover. 10 s gives global enough
-  headroom under load while still catching real silent hangs (those never
-  return). `agent.py` builds a fresh
-  wrapper per `LlmAgent` so the four agents own independent failover
-  state. Streaming (`stream=True`) bypasses both failover AND timeout
-  because partial yields cannot be safely replayed; NetPulse uses
-  `stream=False` so this is not a hot-path concern.
+- **Vertex AI model-ladder failover + escalating timeouts** in
+  `telecom_ops/vertex_failover.py`. All requests target the single
+  `REGION = "global"` Vertex endpoint. On `RESOURCE_EXHAUSTED` 429 *or*
+  `asyncio.TimeoutError`, the wrapper walks `ATTEMPT_SCHEDULE`:
+  | # | model              | timeout | pre-sleep |
+  |---|--------------------|---------|-----------|
+  | 1 | primary self.model | 10s     | 0s        |
+  | 2 | primary self.model | 20s     | 0.5s      |
+  | 3 | `gemini-2.5-flash` | 30s     | 0s        |
+  Worst-case wall clock per agent: 60.5s (well under Cloud Run's 300s).
+  The hybrid retry-then-swap shape means most 429s clear by attempt 2
+  on the same headline preview model (Vertex's dynamic shared quota
+  pool typically replenishes within a second), and only sustained
+  pressure forces the swap to the GA fallback. The 10s attempt-1 timeout
+  is critical: a previously frozen run on 2026-04-26 hung for Cloud Run's
+  full 300s request timeout because the wrapper had no way to detect a
+  TCP socket that never returned a response. Now `wait_for` cancels the
+  in-flight coroutine on timeout, the SDK's aiohttp client closes the
+  socket, and the next attempt fires — only one HTTP call is ever in
+  flight per wrapper. 5s was tried first but a Phase 11 production trace
+  (network_investigator summarising a 15.5 KB weekly_outage_trend
+  response) false-positive-timed-out at 5.05s; 10s was raised to give
+  legitimate-slow responses headroom. The escalating ceiling (10→20→30s)
+  on retries grants progressively more slack since the previous attempt
+  proved the call wasn't a fast hang. The ladder swaps **models**, not
+  regions, because preview models are gated to specific regions per
+  project — `gemini-3.1-flash-lite-preview` is `global`-only here, so
+  the previous region ladder advanced from `global` 429 to `us-central1`
+  404 NOT_FOUND every time. Each model has its own quota bucket, so the
+  GA fallback is a real escape hatch. `agent.py` builds a fresh wrapper
+  per `LlmAgent` so the four agents own independent failover state.
+  Streaming (`stream=True`) bypasses both ladder AND timeout because
+  partial yields cannot be safely replayed; NetPulse uses `stream=False`
+  so this is not a hot-path concern.
 
 - **Per-agent model selection** in `telecom_ops/agent.py`. Two named
   constants split the four agents by cognitive role: `MODEL_FAST =
@@ -169,11 +200,12 @@ These look optional but each one is load-bearing for a reason:
   Flash-Lite. Earlier rev `00009-f2c` ran synthesis on
   `gemini-3.1-pro-preview` for higher instruction-following fidelity, but
   Pro-preview proved `global`-only for this project (us-central1 returned
-  404 NOT_FOUND), making the failover ladder a structural no-op for
-  synthesis. Flash-Lite is multi-region addressable, so the ladder works
-  end-to-end. Re-split this constant if production traces show synthesis
-  quality is insufficient (revert option: `MODEL_SYNTHESIS =
-  "gemini-2.5-pro"`, GA + multi-region).
+  404 NOT_FOUND), making the prior region-failover ladder a structural
+  no-op. Under the new model ladder, re-splitting this constant is safe
+  since the ladder no longer assumes multi-region addressability —
+  attempt 3's `gemini-2.5-flash` fallback covers any global-only primary.
+  Revert option: `MODEL_SYNTHESIS = "gemini-2.5-pro"` (GA + multi-region)
+  if production traces show synthesis quality is insufficient.
 
 - **Customer-impact card consumes a JSON-encoded string from MCP toolbox.**
   `netpulse-ui/templates/chat.html:npExtractRows` recurses through both
