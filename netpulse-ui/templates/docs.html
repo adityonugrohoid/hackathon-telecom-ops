@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Documentation &mdash; NetPulse AI</title>
+<meta name="description" content="The build behind NetPulse AI &mdash; architecture, stack, data, BYOD." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap row">
+    {% include "_brand.html" %}
+
+    <nav class="nav-links">
+      <a href="{{ url_for('landing') }}#how-it-works">How it works</a>
+      <a href="{{ url_for('landing') }}#data-viewer">Data Viewer</a>
+      <a href="{{ url_for('landing') }}#resources">Resources</a>
+      <a href="{{ url_for('app_workspace') }}">Workspace</a>
+      <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+
+    <div class="nav-cta">
+      <a href="{{ url_for('app_workspace') }}" class="btn btn-primary">
+        Try NetPulse AI
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+      <button class="menu-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 6h14M3 10h14M3 14h14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="dv-hero">
+  <div class="wrap">
+    <span class="eyebrow accent">/ 03 &mdash; Resources &middot; Documentation</span>
+    <h1 class="display">The build behind <em>NetPulse AI</em></h1>
+    <p class="lede">Architecture, data, and what it took to ship &mdash; from the four-agent SequentialAgent down to the partition keys on the BigQuery table.</p>
+    <div class="dv-meta-row">
+      <span class="dv-meta-pill"><b>phase</b> Top 100 &middot; refinement</span>
+      <span class="dv-meta-pill"><b>due</b> 2026-04-30</span>
+      <span class="dv-meta-pill"><b>stack</b> ADK &middot; Vertex &middot; AlloyDB &middot; BigQuery</span>
+      <span class="dv-meta-pill"><b>code</b> github / hackathon-telecom-ops</span>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="docs-shell">
+    <aside class="docs-toc"><div class="docs-toc-title">On this page</div><ol><li><a href="#about"><span class="num">01</span><span>About</span></a></li><li><a href="#architecture"><span class="num">02</span><span>Architecture</span></a></li><li><a href="#stack"><span class="num">03</span><span>Tech stack</span></a></li><li><a href="#data"><span class="num">04</span><span>Data schema</span></a></li><li><a href="#byod"><span class="num">05</span><span>Bring your own data</span></a></li><li><a href="#phases"><span class="num">06</span><span>Phase history</span></a></li><li><a href="#roadmap"><span class="num">07</span><span>Roadmap</span></a></li></ol></aside>
+    <div class="docs-body">
+
+<section id="about" class="docs-section">
+  <span class="eyebrow accent">/ 01 &mdash; About</span>
+  <h2 class="serif">About <em>NetPulse AI</em></h2>
+
+<p>NetPulse AI is a multi-agent telecom operations assistant built for the
+APAC GenAI Academy 2026 hackathon. A natural-language complaint goes in;
+a structured incident ticket comes out &mdash; complete with the related
+network events the operator should know about, the CDR findings that
+back up the customer&rsquo;s account of what happened, and a recommended NOC
+action plan.</p>
+
+</section>
+
+
+<section id="architecture" class="docs-section">
+  <span class="eyebrow accent">/ 02 &mdash; Architecture</span>
+  <h2 class="serif">Architecture <em>in detail</em></h2>
+
+<p>The core ADK package <code>telecom_ops</code> exposes a
+<code>SequentialAgent</code> that runs four <code>LlmAgent</code> sub-agents
+in order: classifier, network investigator, CDR analyzer, response
+formatter. Each one reads the shared session state, queries its data
+store through the MCP toolbox, and enriches the state for the next.
+The fourth writes a structured ticket to AlloyDB and the run ends.</p>
+<div class="docs-arch-figure">
+  <img src="{{ url_for('static', filename='architecture.png') }}" alt="NetPulse AI architecture diagram">
+  <div class="docs-arch-caption">User &rarr; UI &rarr; SequentialAgent (4 LlmAgents on Gemini) &rarr; MCP Toolbox &rarr; BigQuery + AlloyDB</div>
+</div>
+<h3>Why a SequentialAgent</h3>
+<p>The four steps have strict data dependencies &mdash; the network
+investigator can&rsquo;t run until the classifier has tagged a region; the CDR
+analyzer joins on the time window the network investigator returned;
+the formatter needs all three to write a coherent ticket. A
+<code>SequentialAgent</code> models this as code rather than encoding it
+into a prompt, so the dependency stays correct under prompt churn.</p>
+<h3>Why MCP Toolbox in front of the data stores</h3>
+<p>Direct BigQuery MCP endpoints returned 403 / connection-closed on
+Cloud Run during early integration. The toolbox-as-intermediary pattern
+works reliably and gives one place to evolve tool definitions without
+redeploying the agent service.</p>
+
+<h3>Why both BigQuery and AlloyDB</h3>
+<p>All-BigQuery makes ticket writes/updates painful &mdash; no transactions,
+latency wrong for an interactive UI. All-AlloyDB makes event scans
+expensive, forces scaling decisions for telemetry that doesn&rsquo;t need a
+relational store, and loses the cheap historical depth. Showing two
+services used for the right reasons mirrors how telecom ops actually
+splits analytical investigation from operational record-keeping.</p>
+
+<div class="docs-split-grid">
+  <div class="docs-split-card">
+    <div class="docs-stack-card-eyebrow">BIGQUERY &middot; WHY</div>
+    <div class="docs-split-card-title">Append-only telemetry, bursty diagnostic scans</div>
+    <ul class="docs-split-list">
+      <li>Network telemetry is the textbook OLAP case &mdash; high-volume, append-only, bursty queries that scan wide time windows. Columnar storage + pay-per-query economics fit the &ldquo;investigate the last N hours&rdquo; pattern better than keeping AlloyDB hot enough to scan that volume.</li>
+      <li>Serverless &mdash; no scaling decisions during the hackathon.</li>
+      <li>Schema flexibility for evolving event shapes; new event types appear all the time in real telco data.</li>
+      <li>Investigation queries are read-only, so BigQuery&rsquo;s eventual-consistency / batch-load model is fine.</li>
+    </ul>
+  </div>
+
+  <div class="docs-split-card">
+    <div class="docs-stack-card-eyebrow">ALLOYDB &middot; WHY</div>
+    <div class="docs-split-card-title">Targeted reads, mutable rows, ACID transactions</div>
+    <ul class="docs-split-list">
+      <li>CDR lookups are <em>targeted</em> &mdash; specific MSISDN, narrow time window, joinable with subscriber metadata. That&rsquo;s point/range access on indexes, OLTP shape, not scans.</li>
+      <li>Tickets need real ACID + frequent state transitions (<code>open &rarr; investigating &rarr; resolved</code>). BigQuery is the wrong tool for mutable rows.</li>
+      <li>PostgreSQL compatibility gives rich SQL, foreign keys, and clean joins between CDRs and ticket records.</li>
+      <li>Low-latency reads to power the Call Records and Incident Tickets viewer tabs without query-cost anxiety per page load.</li>
+    </ul>
+  </div>
+</div>
+
+</section>
+
+
+<section id="stack" class="docs-section">
+  <span class="eyebrow accent">/ 03 &mdash; Tech stack</span>
+  <h2 class="serif">Tech stack <em>on Google Cloud</em></h2>
+
+<p>The complete list of moving parts. Everything is Google Cloud (the
+hackathon track requires it); the LLM-side work is Vertex AI Gemini.</p>
+
+<div class="docs-stack-grid"><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">ORCHESTRATION</div><div class="docs-stack-card-title">Google ADK &middot; SequentialAgent</div><div class="docs-stack-card-role">Coordinates four LlmAgents in order, threading session state forward through <code>output_key</code> handoffs.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">MODELS</div><div class="docs-stack-card-title">Vertex AI &middot; Gemini</div><div class="docs-stack-card-role">All four agents run on <code>gemini-3.1-flash-lite-preview</code> at the <code>global</code> endpoint, with a 3-attempt model ladder failing over to <code>gemini-2.5-flash</code> under quota pressure.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">NETWORK DATA</div><div class="docs-stack-card-title">BigQuery</div><div class="docs-stack-card-role"><code>network_events</code> table &mdash; DAY-partitioned on <code>started_at</code>, clustered by <code>(region, severity)</code>. 50,000 events across 10 metros, 6-month rolling window.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">CDR DATA</div><div class="docs-stack-card-title">AlloyDB AI &middot; NL2SQL</div><div class="docs-stack-card-role"><code>call_records</code> queried in plain English via <code>execute_nl_query</code>. A registered Gemini model translates the question; a structurally read-only role executes the SQL.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">TICKET SINK</div><div class="docs-stack-card-title">AlloyDB Postgres</div><div class="docs-stack-card-role"><code>incident_tickets</code> &mdash; append-only writes via the native ADK tool <code>save_incident_ticket</code>. Connection pool refreshed every 5 minutes to dodge silent-death sockets.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">TOOL TRANSPORT</div><div class="docs-stack-card-title">MCP Toolbox</div><div class="docs-stack-card-role">Two universal BigQuery tools + one AlloyDB AI tool live in a separate Cloud Run service. Agents reach the data via the toolbox; the toolbox reaches the warehouses via service accounts.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">FRONT END</div><div class="docs-stack-card-title">Flask + SSE</div><div class="docs-stack-card-role"><code>netpulse-ui</code> wraps the same <code>root_agent</code> in a hero landing + workspace timeline. Each request runs its own asyncio loop in a worker thread; events stream out incrementally via Server-Sent Events.</div></div><div class="docs-stack-card"><div class="docs-stack-card-eyebrow">DEPLOY</div><div class="docs-stack-card-title">Cloud Run &middot; 2 services</div><div class="docs-stack-card-role"><code>netpulse-ui</code> serves the chat surface; <code>network-toolbox</code> hosts the MCP toolbox. Both built from a Dockerfile in the project root, deployed from <code>main</code>.</div></div></div>
+
+</section>
+
+
+<section id="data" class="docs-section">
+  <span class="eyebrow accent">/ 04 &mdash; Data schema</span>
+  <h2 class="serif">Data schema <em>three surfaces</em></h2>
+
+<p>Three data surfaces feed the run. Each viewer page describes its
+schema and filter dimensions in detail.</p>
+<div class="docs-data-grid"><a class="docs-data-card" href="{{ url_for('network_events') }}"><div class="docs-data-card-eyebrow">BIGQUERY</div><div class="docs-data-card-title">Network events</div><div class="docs-data-card-meta">50,000 rows &middot; DAY-partitioned</div><div class="docs-data-card-arrow">Open viewer &rarr;</div></a><a class="docs-data-card" href="{{ url_for('call_records') }}"><div class="docs-data-card-eyebrow">ALLOYDB &middot; NL</div><div class="docs-data-card-title">Call records</div><div class="docs-data-card-meta">5,000 rows &middot; NL2SQL access</div><div class="docs-data-card-arrow">Open viewer &rarr;</div></a><a class="docs-data-card" href="{{ url_for('tickets') }}"><div class="docs-data-card-eyebrow">ALLOYDB &middot; W</div><div class="docs-data-card-title">Incident tickets</div><div class="docs-data-card-meta">append-only &middot; agent writes</div><div class="docs-data-card-arrow">Open viewer &rarr;</div></a></div>
+
+</section>
+
+
+<section id="byod" class="docs-section">
+  <span class="eyebrow accent">/ 05 &mdash; Bring your own data</span>
+  <h2 class="serif">Bring your own data <em>in three steps</em></h2>
+
+<p>NetPulse AI ships with seed data for ten Indonesian metros. Adapting
+to a different telecom dataset is a three-step exercise:</p>
+<ol class="docs-steps"><li>Replace the seed CSVs in <code>docs/seed-data/</code> with your own <code>network_events.csv</code> and <code>call_records.csv</code>. Keep the column shapes intact &mdash; see <a href="{{ url_for('network_events') }}">network events schema</a> and <a href="{{ url_for('call_records') }}">call records schema</a> for column-by-column descriptions.</li><li>Re-run <code>scripts/setup_bigquery.py --seed --recreate</code> to drop and rebuild the BQ table with your data, then <code>setup_alloydb.py --seed</code> to load CDRs into AlloyDB. The <code>--recreate</code> flag is destructive but is the only way to reapply the partition + cluster spec.</li><li>Adjust the region whitelist in <code>telecom_ops/tools.py</code> (<code>VALID_REGIONS</code>) and the toolbox config in <code>tools.yaml</code> if your cities diverge from the Indonesian-metro defaults. The agents will pick up the new vocabulary on next deploy.</li></ol>
+<p>The agents themselves are dataset-agnostic &mdash; what changes is the
+data, the region whitelist, and the natural-language prompt examples in
+<code>tools.yaml</code> that ground AlloyDB AI&rsquo;s NL-to-SQL translation.</p>
+
+</section>
+
+
+<section id="phases" class="docs-section">
+  <span class="eyebrow accent">/ 06 &mdash; Phase history</span>
+  <h2 class="serif">Phase history <em>over time</em></h2>
+
+<p>NetPulse AI was built through a series of timeboxed
+phases. Each phase landed in a single PR (in most cases) and was
+visually verified end-to-end before the next began.</p>
+<ul class="docs-news"><li><span class="date">April 29, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Phase 12 &mdash; Vertex model-ladder failover replaces region ladder</a><span class="arrow">&rarr;</span></li><li><span class="date">April 28, 2026</span><span class="cat">Architecture</span><a class="title" href="#phases">Phase 11 &mdash; AlloyDB AI NL2SQL replaces hand-written CDR SQL</a><span class="arrow">&rarr;</span></li><li><span class="date">April 27, 2026</span><span class="cat">Refactor</span><a class="title" href="#phases">Phase 10 &mdash; MCP toolbox refactor 8 tools &rarr; 2 universal tools</a><span class="arrow">&rarr;</span></li><li><span class="date">April 26, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Phase 9 &mdash; Flash-Lite collapse + observer pill model unification</a><span class="arrow">&rarr;</span></li><li><span class="date">April 25, 2026</span><span class="cat">Ship</span><a class="title" href="#phases">Phase 8 &mdash; Single consolidated Cloud Run redeploy</a><span class="arrow">&rarr;</span></li><li><span class="date">April 24, 2026</span><span class="cat">Foundation</span><a class="title" href="#phases">Phases 1&ndash;7 &mdash; Refinement runway: audit &rarr; tokens &rarr; region failover &rarr; visual redesign &rarr; UX fixes &rarr; reproducibility &rarr; story polish</a><span class="arrow">&rarr;</span></li><li><span class="date">April 23, 2026</span><span class="cat">Milestone</span><a class="title" href="#phases">Top 100 &mdash; APAC GenAI Academy 2026 selection</a><span class="arrow">&rarr;</span></li></ul>
+
+</section>
+
+
+<section id="roadmap" class="docs-section">
+  <span class="eyebrow accent">/ 07 &mdash; Roadmap</span>
+  <h2 class="serif">Roadmap <em>next</em></h2>
+
+<p>The hackathon scope is a refined prototype, not a product. These are
+the next directions if the project continues past 2026-04-30.</p>
+<div class="docs-roadmap-grid"><div class="docs-roadmap-card tone-ink"><div class="docs-roadmap-card-eyebrow">NEXT</div><div class="docs-roadmap-card-title">Custom-schema BYO data</div><div class="docs-roadmap-card-body">Today, swapping in your own data needs CSV reshaping. Next: a schema-mapping config so any telecom-shaped feed (CDR + events + ticket sink) plugs in without touching code.</div></div><div class="docs-roadmap-card tone-pandan"><div class="docs-roadmap-card-eyebrow">SOON</div><div class="docs-roadmap-card-title">Hourly cron + drift detection</div><div class="docs-roadmap-card-body">Re-poll BigQuery on an hourly cadence; surface schema drift, row-count anomalies, and unfamiliar regions to the operator before they reach an agent.</div></div><div class="docs-roadmap-card "><div class="docs-roadmap-card-eyebrow">MAYBE</div><div class="docs-roadmap-card-title">React rewrite of the workspace</div><div class="docs-roadmap-card-body">The current workspace is server-rendered Flask + a single inline JS handler. A SPA would unlock streaming-state inspection (per-agent JSON view, replay, diffing).</div></div></div>
+
+</section>
+
+    </div>
+  </div>
+
+
+<nav class="dv-cross" aria-label="Other surfaces">
+  <span class="dv-cross-eyebrow">see also</span>
+  <a href="{{ url_for('network_events') }}">Network events &rarr;</a>
+  <a href="{{ url_for('call_records') }}">Call records &rarr;</a>
+  <a href="{{ url_for('tickets') }}">Incident tickets &rarr;</a>
+  <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub repo &rarr;</a>
+</nav>
+
+</div>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="grid">
+      <div class="foot-brand">
+        {% include "_brand.html" %}
+        <p>Telecom incident ticketing in seconds &mdash; a multi-agent assistant built on Google ADK and Vertex AI Gemini. APAC GenAI Academy 2026.</p>
+      </div>
+
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="{{ url_for('landing') }}#how-it-works">How it works</a></li>
+          <li><a href="{{ url_for('app_workspace') }}">Try NetPulse AI</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Data Viewer</h5>
+        <ul>
+          <li><a href="{{ url_for('network_events') }}">Network Events</a></li>
+          <li><a href="{{ url_for('call_records') }}">Call Records</a></li>
+          <li><a href="{{ url_for('tickets') }}">Incident Tickets</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="{{ url_for('docs') }}">Documentation</a></li>
+          <li><a href="{{ url_for('docs') }}#architecture">Architecture</a></li>
+          <li><a href="{{ url_for('docs') }}#byod">Bring Your Own Data</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Project</h5>
+        <ul>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">README</a></li>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          <li><a href="https://hack2skill.com/event/apac-genaiacademy?tab=overview&utm_source=hack2skill&utm_medium=homepage" target="_blank" rel="noopener">APAC GenAI 2026</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-base">
+      <span>&copy; 2026 Adityo Nugroho &middot; NetPulse AI</span>
+      <div class="foot-social">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='site.js') }}"></script>
+</body>
+</html>

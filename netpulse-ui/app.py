@@ -215,6 +215,12 @@ def tickets():
     )
 
 
+@app.route("/docs")
+def docs():
+    """Render the single-page documentation page."""
+    return render_template("docs.html", active_tab="docs")
+
+
 if __name__ == "__main__":
     # Cloud Run injects PORT later; locally we hardcode 8080.
     app.run(host="0.0.0.0", port=8080, debug=True)
