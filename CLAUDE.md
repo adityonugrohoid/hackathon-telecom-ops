@@ -19,11 +19,21 @@ NetPulse AI was selected into the **Top 100** of the APAC GenAI Academy
 2026 (announced 2026-04-23). The hackathon is now in the **Prototype
 Refinement Phase** — refined prototype due **2026-04-30**.
 
-**Active iteration mode (started 2026-04-27, restarted 2026-04-28):
-`static-mockup-rebuild/` UI tweak loop.**
-The earlier `static-mockup/` folder was abandoned mid-iteration; the
-rebuild was scaffolded clean from `landing-trial.html` and committed via
-PR #19. All UI design iteration now happens in `static-mockup-rebuild/`:
+**Static mockup LOCKED 2026-04-28.** `static-mockup-rebuild/` is the
+canonical design surface for all six NetPulse AI pages (landing, docs,
+3 data viewers, workspace). The old `static-mockup/` folder has been
+**deleted** — rebuild is the single source of truth. Iteration was
+scaffolded clean from `landing-trial.html` (PR #19, 2026-04-27),
+expanded to six pages in PR #20 (merge `fc9f10f`, 2026-04-28), and
+finalised same day with a workspace redesign: top split-pane (1fr
+prompt / 2fr dark ticket form with skeleton-shimmer + Compiling pill),
+four agent cards each carrying a Claude-Code-style terminal panel
+(`$ tool_call` + populated mono output + Inter prose summary),
+unified pandan-green source badges, and a `dv-cross` see-also strip.
+**Next move: full LIVE migration to `netpulse-ui/templates/` — see
+`docs/MIGRATION-CANONICAL-DESIGN.md`. User will signal start.**
+
+Reference layout while migration is pending:
 
 - `landing-trial.html` (project root) — **canonical design reference**
   (promoted 2026-04-27, PR #18). Single self-contained page establishing
@@ -31,7 +41,7 @@ PR #19. All UI design iteration now happens in `static-mockup-rebuild/`:
   `#141413` + clay coral `#CC785C` palette; Fraunces display + Inter
   body + JetBrains Mono labels. Calibrate every change in
   `static-mockup-rebuild/` against this page.
-- `static-mockup-rebuild/` — five pages:
+- `static-mockup-rebuild/` — six pages:
   - `index.html` — landing (hero CTA-band with sample IN prompt + sample
     OUT ticket; horizontal How-it-works strip with 6 cards + 5 chevrons;
     Data Viewer + Resources card grids; footer)
@@ -45,9 +55,30 @@ PR #19. All UI design iteration now happens in `static-mockup-rebuild/`:
     links → footer). Source banners name-check real repo entities
     (`query_network_events`, `alloydb_ai_nl.execute_nl_query`,
     `save_incident_ticket`, etc.).
-- `static-mockup-rebuild/css/site.css` — shared stylesheet (~2,650
+  - `app.html` — workspace mockup (final form 2026-04-28). Top
+    **two-pane** at 1fr/2fr: left = prompt (textarea + sample chips,
+    Investigate button anchored bottom-right), right = **dark/ink
+    ticket form** with skeleton-shimmer rows, coral "Compiling" pill +
+    spinner, and a pulsing progress dot ("response_formatter is
+    writing the ticket to AlloyDB…"). Below: four agent cards on a
+    left-rail timeline. Each card carries a **Claude-Code-style
+    terminal panel** (paper-2 bar with traffic-light dots + agent
+    name + model meta on the right; paper-white body with three
+    tiers — Inter prose pull on a coral left-rule, mono `$ tool_call`,
+    mono output rows preserving alignment with bolded `affected:`
+    totals / KVP keys / table-style ratio columns). Cards 1–3 are
+    `is-done` (green pill, coral-filled dot, populated terminals);
+    card 4 is `is-running` (coral pill, animated cursor on the
+    trailing `→` line). All source badges unified to pandan green.
+    Bottom: populated impact card (558,789 customers · 6 events ·
+    3 days · 581 dropped calls) + 5 NOC action chips + `dv-cross`
+    see-also strip (Network events · Call records · Incident
+    tickets · GitHub repo). Deterministic tool-tone — no italic
+    Fraunces in the workspace surface (Fraunces upright stays in
+    the header brand and footer tagline only).
+- `static-mockup-rebuild/css/site.css` — shared stylesheet (~3,000
   lines). Extracted from the originally-inline `<style>` in `index.html`
-  on 2026-04-28 so all 5 pages link a single source of truth.
+  on 2026-04-28 so all 6 pages link a single source of truth.
 - `static-mockup-rebuild/js/site.js` — sticky-nav border handler.
 - `static-mockup-rebuild/img/architecture.png` — NetPulse-palette
   Mermaid render. Source: `docs/architecture.mmd` (also repainted
@@ -59,24 +90,24 @@ PR #19. All UI design iteration now happens in `static-mockup-rebuild/`:
   the canonical header / footer out of `index.html`. The HTML files
   have since diverged via hand edits (elaborated banners, phase-history
   dates); re-running the scripts would overwrite hand changes.
-- `static-mockup-rebuild/README.md` — file map, page structure tables,
-  outstanding issues, resume notes. **Read this first** when picking
-  the iteration up after compaction.
+  `app.html` was generated similarly (inline Python in the chat, not
+  saved as a script) — the file is hand-editable from here.
+- `static-mockup-rebuild/README.md` — file map, page structure tables
+  (incl. an `app.html` section), outstanding issues, resume notes.
+  **Read this first** when picking the iteration up after compaction.
 
-The old `static-mockup/` folder still exists at the repo root with
-uncommitted WIP — abandoned, kept as historical reference only.
+**Local preview workflow:** serve from project root with
+`python3 -m http.server 8765 --directory .`, open
+http://localhost:8765/static-mockup-rebuild/, screenshot via Playwright
+MCP. Rebuild is locked — design changes here are minor polish only;
+substantive change goes through the migration plan.
 
-**Iteration workflow:** serve locally with
-`cd /home/adityonugrohoid/projects/hackathon-telecom-ops && python3 -m http.server 8765 --directory .`,
-open http://localhost:8765/static-mockup-rebuild/, iterate, screenshot
-via Playwright MCP, refine. Unlike the earlier `static-mockup/` loop,
-the rebuild folder **is** git-tracked (PR #19 merged 2026-04-28).
-
-**Note on workflow:** during this iteration mode, never auto-port
-mockup changes to `netpulse-ui/templates/`. The static mockup is the
-design sandbox; the Flask app is production. Two separate decisions:
-"design approved" (static mockup is good) and "ship to prod" (port to
-Flask + redeploy). The user will signal both explicitly.
+**Migration gate:** do not auto-port mockup changes to
+`netpulse-ui/templates/`. The static mockup is the design sandbox; the
+Flask app is production. Two separate decisions: "design approved"
+(static mockup is locked — done 2026-04-28) and "ship to prod" (full
+LIVE migration per `docs/MIGRATION-CANONICAL-DESIGN.md` — pending user
+signal).
 
 **Phase 8 (Ship) shipped 2026-04-26** — single consolidated Cloud Run
 redeploy carried Phases 2-7 to production (rev `00004-sfn`); subsequent
@@ -364,7 +395,8 @@ emojis in code or docs unless explicitly requested.
 
 - `README.md` — full project overview, architecture diagram, screenshots, deployment commands
 - `landing-trial.html` — canonical design reference for static-mockup-rebuild work; warm editorial direction (cream paper + deep ink + clay coral) with Fraunces display + Inter body + JetBrains Mono labels; all CSS / SVG / JS inlined
-- `static-mockup-rebuild/` — active design iteration target (5 HTML pages + shared `css/site.css` + `js/site.js`); see `static-mockup-rebuild/README.md` for the full file map and resume notes
+- `static-mockup-rebuild/` — **locked** design surface (6 HTML pages incl. `app.html` workspace mockup + shared `css/site.css` + `js/site.js`); see `static-mockup-rebuild/README.md` for the full file map and resume notes
+- `docs/MIGRATION-CANONICAL-DESIGN.md` — plan for porting the rebuild into `netpulse-ui/templates/` and redeploying to Cloud Run; gated on user signal
 - `telecom_ops/agent.py` — the four sub-agents and the SequentialAgent root
 - `telecom_ops/tools.py` — `classify_issue` + `save_incident_ticket` (native ADK tools); `network_tools` and `cdr_nl_tools` toolset loaders for the MCP Toolbox
 - `telecom_ops/prompts.py` — sub-agent instruction templates

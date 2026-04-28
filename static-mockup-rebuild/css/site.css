@@ -36,7 +36,7 @@
     --t-slow: 540ms cubic-bezier(.2,.7,.3,1);
   }
 
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  html { scroll-behavior: smooth; scroll-padding-top: 96px; -webkit-text-size-adjust: 100%; }
   body {
     background: var(--paper);
     color: var(--ink);
@@ -78,7 +78,8 @@
     font-variation-settings: "opsz" 144, "SOFT" 30;
   }
   .display em {
-    font-style: italic;
+    color: var(--accent-deep);
+    font-style: normal;
     font-feature-settings: "ss01";
     font-variation-settings: "opsz" 144, "SOFT" 60;
   }
@@ -703,8 +704,8 @@
     grid-template-columns: 1fr auto;
     align-items: end;
     gap: 32px;
-    padding-top: 96px;
-    padding-bottom: 56px;
+    padding-top: 56px;
+    padding-bottom: 32px;
   }
   .section-head .lead { max-width: 720px; }
   .section-head .eyebrow { margin-bottom: 18px; display: block; }
@@ -716,7 +717,7 @@
     letter-spacing: -0.025em;
     color: var(--ink);
   }
-  .section-head h2 em { color: var(--accent-deep); font-style: italic; }
+  .section-head h2 em { color: var(--accent-deep); font-style: normal; }
   .section-head .meta {
     align-self: end;
     text-align: right;
@@ -1333,12 +1334,12 @@
   .foot-brand .brand .mark { width: 36px; height: 36px; }
   .foot-brand p {
     margin-top: 18px;
-    font-family: 'Fraunces', serif;
-    font-style: italic;
-    font-size: 18px;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-size: 15px;
     color: var(--ink-3);
     max-width: 320px;
-    line-height: 1.4;
+    line-height: 1.55;
   }
   .foot-col h5 {
     font-family: 'JetBrains Mono', monospace;
@@ -1543,9 +1544,8 @@
      01 — How it works · agent flow strip
      ========================================================== */
   .np-flow {
-    padding-block: 100px 120px;
+    padding-block: 0 120px;
     background: var(--paper);
-    border-top: 1px solid var(--hairline);
   }
   .np-flow-lede {
     font-size: 17px;
@@ -1558,7 +1558,7 @@
     display: flex;
     align-items: stretch;
     gap: 4px;
-    margin-top: 56px;
+    margin-top: 0;
     padding: 8px 0 16px;
   }
 
@@ -1568,7 +1568,7 @@
     min-width: 0;
     min-height: 240px;
     padding: 20px 18px 16px;
-    background: var(--paper);
+    background: var(--white);
     border: 1px solid var(--hairline);
     border-radius: var(--r);
     display: flex;
@@ -1592,14 +1592,14 @@
   }
   .np-flow-card-num::before { content: 'AGENT · '; }
   .np-flow-card-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
     font-size: 22px;
     line-height: 1.05;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.035em;
     color: var(--ink);
-    font-variation-settings: 'opsz' 60, 'SOFT' 30;
     margin-top: 2px;
+    min-height: 2.1em;
   }
   .np-flow-card-role {
     font-family: 'Inter', sans-serif;
@@ -1677,14 +1677,14 @@
     text-transform: uppercase;
   }
   .np-flow-bookend-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
     font-size: 22px;
     line-height: 1.05;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.035em;
     color: var(--ink);
-    font-variation-settings: 'opsz' 60, 'SOFT' 30;
     margin-top: 2px;
+    min-height: 2.1em;
   }
   .np-flow-bookend-meta {
     font-family: 'Inter', sans-serif;
@@ -1731,22 +1731,21 @@
      02 / 03 — placeholder card grid
      ========================================================== */
   .np-grid-section {
-    padding-block: 96px 120px;
+    padding-block: 0 120px;
     background: var(--paper);
-    border-top: 1px solid var(--hairline);
   }
   .np-card-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
-    margin-top: 56px;
+    margin-top: 0;
   }
   .np-card {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 28px 26px 22px;
-    background: var(--paper);
+    background: var(--white);
     border: 1px solid var(--hairline);
     border-radius: var(--r);
     text-decoration: none;
@@ -1795,6 +1794,27 @@
     font-size: 11px;
     color: var(--ink-2);
     letter-spacing: 0.02em;
+  }
+  .np-card-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+    background: var(--paper);
+    text-transform: lowercase;
+  }
+  .np-card-pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
   }
   .np-card-meta svg {
     transition: transform var(--t-fast);
@@ -1860,7 +1880,7 @@
   }
   .np-mini-pin-in .np-mini-quote {
     font-family: 'Fraunces', serif;
-    font-style: italic;
+    font-style: normal;
     font-weight: 400;
     font-size: 14px;
     color: var(--paper);
@@ -2016,15 +2036,15 @@
     font-family: 'Fraunces', serif;
     font-weight: 400;
     font-size: clamp(40px, 6vw, 64px);
-    line-height: 1;
+    line-height: .98;
     letter-spacing: -0.025em;
     color: var(--ink);
     margin-top: 18px;
     font-variation-settings: 'opsz' 144, 'SOFT' 30;
   }
   .dv-hero h1 em {
-    font-style: italic;
-    color: var(--accent);
+    font-style: normal;
+    color: var(--accent-deep);
     font-feature-settings: 'ss01';
     font-variation-settings: 'opsz' 144, 'SOFT' 60;
   }
@@ -2249,15 +2269,17 @@
     font-family: 'Fraunces', serif;
     font-weight: 400;
     font-size: 28px;
-    letter-spacing: -0.02em;
+    line-height: .98;
+    letter-spacing: -0.025em;
     color: var(--ink);
     margin-bottom: 24px;
+    font-variation-settings: 'opsz' 144, 'SOFT' 30;
   }
   .dv-schema h2 em {
-    font-style: italic;
-    color: var(--accent);
+    font-style: normal;
+    color: var(--accent-deep);
     font-feature-settings: 'ss01';
-    font-variation-settings: 'opsz' 60, 'SOFT' 60;
+    font-variation-settings: 'opsz' 144, 'SOFT' 60;
   }
   .dv-schema-list {
     display: grid;
@@ -2383,7 +2405,6 @@
     min-width: 0;
   }
   .docs-section { padding: 56px 0; border-bottom: 1px dashed var(--hairline); }
-  .docs-section:first-child { padding-top: 0; }
   .docs-section:last-of-type { border-bottom: 0; }
   .docs-section .eyebrow {
     margin-bottom: 14px;
@@ -2393,13 +2414,13 @@
     font-weight: 400;
     font-size: 36px;
     letter-spacing: -0.025em;
-    line-height: 1.05;
+    line-height: .98;
     color: var(--ink);
     font-variation-settings: 'opsz' 144, 'SOFT' 30;
   }
   .docs-section h2 em {
-    font-style: italic;
-    color: var(--accent);
+    font-style: normal;
+    color: var(--accent-deep);
     font-feature-settings: 'ss01';
     font-variation-settings: 'opsz' 144, 'SOFT' 60;
   }
@@ -2479,11 +2500,89 @@
   }
   .docs-stack-card-title {
     margin-top: 4px;
-    font-family: 'Fraunces', serif;
+    font-family: 'Inter', sans-serif;
     font-size: 18px;
     color: var(--ink);
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+
+  /* Polyglot-persistence rationale — sits above the 8-card stack grid */
+  .docs-split-lede {
+    margin-top: 28px;
+    padding: 14px 18px;
+    border-left: 3px solid var(--accent-deep);
+    background: var(--paper-2);
+    border-radius: 0 var(--r) var(--r) 0;
+  }
+  .docs-split-lede p {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .docs-split-lede strong {
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+  .docs-split-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 12px;
+  }
+  .docs-split-card {
+    padding: 20px 22px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r);
+    background: var(--white);
+  }
+  .docs-split-card-title {
+    margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .docs-split-list {
+    margin: 12px 0 0;
+    padding-left: 18px;
+    list-style: disc;
+  }
+  .docs-split-list li {
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin-top: 6px;
+  }
+  .docs-split-list li:first-child { margin-top: 0; }
+  .docs-split-list code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    background: var(--paper-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+  .docs-split-foot {
+    margin-top: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-3);
+    max-width: 760px;
+  }
+  .docs-split-foot strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  @media (max-width: 1080px) {
+    .docs-split-grid { grid-template-columns: 1fr; }
   }
   .docs-stack-card-role {
     margin-top: 4px;
@@ -2785,7 +2884,7 @@
     color: var(--ink);
     margin: 0;
   }
-  .app-section-head h2 em { color: var(--accent-deep); font-style: italic; }
+  .app-section-head h2 em { color: var(--accent-deep); font-style: normal; }
   .app-section-head .meta {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -2890,11 +2989,17 @@
     color: var(--ink-3);
     border: 1px solid var(--hairline);
   }
-  .app-source-tag.adk     { color: var(--accent-deep); border-color: rgba(204,120,92,.3); }
-  .app-source-tag.mcp     { color: #2f5d3d; border-color: rgba(74,140,94,.3); }
-  .app-source-tag.bq      { color: #1a73e8; border-color: rgba(26,115,232,.25); }
-  .app-source-tag.alloydb { color: #0b6e6e; border-color: rgba(11,110,110,.3); }
-  .app-source-tag.local   { color: var(--ink-2); }
+  /* Unified pandan-green source badge style (matches the original live app) */
+  .app-source-tag,
+  .app-source-tag.adk,
+  .app-source-tag.mcp,
+  .app-source-tag.bq,
+  .app-source-tag.alloydb,
+  .app-source-tag.local {
+    color: #2f5d3d;
+    background: rgba(74,140,94,.10);
+    border-color: rgba(74,140,94,.32);
+  }
   .app-step-body {
     font-family: 'Inter', sans-serif;
     font-size: 14.5px;
@@ -2905,7 +3010,7 @@
   .app-step-body strong { color: var(--ink); font-weight: 600; }
   .app-step-body em {
     font-family: 'Fraunces', serif;
-    font-style: italic;
+    font-style: normal;
     color: var(--accent-deep);
   }
   .app-tool-call {
@@ -2972,7 +3077,7 @@
     font-variation-settings: 'opsz' 144, 'SOFT' 30;
   }
   .app-impact-num em {
-    font-style: italic;
+    font-style: normal;
     color: var(--accent-deep);
     font-variation-settings: 'opsz' 144, 'SOFT' 60;
     font-feature-settings: 'ss01';
@@ -3009,7 +3114,7 @@
     color: var(--ink);
     letter-spacing: -0.01em;
   }
-  .app-ticket-id em { color: var(--accent-deep); font-style: italic; }
+  .app-ticket-id em { color: var(--accent-deep); font-style: normal; }
   .app-ticket-meta {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -3197,4 +3302,419 @@
     .app-ticket-row { grid-template-columns: 1fr; gap: 4px; }
     .app-ticket-meta { margin-left: 0; }
     .app-shell-narrow { margin-top: 28px; }
+  }
+
+  /* ============================================================
+     WORKSPACE REDESIGN — top split pane + terminal-feel panels
+     ============================================================ */
+
+  /* Two-pane: prompt+chips (left) + animated processing ticket (right) */
+  .app-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 56px;
+    align-items: start;
+  }
+  .app-split-left,
+  .app-split-right { min-width: 0; }
+  .app-split .app-prompt { margin-top: 0; }
+
+  /* Right-pane: incident-ticket form, processing state */
+  .app-ticket-form {
+    background: var(--paper-white, #FAF7EE);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .app-ticket-form::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(204,120,92,.04) 30%,
+      rgba(204,120,92,.10) 50%,
+      rgba(204,120,92,.04) 70%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: app-ticket-shimmer 3.6s ease-in-out infinite;
+  }
+  @keyframes app-ticket-shimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .app-ticket-form > * { position: relative; z-index: 1; }
+
+  .app-ticket-form-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .app-ticket-form-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .app-ticket-form-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .app-ticket-form-pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 5px 11px 5px 9px;
+    border-radius: 999px;
+    background: rgba(204,120,92,.10);
+    color: var(--accent-deep);
+    border: 1px solid rgba(204,120,92,.3);
+  }
+  .app-ticket-form-spin {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    border-top-color: transparent;
+    animation: app-ticket-spin .9s linear infinite;
+  }
+  @keyframes app-ticket-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .app-ticket-form-rows {
+    margin: 14px 0 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .app-ticket-form-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--hairline);
+    align-items: center;
+    margin: 0;
+  }
+  .app-ticket-form-row:last-child { border-bottom: 0; }
+  .app-ticket-form-row dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+  }
+  .app-ticket-form-row dd {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink-3);
+    min-height: 18px;
+  }
+  .app-skeleton-line {
+    display: block;
+    height: 12px;
+    border-radius: 3px;
+    background: linear-gradient(
+      90deg,
+      var(--paper-2) 0%,
+      var(--hairline) 50%,
+      var(--paper-2) 100%
+    );
+    background-size: 200% 100%;
+    animation: app-skeleton 1.6s ease-in-out infinite;
+  }
+  .app-skeleton-line.is-short  { width: 30%; }
+  .app-skeleton-line.is-medium { width: 60%; }
+  .app-skeleton-line.is-long   { width: 92%; }
+  .app-skeleton-line + .app-skeleton-line { margin-top: 6px; }
+  @keyframes app-skeleton {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  .app-ticket-form-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--hairline);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .app-ticket-form-progress-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: app-progress-pulse 1.2s ease-in-out infinite;
+    flex: 0 0 auto;
+  }
+  @keyframes app-progress-pulse {
+    0%, 100% { transform: scale(1);   opacity: 1;  }
+    50%      { transform: scale(1.7); opacity: .35; }
+  }
+
+  /* Terminal-feel reasoning panel inside each agent card */
+  .app-step-terminal {
+    margin-top: 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--paper-2);
+  }
+  .app-step-terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--hairline);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .app-step-terminal-dots {
+    display: inline-flex;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+  .app-step-terminal-dots i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: block;
+  }
+  .app-step-terminal-dots i:nth-child(1) { background: rgba(204,120,92,.5); }
+  .app-step-terminal-dots i:nth-child(2) { background: rgba(74,140,94,.45); }
+  .app-step-terminal-dots i:nth-child(3) { background: rgba(20,20,19,.18); }
+  .app-step-terminal-bar .label   { color: var(--ink-2); font-weight: 500; }
+  .app-step-terminal-bar .label .agent { color: var(--accent-deep); }
+  .app-step-terminal-bar .meta {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0.04em;
+    font-size: 10.5px;
+    color: var(--ink-3);
+  }
+  .app-step-terminal-body {
+    background: var(--paper-white, #FAF7EE);
+    margin: 0;
+    padding: 14px 16px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--ink-2);
+  }
+  .app-step-terminal-prose {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin-bottom: 12px;
+    padding-left: 12px;
+    border-left: 2px solid rgba(204,120,92,.35);
+  }
+  .app-step-terminal-cmd {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 8px;
+    word-break: break-word;
+    font-size: 12px;
+  }
+  .app-step-terminal-cmd::before {
+    content: '$ ';
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .app-step-terminal-out {
+    display: block;
+    color: var(--ink-3);
+    font-size: 11.5px;
+    margin-bottom: 4px;
+  }
+  .app-step-terminal-out + .app-step-terminal-prose { margin-top: 12px; margin-bottom: 0; }
+  .app-step-terminal-out .line {
+    display: block;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .app-step-terminal-out .k { color: var(--accent-deep); font-weight: 500; }
+  .app-step-terminal-out .v { color: var(--ink); font-weight: 500; }
+  .app-step-terminal-out .dim { color: var(--ink-3); }
+  .app-step-terminal-cursor {
+    display: inline-block;
+    width: 7px;
+    height: 13px;
+    background: var(--accent);
+    vertical-align: -2px;
+    margin-left: 1px;
+    animation: app-cursor 1s steps(1) infinite;
+  }
+  @keyframes app-cursor {
+    50% { opacity: 0; }
+  }
+  .app-step.is-running .app-step-terminal {
+    border-color: rgba(204,120,92,.32);
+  }
+  .app-step.is-running .app-step-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper);
+  }
+
+  /* Section eyebrow / heading row above the timeline */
+  .app-run-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 64px 0 18px;
+  }
+  .app-run-head .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .app-run-head h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0;
+  }
+  .app-run-head .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-left: auto;
+  }
+
+  @media (max-width: 920px) {
+    .app-split {
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .app-ticket-form-row { grid-template-columns: 100px 1fr; gap: 10px; }
+  }
+
+  /* ============================================================
+     WORKSPACE REDESIGN v2 — 1/3 prompt · 2/3 dark ticket · see-also
+     ============================================================ */
+
+  /* Split ratio: left 1fr, right 2fr (prompt narrower, ticket wider) */
+  .app-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  /* Taller prompt card with textarea + Investigate anchored bottom-right */
+  .app-split .app-prompt {
+    padding: 22px 24px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 220px;
+  }
+  .app-split .app-prompt .app-prompt-input {
+    display: block;
+    width: 100%;
+    flex: 1 1 auto;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--ink);
+    padding: 0;
+    resize: vertical;
+    min-height: 110px;
+  }
+  .app-split .app-prompt .app-prompt-input::placeholder { color: var(--muted); }
+  .app-prompt-foot {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-top: 1px solid var(--hairline);
+    padding-top: 14px;
+    margin-top: auto;
+  }
+
+  /* Black/ink ticket form (matches the original app's dark ticket panel) */
+  .app-ticket-form {
+    background: var(--ink, #141413);
+    border-color: var(--ink, #141413);
+    color: var(--paper, #F4F0E6);
+  }
+  .app-ticket-form::before {
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(204,120,92,.08) 30%,
+      rgba(204,120,92,.18) 50%,
+      rgba(204,120,92,.08) 70%,
+      transparent 100%
+    );
+  }
+  .app-ticket-form-eyebrow { color: rgba(244,240,230,.5); }
+  .app-ticket-form-title   { color: var(--paper); }
+  .app-ticket-form-pill {
+    background: rgba(204,120,92,.20);
+    color: #f3a98e;
+    border-color: rgba(204,120,92,.45);
+  }
+  .app-ticket-form-spin {
+    border-color: var(--accent);
+    border-top-color: transparent;
+  }
+  .app-ticket-form-rows { border-top-color: rgba(244,240,230,.12); }
+  .app-ticket-form-row  { border-bottom-color: rgba(244,240,230,.08); }
+  .app-ticket-form-row dt { color: rgba(244,240,230,.5); }
+  .app-ticket-form-row dd { color: rgba(244,240,230,.7); }
+  .app-ticket-form .app-skeleton-line {
+    background: linear-gradient(
+      90deg,
+      rgba(244,240,230,.06) 0%,
+      rgba(244,240,230,.18) 50%,
+      rgba(244,240,230,.06) 100%
+    );
+    background-size: 200% 100%;
+  }
+  .app-ticket-form-progress {
+    border-top-color: rgba(244,240,230,.12);
+    color: rgba(244,240,230,.6);
+  }
+
+  @media (max-width: 920px) {
+    .app-split { grid-template-columns: 1fr; }
   }
