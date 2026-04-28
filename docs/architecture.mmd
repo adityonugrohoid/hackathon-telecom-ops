@@ -1,7 +1,7 @@
-%%{init: {"flowchart": {"htmlLabels": true, "curve": "basis"}, "themeVariables": {"fontSize": "15px", "fontFamily": "-apple-system, Segoe UI, sans-serif"}}}%%
+%%{init: {"flowchart": {"htmlLabels": true, "curve": "basis"}, "themeVariables": {"fontSize": "15px", "fontFamily": "Inter, -apple-system, Segoe UI, sans-serif"}}}%%
 flowchart TB
     User([NOC Operator])
-    UI["NetPulse UI<br/><span style='font-size:11px;font-weight:400'>Flask + SSE chat &middot; Cloud Run</span>"]
+    UI["NetPulse UI<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>Flask + SSE chat &middot; Cloud Run</span>"]
 
     subgraph ORCH["ADK SequentialAgent &middot; telecom_ops &middot; 4 LlmAgents on Gemini"]
         direction TB
@@ -14,16 +14,16 @@ flowchart TB
         A3 -- "+ cdr_findings" --> A4
     end
 
-    MCP["MCP Toolbox<br/><span style='font-size:11px;font-weight:400'>Cloud Run</span>"]
+    MCP["MCP Toolbox<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>Cloud Run</span>"]
 
     subgraph DATA["Backends &middot; Google Cloud"]
         direction LR
-        BQ[("BigQuery<br/><span style='font-size:11px;font-weight:400'>network_events</span>")]
-        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>call_records &middot; NL2SQL</span>")]
-        ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>incident_tickets</span>")]
+        BQ[("BigQuery<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>network_events</span>")]
+        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>call_records &middot; NL2SQL</span>")]
+        ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>incident_tickets</span>")]
     end
 
-    Vertex["Vertex AI Gemini<br/><span style='font-size:11px;font-weight:400'>3.1 Flash-Lite + 2.5 Flash failover</span>"]
+    Vertex["Vertex AI Gemini<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>3.1 Flash-Lite + 2.5 Flash failover</span>"]
 
     User --> UI --> A1
     A2 --> MCP --> BQ
@@ -32,21 +32,22 @@ flowchart TB
     A4 -- "INSERT" --> ADB2
     ORCH -. "LLM calls" .-> Vertex
 
-    classDef user fill:#0d47a1,stroke:#0d47a1,color:#ffffff,font-weight:600
-    classDef fe fill:#1a73e8,stroke:#0d47a1,color:#ffffff,font-weight:600
-    classDef adk fill:#ede9fe,stroke:#7c3aed,color:#4c1d95,font-weight:600
-    classDef mcp fill:#a7f3d0,stroke:#065f46,color:#065f46,font-weight:600
-    classDef alloydb fill:#fde68a,stroke:#92400e,color:#92400e,font-weight:600
-    classDef alloydbWrite fill:#fca5a5,stroke:#991b1b,color:#7f1d1d,font-weight:600
-    classDef vertex fill:#fbcfe8,stroke:#be185d,color:#831843,font-weight:600
+    %% NetPulse palette: cream paper, deep ink, clay coral accent, pandan green
+    classDef user        fill:#141413,stroke:#141413,color:#F4F0E6,font-weight:600
+    classDef fe          fill:#ECE4D1,stroke:#CC785C,color:#141413,font-weight:600,stroke-width:1.5px
+    classDef adk         fill:#F4F0E6,stroke:#DDD3BB,color:#141413,font-weight:500
+    classDef mcp         fill:#ECE4D1,stroke:#4a8c5e,color:#2f5d3d,font-weight:600,stroke-width:1.5px
+    classDef alloydb     fill:#F4F0E6,stroke:#CC785C,color:#141413,font-weight:600
+    classDef alloydbWrite fill:#CC785C,stroke:#A85B40,color:#FAF7EE,font-weight:600
+    classDef vertex      fill:#141413,stroke:#141413,color:#F4F0E6,font-weight:600
 
     class User user
     class UI fe
     class A1,A2,A3,A4 adk
-    class MCP,BQ mcp
-    class ADB1 alloydb
+    class MCP mcp
+    class BQ,ADB1 alloydb
     class ADB2 alloydbWrite
     class Vertex vertex
 
-    style ORCH fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px
-    style DATA fill:#f9fafb,stroke:#9ca3af,stroke-width:2px
+    style ORCH fill:#FAF7EE,stroke:#CC785C,stroke-width:2px,stroke-dasharray:6 4,color:#141413
+    style DATA fill:#FAF7EE,stroke:#DDD3BB,stroke-width:1.5px,color:#5A554D

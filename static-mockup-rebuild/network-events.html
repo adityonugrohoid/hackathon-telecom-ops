@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NetPulse AI — Telecom incident ticketing in seconds</title>
-<meta name="description" content="A multi-agent assistant that turns a customer complaint into a structured NOC incident ticket. Built on Google ADK and Vertex AI Gemini." />
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Network events — NetPulse AI</title>
+<meta name="description" content="NetPulse AI data viewer — BigQuery." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
   href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
   rel="stylesheet"
 />
-
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
-<!-- ============================================================
-     NAVIGATION
-     ============================================================ -->
 <header class="nav" id="nav">
   <div class="wrap row">
     <a href="#" class="brand">
@@ -80,415 +75,134 @@
   </div>
 </header>
 
-<!-- ============================================================
-     TEMP — wordmark specimen strip (remove after wordmark picked)
-     ============================================================ -->
-<aside class="np-type-test" aria-label="Wordmark specimens (temporary)">
+<!-- Page hero -->
+<section class="dv-hero">
   <div class="wrap">
-    <div class="np-type-test-head">
-      <span class="np-type-test-eyebrow">Type study · telecom phrases · temporary</span>
-      <span class="np-type-test-note">12 specimens · 3 typefaces · click any to highlight (visual only)</span>
-    </div>
-    <div class="np-type-test-grid">
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Fraunces',serif;font-weight:700;font-variation-settings:'opsz' 144,'SOFT' 30;letter-spacing:-0.025em;">Network Slicing</span>
-        <span class="label">01 · Fraunces 700 · opsz 144 · SOFT 30</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Fraunces',serif;font-weight:500;font-variation-settings:'opsz' 144,'SOFT' 30;letter-spacing:-0.02em;">Packet Core</span>
-        <span class="label">02 · Fraunces 500 · opsz 144 · SOFT 30</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Fraunces',serif;font-weight:300;font-variation-settings:'opsz' 144,'SOFT' 30;letter-spacing:-0.015em;">Backhaul Edge</span>
-        <span class="label">03 · Fraunces 300 · opsz 144 (thin display)</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Fraunces',serif;font-weight:600;font-variation-settings:'opsz' 9,'SOFT' 100;letter-spacing:0;">QoS Guardrail</span>
-        <span class="label">04 · Fraunces 600 · opsz 9 · SOFT 100 (text shapes)</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Fraunces',serif;font-weight:500;font-style:italic;font-variation-settings:'opsz' 144,'SOFT' 60;font-feature-settings:'ss01';letter-spacing:-0.015em;">VoLTE Routing</span>
-        <span class="label">05 · Fraunces 500 italic · ss01 · SOFT 60</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Fraunces',serif;font-weight:600;font-style:italic;font-variation-settings:'opsz' 144,'SOFT' 60;font-feature-settings:'ss01';letter-spacing:-0.02em;">Outage Hotspot</span>
-        <span class="label">06 · Fraunces 600 italic · ss01</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.035em;">Carrier Aggregation</span>
-        <span class="label">07 · Inter 700 · tight tracking</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Inter',sans-serif;font-weight:500;letter-spacing:-0.015em;">Cell Tower Mesh</span>
-        <span class="label">08 · Inter 500 · default tracking</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0;">SDN Fabric</span>
-        <span class="label">09 · Inter 400 · neutral</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'Inter',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;">LATENCY PROBE</span>
-        <span class="label">10 · Inter 600 · all-caps · +120 tracking</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:-0.02em;">Spectrum Tier</span>
-        <span class="label">11 · JetBrains Mono 600</span>
-      </button>
-
-      <button class="specimen" type="button">
-        <span class="word" style="font-family:'JetBrains Mono',monospace;font-weight:500;text-transform:lowercase;letter-spacing:0;">enodeb_mesh</span>
-        <span class="label">12 · JetBrains Mono 500 · snake_case lowercase</span>
-      </button>
-
-    </div>
-  </div>
-</aside>
-
-<!-- ============================================================
-     CTA BAND (moved up — first impression slab right under header)
-     ============================================================ -->
-<section class="cta-band">
-  <div class="wrap">
-    <div>
-      <h2 class="display">
-        Telecom incident<br>
-        ticketing<br>
-        <em>in seconds.</em>
-      </h2>
-      <p>
-        A multi-agent assistant that turns a customer complaint into a
-        structured NOC incident ticket. Built on Google ADK + Vertex AI
-        Gemini, with BigQuery network events, AlloyDB call records, and
-        AlloyDB NL2SQL.
-      </p>
-      <p class="meta">
-        4 ADK sub-agents · SequentialAgent root · BigQuery network events · AlloyDB call records · AlloyDB ticket sink
-      </p>
-      <div class="ctas">
-        <a href="#" class="btn btn-paper">
-          Launch NetPulse AI
-          <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M3 7h8M7 3l4 4-4 4"/>
-          </svg>
-        </a>
-        <a href="https://github.com/" target="_blank" rel="noopener" class="btn" style="background:transparent;color:var(--paper);border:1px solid rgba(244,240,230,.4);">
-          View on GitHub
-        </a>
-      </div>
-    </div>
-
-    <div class="visual">
-      <div class="np-mini" aria-hidden="true">
-        <div class="np-mini-rail">
-          <span class="np-mini-rail-l">SequentialAgent</span>
-          <span class="np-mini-rail-r">4 · all on Gemini</span>
-        </div>
-
-        <div class="np-mini-pin np-mini-pin-in">
-          <div class="np-mini-pin-row">
-            <b>IN</b>
-            <span class="np-mini-quote">Slow internet in Jakarta during peak hours</span>
-          </div>
-        </div>
-
-        <div class="np-mini-flow">
-          <div class="np-mini-cell">
-            <span class="num">01</span>
-            <span class="name">Classifier</span>
-            <span class="hint">tags category</span>
-          </div>
-          <span class="np-mini-arrow"></span>
-          <div class="np-mini-cell">
-            <span class="num">02</span>
-            <span class="name">Net Inv.</span>
-            <span class="hint">reads BigQuery</span>
-          </div>
-          <span class="np-mini-arrow"></span>
-          <div class="np-mini-cell">
-            <span class="num">03</span>
-            <span class="name">CDR Anlz.</span>
-            <span class="hint">queries AlloyDB</span>
-          </div>
-          <span class="np-mini-arrow"></span>
-          <div class="np-mini-cell">
-            <span class="num">04</span>
-            <span class="name">Formatter</span>
-            <span class="hint">writes ticket</span>
-          </div>
-        </div>
-
-        <div class="np-mini-srcs">
-          <span>native tool</span>
-          <span>BigQuery</span>
-          <span>AlloyDB&nbsp;·&nbsp;NL</span>
-          <span>AlloyDB&nbsp;·&nbsp;W</span>
-        </div>
-
-        <div class="np-mini-pin np-mini-pin-out">
-          <div class="np-mini-pin-row">
-            <b>OUT</b>
-            <span class="np-mini-tid">Ticket #35</span>
-          </div>
-          <div class="np-mini-chips">
-            <span class="np-mini-chip is-cat">network</span>
-            <span class="np-mini-chip is-region">Jakarta</span>
-            <span class="np-mini-chip is-severity">critical</span>
-          </div>
-          <div class="np-mini-rec">Monitor backbone stability after the recent failover; conduct post-incident review of backhaul path.</div>
-        </div>
-      </div>
+    <span class="eyebrow accent">/ 02 — Data Viewer · BigQuery</span>
+    <h1 class="display">Network <em>events.</em></h1>
+    <p class="lede">Outages, maintenance windows, degradations, and restorations across ten Indonesian metro regions — six months of telemetry feeding the Network Investigator agent.</p>
+    <div class="dv-meta-row">
+        <span class="dv-meta-pill"><b>table</b> telecom_network.network_events</span>
+        <span class="dv-meta-pill"><b>partition</b> DAY · started_at</span>
+        <span class="dv-meta-pill"><b>cluster</b> region, severity</span>
+        <span class="dv-meta-pill"><b>rows</b> 50,000</span>
     </div>
   </div>
 </section>
 
+<div class="wrap">
 
-<!-- ============================================================
-     01 — HOW IT WORKS  (the agent flow strip)
-     ============================================================ -->
-<section id="how-it-works" class="np-flow">
-  <div class="wrap">
-    <header class="section-head">
-      <div class="lead">
-        <span class="eyebrow accent">/ 01 — How it works</span>
-        <h2 class="serif">Four agents, <em>one ticket.</em></h2>
-        <p class="np-flow-lede">
-          A complaint enters the chat. Four ADK sub-agents run in
-          sequence — each reads the previous agent's notes, queries the
-          right data store, and hands forward an enriched session
-          state. The fourth writes the ticket and the run ends.
-        </p>
-      </div>
-      <div class="meta">
-        <a href="docs.html#architecture">Full architecture
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M3 7h8M7 3l4 4-4 4"/>
-          </svg>
-        </a>
-      </div>
-    </header>
+  <!-- Source banner -->
+  <div class="dv-source-banner" role="note">
+    <span class="dv-source-banner-eyebrow">about this data</span>
+    <p>The Network Investigator agent reads from BigQuery through three MCP toolbox tools — <code>query_network_events</code> for filtered event lookups, <code>query_affected_customers_summary</code> for customer-impact rollups, and <code>weekly_outage_trend</code> for partition-pruned historical scans across the <code>(region, severity)</code> cluster keys.</p>
+  </div>
 
-    <div class="np-flow-track" role="list" aria-label="Agent pipeline">
-
-      <div class="np-flow-bookend np-flow-in" role="listitem">
-        <span class="np-flow-bookend-eyebrow">IN</span>
-        <span class="np-flow-bookend-title">Customer complaint</span>
-        <span class="np-flow-bookend-meta">Flask · SSE chat</span>
-        <div class="np-flow-card-output">
-          <span class="np-flow-card-output-label">→ emits</span>
-          <span class="np-flow-card-output-value">prompt</span>
+  <!-- Filter bar -->
+  <form class="dv-filter" method="get" action="">
+    <span class="dv-cross-eyebrow" style="flex-basis:100%">filters</span>
+    <div class="dv-field">
+          <label for="region">Region</label>
+          <select id="region" name="region">
+            <option value="" selected>All</option>
+            <option value="Jakarta">Jakarta</option>
+            <option value="Surabaya">Surabaya</option>
+            <option value="Bandung">Bandung</option>
+            <option value="Medan">Medan</option>
+            <option value="Semarang">Semarang</option>
+            <option value="Yogyakarta">Yogyakarta</option>
+            <option value="Denpasar">Denpasar</option>
+            <option value="Makassar">Makassar</option>
+            <option value="Palembang">Palembang</option>
+            <option value="Balikpapan">Balikpapan</option>
+          </select>
         </div>
-      </div>
-
-      <div class="np-flow-chevron" aria-hidden="true">›</div>
-
-      <div class="np-flow-card" role="listitem">
-        <span class="np-flow-card-num">01</span>
-        <span class="np-flow-card-title">Classifier</span>
-        <span class="np-flow-card-role">Tags category &amp; region from raw complaint text.</span>
-        <div class="np-flow-card-stack">
-          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">native tool</span>
+        <div class="dv-field">
+          <label for="severity">Severity</label>
+          <select id="severity" name="severity">
+            <option value="" selected>All</option>
+            <option value="critical">critical</option>
+            <option value="major">major</option>
+            <option value="minor">minor</option>
+          </select>
         </div>
-        <div class="np-flow-card-output">
-          <span class="np-flow-card-output-label">→ emits</span>
-          <span class="np-flow-card-output-value">category, region</span>
+        <div class="dv-field">
+          <label for="event_type">Event type</label>
+          <select id="event_type" name="event_type">
+            <option value="" selected>All</option>
+            <option value="outage">outage</option>
+            <option value="maintenance">maintenance</option>
+            <option value="degradation">degradation</option>
+            <option value="restoration">restoration</option>
+          </select>
         </div>
-      </div>
-
-      <div class="np-flow-chevron" aria-hidden="true">›</div>
-
-      <div class="np-flow-card" role="listitem">
-        <span class="np-flow-card-num">02</span>
-        <span class="np-flow-card-title">Network<br>Investigator</span>
-        <span class="np-flow-card-role">Pulls related outages from BigQuery.</span>
-        <div class="np-flow-card-stack">
-          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">BigQuery · MCP</span>
+        <div class="dv-field">
+          <label for="limit">Limit</label>
+          <input id="limit" name="limit" type="number" min="1" max="500" value="50">
         </div>
-        <div class="np-flow-card-output">
-          <span class="np-flow-card-output-label">→ emits</span>
-          <span class="np-flow-card-output-value">network_findings</span>
-        </div>
-      </div>
+    <div class="dv-filter-actions">
+      <button type="submit" class="dv-btn">Apply</button>
+      <a href="" class="dv-btn dv-btn-ghost" role="button">Reset</a>
+    </div>
+  </form>
 
-      <div class="np-flow-chevron" aria-hidden="true">›</div>
-
-      <div class="np-flow-card" role="listitem">
-        <span class="np-flow-card-num">03</span>
-        <span class="np-flow-card-title">CDR Analyzer</span>
-        <span class="np-flow-card-role">Mines call records via natural language.</span>
-        <div class="np-flow-card-stack">
-          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">AlloyDB NL2SQL</span>
-        </div>
-        <div class="np-flow-card-output">
-          <span class="np-flow-card-output-label">→ emits</span>
-          <span class="np-flow-card-output-value">cdr_findings</span>
-        </div>
-      </div>
-
-      <div class="np-flow-chevron" aria-hidden="true">›</div>
-
-      <div class="np-flow-card" role="listitem">
-        <span class="np-flow-card-num">04</span>
-        <span class="np-flow-card-title">Response<br>Formatter</span>
-        <span class="np-flow-card-role">Synthesises &amp; persists the incident ticket.</span>
-        <div class="np-flow-card-stack">
-          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">AlloyDB · INSERT</span>
-        </div>
-        <div class="np-flow-card-output">
-          <span class="np-flow-card-output-label">→ emits</span>
-          <span class="np-flow-card-output-value">ticket_id · noc_actions</span>
-        </div>
-      </div>
-
-      <div class="np-flow-chevron" aria-hidden="true">›</div>
-
-      <div class="np-flow-bookend np-flow-out" role="listitem">
-        <span class="np-flow-bookend-eyebrow">OUT</span>
-        <span class="np-flow-bookend-title">Incident ticket</span>
-        <span class="np-flow-bookend-meta">AlloyDB · NOC dispatch</span>
-        <div class="np-flow-card-output">
-          <span class="np-flow-card-output-label">→ persists</span>
-          <span class="np-flow-card-output-value">incident_tickets</span>
-        </div>
-      </div>
-
+  <!-- Table card -->
+  <div class="dv-table-card" role="region" aria-label="Result rows">
+    <div class="dv-table-meta">
+      <span>Showing <b>10</b> of <b>—</b> rows · sample data</span>
+      <span>last loaded · just now</span>
+    </div>
+    <div class="dv-table-scroll">
+      <table class="dv-table">
+        <thead><tr><th>event_id</th><th>event_type</th><th>region</th><th>severity</th><th>description</th><th>started_at</th><th>resolved_at</th><th>affected_customers</th></tr></thead>
+        <tbody>
+        <tr><td>evt_48201</td><td><span class="dv-chip evt-outage">outage</span></td><td>Jakarta</td><td><span class="dv-chip sev-critical">critical</span></td><td>Backbone fiber cut on east-west trunk</td><td>2026-04-26 08:14:02</td><td>2026-04-26 11:42:18</td><td>182,400</td></tr>
+        <tr><td>evt_48202</td><td><span class="dv-chip evt-degradation">degradation</span></td><td>Jakarta</td><td><span class="dv-chip sev-major">major</span></td><td>Authentication backhaul slowdown on PoP-J03</td><td>2026-04-26 08:22:51</td><td>2026-04-26 10:08:33</td><td>44,120</td></tr>
+        <tr><td>evt_48203</td><td><span class="dv-chip evt-restoration">restoration</span></td><td>Jakarta</td><td><span class="dv-chip sev-minor">minor</span></td><td>Failover path active; primary path under repair</td><td>2026-04-26 11:42:18</td><td>2026-04-26 11:42:18</td><td>0</td></tr>
+        <tr><td>evt_48168</td><td><span class="dv-chip evt-maintenance">maintenance</span></td><td>Surabaya</td><td><span class="dv-chip sev-minor">minor</span></td><td>Scheduled core router OS upgrade — window 02:00&ndash;04:00</td><td>2026-04-25 02:00:00</td><td>2026-04-25 03:48:11</td><td>12,808</td></tr>
+        <tr><td>evt_48155</td><td><span class="dv-chip evt-outage">outage</span></td><td>Bandung</td><td><span class="dv-chip sev-major">major</span></td><td>Power feed B failure at Cikutra POP</td><td>2026-04-24 19:33:08</td><td>2026-04-24 22:12:44</td><td>67,322</td></tr>
+        <tr><td>evt_48140</td><td><span class="dv-chip evt-degradation">degradation</span></td><td>Medan</td><td><span class="dv-chip sev-minor">minor</span></td><td>Latency spike to upstream peering 39 ms &rarr; 188 ms</td><td>2026-04-24 14:08:00</td><td>2026-04-24 15:01:22</td><td>8,440</td></tr>
+        <tr><td>evt_48133</td><td><span class="dv-chip evt-outage">outage</span></td><td>Yogyakarta</td><td><span class="dv-chip sev-critical">critical</span></td><td>Optical transport ring fault, ring B in degraded state</td><td>2026-04-23 22:14:17</td><td>2026-04-24 02:55:09</td><td>94,118</td></tr>
+        <tr><td>evt_48127</td><td><span class="dv-chip evt-maintenance">maintenance</span></td><td>Denpasar</td><td><span class="dv-chip sev-minor">minor</span></td><td>Submarine cable landing-station scheduled patch</td><td>2026-04-23 03:00:00</td><td>2026-04-23 04:32:55</td><td>0</td></tr>
+        <tr><td>evt_48119</td><td><span class="dv-chip evt-restoration">restoration</span></td><td>Makassar</td><td><span class="dv-chip sev-minor">minor</span></td><td>Cell-site B402 power restored, alarms cleared</td><td>2026-04-22 18:48:30</td><td>2026-04-22 18:48:30</td><td>0</td></tr>
+        <tr><td>evt_48104</td><td><span class="dv-chip evt-outage">outage</span></td><td>Palembang</td><td><span class="dv-chip sev-major">major</span></td><td>Backhaul microwave path dispersed by storm front</td><td>2026-04-22 09:11:55</td><td>2026-04-22 12:24:08</td><td>31,045</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
-</section>
 
+  <!-- Schema callout -->
+  <section class="dv-schema">
+    <h2 class="serif">What you&rsquo;re looking <em>at.</em></h2>
+    <dl class="dv-schema-list">
+      <dt>event_id</dt>
+      <dd>Stable event identifier (PK). Matches the value carried forward in saved tickets&rsquo; <code>related_events</code> field.</dd>
+      <dt>event_type</dt>
+      <dd>One of <code>outage</code>, <code>maintenance</code>, <code>degradation</code>, <code>restoration</code>. Restorations close out a prior outage and inherit its <code>started_at</code> as their resolution time.</dd>
+      <dt>region</dt>
+      <dd>City-level metro identifier from a fixed 10-region whitelist. Cluster key — most queries filter here first.</dd>
+      <dt>severity</dt>
+      <dd><code>critical</code> · <code>major</code> · <code>minor</code>. Cluster key. Critical events always escalate to a NOC page even if no customer complaint arrives.</dd>
+      <dt>description</dt>
+      <dd>Free-text operator note. Read by the Network Investigator when summarising findings in the saved ticket.</dd>
+      <dt>started_at</dt>
+      <dd>UTC timestamp the event was first observed. Partition key — DAY-partitioned so multi-week scans prune cheaply.</dd>
+      <dt>resolved_at</dt>
+      <dd>UTC timestamp the event cleared. Equal to <code>started_at</code> for instantaneous events like restorations.</dd>
+      <dt>affected_customers</dt>
+      <dd>Best-effort impact estimate at the time of the event. Drives the customer-impact rollup card on the workspace.</dd>
+    </dl>
+  </section>
 
-<!-- ============================================================
-     02 — DATA VIEWER (placeholder)
-     ============================================================ -->
-<section id="data-viewer" class="np-grid-section">
-  <div class="wrap">
-    <header class="section-head">
-      <div class="lead">
-        <span class="eyebrow accent">/ 02 — Data Viewer</span>
-        <h2 class="serif">The <em>data</em> behind every ticket.</h2>
-        <p class="np-flow-lede">
-          Read-only views into the live sources the agents query.
-          Useful for poking at edge cases, validating fixtures, or just
-          seeing what the system saw before it wrote a ticket.
-        </p>
-      </div>
-      <div class="meta">
-        <a href="#">All sources
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M3 7h8M7 3l4 4-4 4"/>
-          </svg>
-        </a>
-      </div>
-    </header>
+  <!-- Cross-link strip -->
+  <nav class="dv-cross" aria-label="Other data viewers">
+    <span class="dv-cross-eyebrow">see also</span>
+    <a href="call-records.html">Call records &rarr;</a>
+    <a href="tickets.html">Incident tickets &rarr;</a>
+  </nav>
 
-    <div class="np-card-grid">
-      <a href="network-events.html" class="np-card">
-        <span class="np-card-eyebrow">BigQuery · partitioned</span>
-        <h3>Network Events</h3>
-        <p>Outage and maintenance events across 10 cities, day-partitioned and clustered by region/severity.</p>
-        <span class="np-card-meta">
-          <span>50,000 rows</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
-        </span>
-      </a>
+</div>
 
-      <a href="call-records.html" class="np-card">
-        <span class="np-card-eyebrow">AlloyDB · NL2SQL</span>
-        <h3>Call Records</h3>
-        <p>Customer Detail Records with anchor-clustered drop and failure events around outage windows.</p>
-        <span class="np-card-meta">
-          <span>5,000 rows</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
-        </span>
-      </a>
-
-      <a href="tickets.html" class="np-card">
-        <span class="np-card-eyebrow">AlloyDB · write</span>
-        <h3>Incident Tickets</h3>
-        <p>The agents' output destination — every saved ticket lives here with category, severity and recommended action.</p>
-        <span class="np-card-meta">
-          <span>live</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
-        </span>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================
-     03 — RESOURCES (placeholder)
-     ============================================================ -->
-<section id="resources" class="np-grid-section">
-  <div class="wrap">
-    <header class="section-head">
-      <div class="lead">
-        <span class="eyebrow accent">/ 03 — Resources</span>
-        <h2 class="serif">Read the <em>build</em>.</h2>
-        <p class="np-flow-lede">
-          Documentation, the full architecture deep-dive, and a guide to
-          wiring NetPulse against your own telco data.
-        </p>
-      </div>
-      <div class="meta">
-        <a href="#">All resources
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M3 7h8M7 3l4 4-4 4"/>
-          </svg>
-        </a>
-      </div>
-    </header>
-
-    <div class="np-card-grid">
-      <a href="docs.html" class="np-card">
-        <span class="np-card-eyebrow">Reference</span>
-        <h3>Documentation</h3>
-        <p>What NetPulse is, what each agent does, and how the pieces fit together. Single-page, plain prose.</p>
-        <span class="np-card-meta">
-          <span>~2,000 words</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
-        </span>
-      </a>
-
-      <a href="docs.html#architecture" class="np-card">
-        <span class="np-card-eyebrow">Diagram + prose</span>
-        <h3>Architecture</h3>
-        <p>Subsystems, data flow, the model failover ladder, and the non-obvious choices that keep production stable.</p>
-        <span class="np-card-meta">
-          <span>9 subsystems</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
-        </span>
-      </a>
-
-      <a href="docs.html#byod" class="np-card">
-        <span class="np-card-eyebrow">How-to</span>
-        <h3>Bring Your Own Data</h3>
-        <p>Map your operator's CDR + network events tables into the agent toolset. Schema, prompts, and the gotchas we hit.</p>
-        <span class="np-card-meta">
-          <span>roadmap</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
-        </span>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================
-     FOOTER
-     ============================================================ -->
 <footer class="foot">
   <div class="wrap">
     <div class="grid">
@@ -555,31 +269,6 @@
   </div>
 </footer>
 
-<script>
-  // Sticky-nav border on scroll
-  const nav = document.getElementById('nav');
-  const update = () => nav.classList.toggle('scrolled', window.scrollY > 8);
-  update();
-  window.addEventListener('scroll', update, { passive: true });
-
-  // Subtle parallax on the hero blot
-  const blot = document.querySelector('.hero-blot');
-  if (blot && window.matchMedia('(min-width: 720px)').matches) {
-    window.addEventListener('mousemove', (e) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 14;
-      const y = (e.clientY / window.innerHeight - 0.5) * 14;
-      blot.style.translate = `${x}px ${y}px`;
-    });
-  }
-
-  // TEMP — wordmark specimen click-to-pick (visual only)
-  document.querySelectorAll('.np-type-test .specimen').forEach((b) => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('.np-type-test .specimen.is-picked')
-        .forEach((p) => p.classList.remove('is-picked'));
-      b.classList.add('is-picked');
-    });
-  });
-</script>
+<script src="js/site.js"></script>
 </body>
 </html>
