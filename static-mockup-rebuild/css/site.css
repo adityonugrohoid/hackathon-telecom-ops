@@ -3792,3 +3792,26 @@
     .app-statusbar { padding: 10px 18px; font-size: 11px; }
     .app-statusbar-runinfo { white-space: normal; }
   }
+
+  /* ============================================================
+     RESPONSIVE POLISH — long-string wrapping + header collapse
+     ============================================================ */
+  .dv-source-banner p,
+  .dv-source-banner p code { overflow-wrap: anywhere; word-break: break-word; }
+  .app-step-terminal-cmd { overflow-wrap: anywhere; }
+  .brand { white-space: nowrap; min-width: 0; }
+
+  @media (max-width: 920px) {
+    .app-toolbar-center { display: none !important; }
+  }
+  @media (max-width: 720px) {
+    .menu-toggle { display: none !important; }
+    .nav .row { gap: 14px; }
+    .brand { font-size: 18px; }
+    .brand .mark { width: 28px; height: 28px; }
+    .nav-cta .btn { font-size: 13px; padding: 8px 14px; }
+    .nav-cta .btn .arrow { width: 12px; height: 12px; }
+  }
+  @media (max-width: 480px) {
+    .nav-cta .btn { font-size: 12px; padding: 7px 12px; }
+  }
