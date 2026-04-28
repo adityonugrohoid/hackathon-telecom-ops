@@ -1,0 +1,2619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NetPulse AI — Telecom incident ticketing in seconds</title>
+<meta name="description" content="A multi-agent assistant that turns a customer complaint into a structured NOC incident ticket. Built on Google ADK and Vertex AI Gemini." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  /* ==========================================================
+     Reset + tokens
+     ========================================================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Paper / ink — warm editorial palette */
+    --paper: #F4F0E6;
+    --paper-2: #ECE4D1;
+    --paper-3: #E0D5BA;
+    --ink: #141413;
+    --ink-2: #2C2A26;
+    --ink-3: #5A554D;
+    --muted: #8A8378;
+    --hairline: #DDD3BB;
+    --hairline-soft: #ECE4D1;
+    --accent: #CC785C;
+    --accent-deep: #A85738;
+    --accent-soft: #F4DACB;
+    --accent-tint: #FBEFE6;
+    --white: #FAF7EE;
+    --black: #0A0A09;
+
+    --max: 1340px;
+    --gutter: 28px;
+    --r-sm: 6px;
+    --r: 14px;
+    --r-lg: 22px;
+    --r-xl: 32px;
+
+    --shadow: 0 1px 2px rgba(20,20,19,.05), 0 8px 24px rgba(20,20,19,.04);
+    --shadow-lift: 0 2px 4px rgba(20,20,19,.07), 0 18px 44px rgba(20,20,19,.07);
+
+    --t-fast: 160ms cubic-bezier(.2,.7,.3,1);
+    --t: 280ms cubic-bezier(.2,.7,.3,1);
+    --t-slow: 540ms cubic-bezier(.2,.7,.3,1);
+  }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* Subtle paper grain so the background reads like a printed sheet,
+     not a flat color */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.07 0 0 0 0 0.06 0 0 0 0.045 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+    opacity: .55;
+    mix-blend-mode: multiply;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; border: 0; background: transparent; color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+  ::selection { background: var(--accent); color: var(--paper); }
+
+  /* ==========================================================
+     Type system
+     ========================================================== */
+  .display {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: .98;
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+  }
+  .display em {
+    font-style: italic;
+    font-feature-settings: "ss01";
+    font-variation-settings: "opsz" 144, "SOFT" 60;
+  }
+  .serif { font-family: 'Fraunces', serif; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+  }
+  .eyebrow.accent { color: var(--accent-deep); }
+
+  /* ==========================================================
+     Layout helpers
+     ========================================================== */
+  .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+    position: relative;
+  }
+  .stack > * + * { margin-top: var(--stack, 16px); }
+
+  /* ==========================================================
+     Buttons
+     ========================================================== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    transition: background var(--t-fast), color var(--t-fast),
+                border-color var(--t-fast), transform var(--t-fast),
+                box-shadow var(--t);
+    white-space: nowrap;
+  }
+  .btn .arrow {
+    width: 14px; height: 14px;
+    transition: transform var(--t);
+  }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: 0 1px 2px rgba(20,20,19,.18), 0 6px 18px rgba(20,20,19,.14);
+  }
+  .btn-primary:hover {
+    background: var(--accent-deep);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+  }
+  .btn-secondary:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    height: 40px;
+    padding: 0 14px;
+  }
+  .btn-ghost:hover { color: var(--accent-deep); }
+  .btn-paper {
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .btn-paper:hover {
+    background: var(--white);
+    transform: translateY(-1px);
+  }
+
+  /* ==========================================================
+     Utility / announcement bar
+     ========================================================== */
+  .utility {
+    position: relative;
+    z-index: 30;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+  }
+  .utility .row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    height: 38px;
+    padding: 0 var(--gutter);
+    flex-wrap: wrap;
+  }
+  .utility .pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+  .utility .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(204,120,92,.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(204,120,92,.6); }
+    70% { box-shadow: 0 0 0 9px rgba(204,120,92,0); }
+    100% { box-shadow: 0 0 0 0 rgba(204,120,92,0); }
+  }
+  .utility a {
+    color: var(--paper);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+    transition: color var(--t-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .utility a:hover { color: var(--accent-soft); text-decoration: underline; }
+
+  /* ==========================================================
+     Top navigation
+     ========================================================== */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background: rgba(244,240,230,0.85);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--t), background var(--t);
+  }
+  .nav.scrolled { border-color: var(--hairline); }
+  .nav .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 28px;
+    height: 72px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.035em;
+    color: var(--ink);
+  }
+  .brand .mark {
+    display: inline-flex;
+    width: 35px; height: 35px;
+    color: var(--accent-deep);
+  }
+  .brand .mark svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Dropdown menus on nav */
+  .nav-links .has-drop {
+    position: relative;
+  }
+  .nav-links .drop-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    font: inherit;
+    font-size: 14.5px;
+    color: var(--ink-2);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: color var(--t-fast), background var(--t-fast);
+  }
+  .nav-links .drop-trigger .chev {
+    width: 11px; height: 11px;
+    transition: transform var(--t-fast);
+  }
+  .nav-links .has-drop:hover .drop-trigger,
+  .nav-links .has-drop:focus-within .drop-trigger {
+    color: var(--ink);
+  }
+  .nav-links .has-drop:hover .drop-trigger .chev,
+  .nav-links .has-drop:focus-within .drop-trigger .chev {
+    transform: rotate(180deg);
+  }
+  .nav-links .drop-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translate(-50%, -4px);
+    min-width: 220px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r);
+    padding: 6px;
+    box-shadow: var(--shadow-lift);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--t-fast), transform var(--t-fast), visibility var(--t-fast);
+    z-index: 30;
+  }
+  .nav-links .has-drop:hover .drop-menu,
+  .nav-links .has-drop:focus-within .drop-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  .nav-links .drop-menu a {
+    display: block;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: var(--ink-2);
+    border-radius: var(--r-sm);
+  }
+  .nav-links .drop-menu a::after { display: none; }
+  .nav-links .drop-menu a:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
+
+
+  .nav-links {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .nav-links a {
+    position: relative;
+    padding: 8px 12px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+    transition: color var(--t-fast);
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    left: 12px; right: 12px; bottom: 4px;
+    height: 1px;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--t);
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+
+  .nav-cta {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .menu-toggle {
+    display: none;
+    width: 44px; height: 44px;
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+  }
+  .menu-toggle:hover { background: var(--paper-2); }
+
+  /* ==========================================================
+     Hero
+     ========================================================== */
+  .hero {
+    position: relative;
+    padding: 120px 0 72px;
+    overflow: hidden;
+  }
+  .hero .wrap {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .hero-text { max-width: 720px; }
+  .hero-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+    padding: 6px 6px 6px 14px;
+    background: var(--paper-2);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+  }
+  .hero-meta .tag {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .hero h1.display {
+    font-size: clamp(48px, 7.4vw, 104px);
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+  .hero h1 .accent-mark {
+    color: var(--accent-deep);
+    font-style: italic;
+    font-weight: 500;
+    position: relative;
+    display: inline-block;
+  }
+  .hero h1 .accent-mark::after {
+    content: '';
+    position: absolute;
+    left: -2%;
+    right: -4%;
+    bottom: -2px;
+    height: 9px;
+    background: var(--accent-soft);
+    z-index: -1;
+    border-radius: 4px;
+    transform: skew(-2deg);
+  }
+
+  .hero-lede {
+    font-size: 18px;
+    color: var(--ink-3);
+    max-width: 560px;
+    margin-bottom: 36px;
+    font-weight: 400;
+  }
+
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 52px;
+  }
+
+  .hero-meta-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    border-top: 1px solid var(--hairline);
+    padding-top: 28px;
+    max-width: 600px;
+  }
+  .hero-stat {
+    border-right: 1px solid var(--hairline);
+    padding-right: 18px;
+  }
+  .hero-stat:last-child { border-right: 0; padding-left: 18px; }
+  .hero-stat:nth-child(2) { padding-left: 18px; }
+  .hero-stat .num {
+    font-family: 'Fraunces', serif;
+    font-size: 38px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .hero-stat .num em {
+    color: var(--accent-deep);
+    font-style: italic;
+  }
+  .hero-stat .num .unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .hero-stat .label {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    line-height: 1.4;
+  }
+
+  /* Hero visual: faux product card */
+  .hero-visual {
+    position: relative;
+    perspective: 1400px;
+  }
+  .hero-card {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    background: var(--white);
+    border-radius: var(--r-xl);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-lift);
+    overflow: hidden;
+    transform: rotate(-1.2deg);
+  }
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--r-xl);
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 80% 0%, rgba(204,120,92,.15), transparent 55%),
+      radial-gradient(ellipse at 0% 100%, rgba(204,120,92,.08), transparent 60%);
+  }
+  .hero-card .strip {
+    height: 36px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+  }
+  .hero-card .strip .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--paper-3);
+  }
+  .hero-card .strip .url {
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--paper-2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    flex: 1;
+    max-width: 280px;
+  }
+  .hero-card .body {
+    padding: 28px 32px 32px;
+    height: calc(100% - 36px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+  }
+  .hero-card .pill {
+    align-self: flex-start;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: var(--accent-tint);
+    color: var(--accent-deep);
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--accent-soft);
+  }
+  .hero-card h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .hero-card p {
+    font-size: 14px;
+    color: var(--ink-3);
+    line-height: 1.55;
+  }
+  .hero-card .reply {
+    margin-top: auto;
+    padding: 14px 16px;
+    background: var(--paper);
+    border-radius: var(--r);
+    border: 1px solid var(--hairline);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .hero-card .reply .caret {
+    color: var(--accent-deep);
+    animation: caret 1s steps(2) infinite;
+  }
+  @keyframes caret { 50% { opacity: 0; } }
+
+  .hero-mini-card {
+    position: absolute;
+    z-index: 2;
+    bottom: -22px;
+    right: -18px;
+    width: 220px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--r-lg);
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow-lift);
+    transform: rotate(2deg);
+  }
+  .hero-mini-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-soft);
+    margin-bottom: 10px;
+  }
+  .hero-mini-card .v {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .hero-mini-card .bar {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.1);
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .hero-mini-card .bar > span {
+    display: block;
+    height: 100%;
+    width: 78%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+    border-radius: inherit;
+  }
+  .hero-mini-card .foot {
+    font-size: 11px;
+    opacity: .65;
+  }
+
+  /* Decorative geometric blot */
+  .hero-blot {
+    position: absolute;
+    width: 380px;
+    height: 380px;
+    top: -40px;
+    right: -160px;
+    z-index: 0;
+    color: var(--accent);
+    opacity: .12;
+    animation: spin 70s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ==========================================================
+     Logo strip — implied trust row
+     ========================================================== */
+  .marquee {
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    padding: 28px 0;
+    background: var(--paper);
+  }
+  .marquee .row {
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .marquee .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    margin-right: 12px;
+  }
+  .marquee .word {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    opacity: .72;
+    transition: opacity var(--t), color var(--t);
+  }
+  .marquee .word:hover { opacity: 1; color: var(--ink); }
+  .marquee .word.italic { font-style: italic; }
+  .marquee .word.caps { letter-spacing: .22em; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; }
+
+  /* ==========================================================
+     Section header (re-used)
+     ========================================================== */
+  section { position: relative; }
+  .section-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 32px;
+    padding-top: 96px;
+    padding-bottom: 56px;
+  }
+  .section-head .lead { max-width: 720px; }
+  .section-head .eyebrow { margin-bottom: 18px; display: block; }
+  .section-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 4.6vw, 64px);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .section-head h2 em { color: var(--accent-deep); font-style: italic; }
+  .section-head .meta {
+    align-self: end;
+    text-align: right;
+  }
+  .section-head .meta a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 2px;
+    transition: color var(--t-fast), border-color var(--t-fast);
+  }
+  .section-head .meta a:hover { color: var(--accent-deep); border-color: var(--accent-deep); }
+
+  /* ==========================================================
+     Products — 4-card grid with featured first card
+     ========================================================== */
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 380px;
+    gap: 18px;
+  }
+  .pcard {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--hairline);
+    background: var(--white);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--t), box-shadow var(--t);
+  }
+  .pcard:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+  .pcard.featured {
+    grid-column: span 2;
+    grid-row: span 2;
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    padding: 36px 36px 32px;
+  }
+  .pcard.featured .pcard-eyebrow { color: var(--accent-soft); }
+  .pcard.featured h3 { color: var(--paper); }
+  .pcard.featured p { color: rgba(244,240,230,.7); }
+  .pcard.tall { grid-row: span 2; }
+  .pcard-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--accent-deep);
+    margin-bottom: 14px;
+  }
+  .pcard h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .pcard.featured h3 { font-size: 44px; }
+  .pcard p {
+    font-size: 14.5px;
+    color: var(--ink-3);
+    line-height: 1.55;
+    max-width: 320px;
+  }
+  .pcard.featured p { font-size: 17px; max-width: 480px; }
+  .pcard .pcard-foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .pcard .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: inherit;
+    transition: gap var(--t);
+  }
+  .pcard .link svg { width: 14px; height: 14px; }
+  .pcard:hover .link { gap: 12px; }
+
+  .pcard .visual {
+    position: absolute;
+    pointer-events: none;
+  }
+  .pcard.featured .visual {
+    inset: auto -40px -40px auto;
+    width: 320px;
+    height: 320px;
+    opacity: .85;
+  }
+  .pcard.tall .visual {
+    inset: auto 0 0 0;
+    height: 200px;
+  }
+  .pcard.short .visual {
+    inset: auto -20px -20px auto;
+    width: 160px;
+    height: 160px;
+  }
+
+  /* Visual: chat bubbles inside featured card */
+  .featured-bubbles {
+    position: absolute;
+    right: 32px;
+    bottom: 28px;
+    width: 320px;
+    pointer-events: none;
+    opacity: .96;
+  }
+  .featured-bubbles .b {
+    background: rgba(244,240,230,.08);
+    border: 1px solid rgba(244,240,230,.15);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: rgba(244,240,230,.7);
+    backdrop-filter: blur(4px);
+  }
+  .featured-bubbles .b.user {
+    background: rgba(204,120,92,.18);
+    border-color: rgba(204,120,92,.35);
+    color: var(--accent-soft);
+    margin-left: 36px;
+  }
+  .featured-bubbles .b.assistant { margin-right: 24px; }
+
+  /* ==========================================================
+     Manifesto / two-column statement
+     ========================================================== */
+  .manifesto {
+    padding: 96px 0 96px;
+    border-top: 1px solid var(--hairline);
+  }
+  .manifesto .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 96px;
+    align-items: start;
+  }
+  .manifesto h2.display {
+    font-size: clamp(40px, 5.6vw, 80px);
+    line-height: 1;
+    color: var(--ink);
+    letter-spacing: -0.025em;
+  }
+  .manifesto h2 em { color: var(--accent-deep); }
+  .manifesto .copy {
+    padding-top: 14px;
+  }
+  .manifesto .copy p {
+    font-size: 17px;
+    color: var(--ink-2);
+    line-height: 1.65;
+    margin-bottom: 18px;
+    max-width: 560px;
+  }
+  .manifesto .copy p:first-child::first-letter {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 64px;
+    float: left;
+    line-height: .85;
+    margin: 6px 10px -2px 0;
+    color: var(--accent-deep);
+  }
+  .manifesto .signoff {
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .signoff .avatar {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    display: grid;
+    place-items: center;
+    color: var(--paper);
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .signoff .who { font-weight: 500; font-size: 14.5px; color: var(--ink); }
+  .signoff .role { font-size: 13px; color: var(--ink-3); }
+
+  /* ==========================================================
+     Pull quote band
+     ========================================================== */
+  .quote-band {
+    padding: 96px 0;
+    background:
+      linear-gradient(180deg, transparent, var(--paper-2)),
+      var(--paper-2);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    text-align: center;
+    position: relative;
+  }
+  .quote-band::before, .quote-band::after {
+    content: '';
+    position: absolute;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, var(--accent-tint), transparent 65%);
+    z-index: 0;
+    opacity: .6;
+  }
+  .quote-band::before { top: -40px; left: 4%; }
+  .quote-band::after { bottom: -40px; right: 4%; }
+  .quote-band .wrap { position: relative; z-index: 1; }
+  .quote-band .glyph {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 96px;
+    color: var(--accent-deep);
+    line-height: 1;
+    margin-bottom: -40px;
+    display: block;
+  }
+  .quote-band blockquote {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(28px, 3.6vw, 48px);
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    max-width: 1000px;
+    margin: 0 auto 36px;
+  }
+  .quote-band blockquote em {
+    font-style: italic;
+    color: var(--accent-deep);
+  }
+  .quote-band cite {
+    font-style: normal;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .quote-band cite::before {
+    content: '';
+    width: 28px; height: 1px;
+    background: var(--ink-3);
+  }
+
+  /* ==========================================================
+     Customer stories — asymmetric grid
+     ========================================================== */
+  .stories {
+    padding-bottom: 24px;
+  }
+  .stories-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 18px;
+  }
+  .story {
+    grid-column: span 2;
+    background: var(--white);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-lg);
+    padding: 26px 26px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 320px;
+    transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+  }
+  .story:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--paper-3);
+  }
+  .story.lg { grid-column: span 3; }
+  .story.tone-ink {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .story.tone-ink .wordmark { color: var(--paper); }
+  .story.tone-ink .pull { color: var(--paper); }
+  .story.tone-ink .meta { color: rgba(244,240,230,.65); }
+  .story.tone-coral {
+    background: var(--accent-tint);
+    border-color: var(--accent-soft);
+  }
+  .story .wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .story .wordmark.serif-i { font-style: italic; font-weight: 400; }
+  .story .wordmark.caps {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 14px;
+  }
+  .story .wordmark.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    font-size: 16px;
+  }
+  .story .pull {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    flex: 1;
+  }
+  .story.lg .pull { font-size: 28px; }
+  .story .meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--ink-3);
+    padding-top: 16px;
+    border-top: 1px solid currentColor;
+    border-color: var(--hairline);
+  }
+  .story.tone-ink .meta { border-color: rgba(244,240,230,.18); }
+  .story.tone-coral .meta { border-color: var(--accent-soft); }
+  .story .meta .who strong { color: inherit; font-weight: 600; display: block; }
+  .story .meta .arrow {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    display: grid;
+    place-items: center;
+    transition: background var(--t), color var(--t), transform var(--t);
+  }
+  .story:hover .meta .arrow {
+    background: var(--ink);
+    color: var(--paper);
+    transform: rotate(-45deg);
+  }
+  .story.tone-ink:hover .meta .arrow {
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  /* ==========================================================
+     Research grid
+     ========================================================== */
+  .research {
+    border-top: 1px solid var(--hairline);
+    margin-top: 96px;
+  }
+  .research-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  .article {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    cursor: pointer;
+  }
+  .article .thumb {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--r);
+    border: 1px solid var(--hairline);
+    overflow: hidden;
+    position: relative;
+    transition: transform var(--t);
+  }
+  .article:hover .thumb { transform: translateY(-3px); }
+  .article .thumb svg { width: 100%; height: 100%; display: block; }
+  .article .meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+  .article .meta .cat { color: var(--accent-deep); }
+  .article .meta .sep {
+    width: 14px; height: 1px;
+    background: var(--ink-3);
+  }
+  .article h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 1.18;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    transition: color var(--t-fast);
+  }
+  .article:hover h3 { color: var(--accent-deep); }
+  .article p {
+    font-size: 14.5px;
+    color: var(--ink-3);
+    line-height: 1.55;
+    max-width: 380px;
+  }
+
+  /* ==========================================================
+     News list
+     ========================================================== */
+  .news {
+    margin-top: 96px;
+    border-top: 1px solid var(--hairline);
+  }
+  .news-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .news-item {
+    display: grid;
+    grid-template-columns: 140px 160px 1fr auto;
+    align-items: center;
+    gap: 28px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--hairline);
+    transition: background var(--t-fast), padding var(--t-fast);
+  }
+  .news-item:hover { background: var(--paper-2); padding-left: 12px; padding-right: 12px; }
+  .news-item .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .news-item .cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+    justify-self: start;
+  }
+  .news-item .cat.coral {
+    color: var(--accent-deep);
+    border-color: var(--accent-soft);
+    background: var(--accent-tint);
+  }
+  .news-item .cat.ink {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+  .news-item .title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.18;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+  }
+  .news-item .arrow {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline);
+    display: grid;
+    place-items: center;
+    color: var(--ink-2);
+    transition: all var(--t);
+  }
+  .news-item:hover .arrow {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    transform: rotate(-45deg);
+  }
+
+  /* ==========================================================
+     CTA banner
+     ========================================================== */
+  .cta-band {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    overflow: hidden;
+    position: relative;
+  }
+  .cta-band .wrap {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 48px;
+    align-items: stretch;
+    padding-top: 96px;
+    padding-bottom: 96px;
+    position: relative;
+    z-index: 1;
+  }
+  .cta-band h2.display {
+    font-size: clamp(40px, 5.6vw, 76px);
+    line-height: 1;
+    color: var(--paper);
+    margin-bottom: 24px;
+  }
+  .cta-band h2 em { color: var(--accent); }
+  .cta-band p {
+    font-size: 17px;
+    color: rgba(244,240,230,.65);
+    margin-bottom: 20px;
+    max-width: 520px;
+  }
+  .cta-band p.meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: rgba(244,240,230,.45);
+    letter-spacing: 0.01em;
+    line-height: 1.7;
+    margin-bottom: 32px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(244,240,230,.12);
+    max-width: 520px;
+  }
+  .cta-band .ctas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .cta-band .visual {
+    position: relative;
+    height: 320px;
+  }
+  .cta-band .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px dashed rgba(204,120,92,.4);
+    animation: spin 60s linear infinite;
+  }
+  .cta-band .ring::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    top: -7px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 24px var(--accent);
+  }
+  .cta-band .ring.r2 {
+    inset: 36px;
+    animation-direction: reverse;
+    animation-duration: 90s;
+    border-color: rgba(244,240,230,.15);
+  }
+  .cta-band .ring.r3 {
+    inset: 80px;
+    border-color: rgba(244,240,230,.08);
+    animation-duration: 120s;
+  }
+  .cta-band .core {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+  }
+
+  /* ==========================================================
+     Footer
+     ========================================================== */
+  footer.foot {
+    padding: 80px 0 36px;
+    background: var(--paper);
+    color: var(--ink-2);
+    border-top: 1px solid var(--hairline);
+  }
+  .foot .grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 64px;
+  }
+  .foot-brand .brand { font-size: 28px; }
+  .foot-brand .brand .mark { width: 36px; height: 36px; }
+  .foot-brand p {
+    margin-top: 18px;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink-3);
+    max-width: 320px;
+    line-height: 1.4;
+  }
+  .foot-col h5 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+    margin-bottom: 18px;
+    font-weight: 500;
+  }
+  .foot-col ul { list-style: none; }
+  .foot-col li { margin-bottom: 10px; }
+  .foot-col a {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    transition: color var(--t-fast);
+  }
+  .foot-col a:hover { color: var(--accent-deep); }
+
+  .foot-base {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 32px;
+    align-items: center;
+    padding-top: 32px;
+    border-top: 1px solid var(--hairline);
+    font-size: 13px;
+    color: var(--ink-3);
+    flex-wrap: wrap;
+  }
+  .foot-legal {
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .foot-legal a {
+    color: var(--ink-3);
+    transition: color var(--t-fast);
+  }
+  .foot-legal a:hover { color: var(--ink); }
+  .foot-social { display: flex; gap: 6px; justify-content: flex-end; }
+  .foot-social a {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline);
+    display: grid;
+    place-items: center;
+    color: var(--ink-2);
+    transition: all var(--t-fast);
+  }
+  .foot-social a:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  /* Big watermark wordmark */
+  .watermark {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(120px, 22vw, 320px);
+    letter-spacing: -0.04em;
+    line-height: .8;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--paper-3);
+    text-stroke: 1px var(--paper-3);
+    margin-top: 24px;
+    user-select: none;
+    text-align: center;
+  }
+
+  /* ==========================================================
+     Reveal animations on load
+     ========================================================== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: reveal var(--t-slow) ease-out forwards;
+  }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .d-1 { animation-delay: 80ms; }
+  .d-2 { animation-delay: 180ms; }
+  .d-3 { animation-delay: 280ms; }
+  .d-4 { animation-delay: 380ms; }
+  .d-5 { animation-delay: 480ms; }
+  .d-6 { animation-delay: 580ms; }
+
+  /* ==========================================================
+     Responsive
+     ========================================================== */
+  @media (max-width: 1080px) {
+    .hero .wrap { grid-template-columns: 1fr; gap: 40px; }
+    .hero { padding-top: 80px; }
+    .manifesto .row { gap: 48px; }
+    .products-grid { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 320px; }
+    .pcard.featured { grid-column: span 2; grid-row: span 1; }
+    .stories-grid { grid-template-columns: repeat(2, 1fr); }
+    .story, .story.lg { grid-column: span 1; }
+    .research-grid { grid-template-columns: repeat(2, 1fr); }
+    .cta-band .wrap { grid-template-columns: 1fr; padding-top: 64px; padding-bottom: 64px; }
+    .cta-band .visual { display: none; }
+    .foot .grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    :root { --gutter: 20px; }
+    .nav-links, .nav-cta .btn-ghost { display: none; }
+    .menu-toggle { display: inline-grid; }
+    .hero { padding: 56px 0 48px; }
+    .hero h1.display { font-size: clamp(40px, 11vw, 72px); }
+    .hero-meta-row { grid-template-columns: 1fr; gap: 14px; }
+    .hero-stat { border-right: 0; border-bottom: 1px solid var(--hairline); padding: 0 0 14px !important; }
+    .hero-stat:last-child { border-bottom: 0; padding: 14px 0 0 !important; }
+    .manifesto .row { grid-template-columns: 1fr; gap: 24px; }
+    .section-head { grid-template-columns: 1fr; padding-top: 64px; padding-bottom: 32px; }
+    .section-head .meta { text-align: left; }
+    .products-grid { grid-template-columns: 1fr; grid-auto-rows: auto; }
+    .pcard, .pcard.featured { grid-column: auto; grid-row: auto; min-height: 320px; }
+    .stories-grid { grid-template-columns: 1fr; }
+    .research-grid { grid-template-columns: 1fr; }
+    .news-item { grid-template-columns: 1fr auto; gap: 8px; }
+    .news-item .date, .news-item .cat { grid-column: 1; }
+    .news-item .title { grid-column: 1 / -1; }
+    .news-item .arrow { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+    .foot .grid { grid-template-columns: 1fr; gap: 32px; }
+    .foot-base { grid-template-columns: 1fr; text-align: center; }
+    .foot-social { justify-content: center; }
+  }
+
+  /* ==========================================================
+     TEMP — wordmark specimen strip (remove with the <aside>)
+     ========================================================== */
+  .np-type-test {
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--hairline);
+    padding: 24px 0 28px;
+    position: relative;
+    z-index: 5;
+  }
+  .np-type-test-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .np-type-test-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-2);
+  }
+  .np-type-test-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .np-type-test-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .np-type-test .specimen {
+    appearance: none;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r);
+    padding: 18px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+  }
+  .np-type-test .specimen:hover,
+  .np-type-test .specimen:focus-visible {
+    border-color: var(--ink-3);
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+    outline: none;
+  }
+  .np-type-test .specimen.is-picked {
+    border-color: var(--accent-deep);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .np-type-test .specimen .word {
+    font-size: 30px;
+    line-height: 1.05;
+    color: var(--ink);
+  }
+  .np-type-test .specimen .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.01em;
+  }
+
+  /* ==========================================================
+     02 — How it works · agent flow strip
+     ========================================================== */
+  .np-flow {
+    padding-block: 100px 120px;
+    background: var(--paper);
+    border-top: 1px solid var(--hairline);
+  }
+  .np-flow-lede {
+    font-size: 17px;
+    color: var(--ink-3);
+    max-width: 640px;
+    margin-top: 18px;
+    line-height: 1.55;
+  }
+  .np-flow-track {
+    display: grid;
+    /* 7-col layout: 4 agent cell-tracks (cols 1,3,5,7) + 3 gap-tracks (cols 2,4,6) */
+    grid-template-columns:
+      minmax(0, 1.4fr) minmax(0, .9fr)
+      minmax(0, 1.4fr) minmax(0, .9fr)
+      minmax(0, 1.4fr) minmax(0, .9fr)
+      minmax(0, 1.4fr);
+    /* 5 rows: IN pill, vertical drop, agents, vertical drop, OUT pill */
+    grid-template-rows: auto auto auto auto auto;
+    column-gap: 0;
+    row-gap: 0;
+    margin-top: 56px;
+    padding: 8px 0 16px;
+  }
+  /* Top-in / bottom-out diagonal: IN above col 1, OUT below col 7 */
+  .np-flow-bookend.np-flow-in   { grid-row: 1; grid-column: 1 / 4; justify-self: start; margin-bottom: 6px; }
+  .np-flow-bookend.np-flow-out  { grid-row: 5; grid-column: 5 / 8; justify-self: end;   margin-top: 6px;    }
+  /* Agent cards in row 3, odd columns */
+  .np-flow-track > .np-flow-card[data-cell="1"] { grid-row: 3; grid-column: 1; }
+  .np-flow-track > .np-flow-card[data-cell="2"] { grid-row: 3; grid-column: 3; }
+  .np-flow-track > .np-flow-card[data-cell="3"] { grid-row: 3; grid-column: 5; }
+  .np-flow-track > .np-flow-card[data-cell="4"] { grid-row: 3; grid-column: 7; }
+
+  .np-flow-card,
+  .np-flow-bookend {
+    min-height: 220px;
+    padding: 22px 22px 18px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color var(--t-fast),
+                box-shadow    var(--t-fast),
+                transform     var(--t-fast);
+  }
+  .np-flow-card:hover {
+    border-color: var(--ink-3);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+  .np-flow-card-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .np-flow-card-num::before { content: 'AGENT · '; }
+  .np-flow-card-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 60, 'SOFT' 30;
+    margin-top: 2px;
+  }
+  .np-flow-card-role {
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink-3);
+    flex: 1;
+    margin-top: 4px;
+  }
+  .np-flow-card-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--hairline);
+  }
+  .np-flow-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+    background: var(--paper);
+  }
+  .np-flow-tag-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Bookends — horizontal pill (paper-2 with dashed accent border) */
+  .np-flow-bookend {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 22px;
+    min-height: auto;
+    background: var(--paper-2);
+    border-style: dashed;
+    border-color: var(--accent-deep);
+  }
+  .np-flow-bookend-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--accent-deep);
+    font-weight: 600;
+    flex: 0 0 auto;
+  }
+  .np-flow-bookend-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+  .np-flow-bookend-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 60, 'SOFT' 30;
+  }
+  .np-flow-bookend-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+
+  /* Edges — base */
+  .np-flow-edge {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+  }
+  .np-flow-edge-label {
+    position: relative;
+    z-index: 1;
+    background: var(--paper);
+    padding: 2px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  /* Vertical drops — IN→01 (row 2, col 1) and 04→OUT (row 4, col 7) */
+  .np-flow-edge[data-edge="1"],
+  .np-flow-edge[data-edge="5"] {
+    height: 56px;
+    flex-direction: column;
+    justify-self: center;
+  }
+  .np-flow-edge[data-edge="1"] { grid-row: 2; grid-column: 1; }
+  .np-flow-edge[data-edge="5"] { grid-row: 4; grid-column: 7; }
+  .np-flow-edge[data-edge="1"]::before,
+  .np-flow-edge[data-edge="5"]::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 50%;
+    width: 1px;
+    background: var(--hairline);
+    transform: translateX(-50%);
+  }
+  .np-flow-edge[data-edge="1"]::after,
+  .np-flow-edge[data-edge="5"]::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid var(--ink-3);
+    transform: translateX(-50%);
+  }
+
+  /* Horizontal edges — between agents (row 3, gap cols 2/4/6) */
+  .np-flow-edge[data-edge="2"],
+  .np-flow-edge[data-edge="3"],
+  .np-flow-edge[data-edge="4"] {
+    grid-row: 3;
+    height: 100%;
+    align-self: stretch;
+  }
+  .np-flow-edge[data-edge="2"] { grid-column: 2; }
+  .np-flow-edge[data-edge="3"] { grid-column: 4; }
+  .np-flow-edge[data-edge="4"] { grid-column: 6; }
+  .np-flow-edge[data-edge="2"]::before,
+  .np-flow-edge[data-edge="3"]::before,
+  .np-flow-edge[data-edge="4"]::before {
+    content: '';
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    top: 50%;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .np-flow-edge[data-edge="2"]::after,
+  .np-flow-edge[data-edge="3"]::after,
+  .np-flow-edge[data-edge="4"]::after {
+    content: '';
+    position: absolute;
+    right: 6%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 6px solid var(--ink-3);
+    transform: translateY(-50%);
+  }
+
+  /* Mobile — collapse to single vertical column with vertical edges throughout */
+  @media (max-width: 1080px) {
+    .np-flow-track {
+      grid-template-columns: 1fr;
+      grid-template-rows: none;
+    }
+    .np-flow-bookend.np-flow-in,
+    .np-flow-bookend.np-flow-out {
+      grid-row: auto;
+      grid-column: 1;
+      justify-self: stretch;
+      margin: 0;
+    }
+    .np-flow-track > .np-flow-card[data-cell] {
+      grid-row: auto;
+      grid-column: 1;
+    }
+    .np-flow-card,
+    .np-flow-bookend {
+      min-height: auto;
+    }
+    .np-flow-edge,
+    .np-flow-edge[data-edge="1"],
+    .np-flow-edge[data-edge="2"],
+    .np-flow-edge[data-edge="3"],
+    .np-flow-edge[data-edge="4"],
+    .np-flow-edge[data-edge="5"] {
+      grid-row: auto;
+      grid-column: 1;
+      height: 56px;
+      flex-direction: column;
+      justify-self: center;
+      align-self: auto;
+    }
+    /* Reset all hairlines + arrows to vertical */
+    .np-flow-edge::before {
+      left: 50% !important;
+      right: auto !important;
+      top: 8px !important;
+      bottom: 8px !important;
+      width: 1px !important;
+      height: auto !important;
+      transform: translateX(-50%);
+    }
+    .np-flow-edge::after {
+      right: auto !important;
+      bottom: 0 !important;
+      left: 50% !important;
+      top: auto !important;
+      border-left: 4px solid transparent !important;
+      border-right: 4px solid transparent !important;
+      border-top: 6px solid var(--ink-3) !important;
+      border-bottom: 0 !important;
+      transform: translateX(-50%);
+    }
+  }
+
+  /* ==========================================================
+     03 / 04 — placeholder card grid
+     ========================================================== */
+  .np-grid-section {
+    padding-block: 96px 120px;
+    background: var(--paper);
+    border-top: 1px solid var(--hairline);
+  }
+  .np-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 56px;
+  }
+  .np-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 28px 26px 22px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--t-fast),
+                box-shadow    var(--t-fast),
+                transform     var(--t-fast);
+  }
+  .np-card:hover {
+    border-color: var(--ink-3);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+  .np-card-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+  .np-card h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    font-variation-settings: 'opsz' 60, 'SOFT' 30;
+    margin: 4px 0 0;
+  }
+  .np-card p {
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink-3);
+    margin: 0;
+    flex: 1;
+  }
+  .np-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--hairline);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-2);
+    letter-spacing: 0.02em;
+  }
+  .np-card-meta svg {
+    transition: transform var(--t-fast);
+  }
+  .np-card:hover .np-card-meta svg {
+    transform: translate(2px, -2px);
+  }
+  @media (max-width: 1080px) {
+    .np-card-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ==========================================================
+     Hero · mini wireframe diagram (replaces orbiting rings)
+     ========================================================== */
+  .cta-band .visual {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .np-mini {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(244,240,230,.85);
+    padding: 4px;
+  }
+  .np-mini-rail {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(244,240,230,.5);
+    border-bottom: 1px dashed rgba(244,240,230,.18);
+    padding-bottom: 10px;
+  }
+  .np-mini-pin {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px dashed rgba(244,240,230,.3);
+    border-radius: 6px;
+    font-size: 10px;
+    color: rgba(244,240,230,.7);
+    letter-spacing: 0.04em;
+  }
+  .np-mini-pin b {
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-size: 9.5px;
+  }
+  .np-mini-pin-out { align-self: flex-end; }
+
+  .np-mini-flow {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .np-mini-cell {
+    flex: 1;
+    border: 1px solid rgba(244,240,230,.22);
+    border-radius: 6px;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .np-mini-cell .hint {
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    color: rgba(244,240,230,.5);
+    margin-top: 4px;
+  }
+  .np-mini-cell:hover {
+    border-color: var(--accent);
+    background: rgba(204,120,92,.06);
+  }
+  .np-mini-cell .num {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+  }
+  .np-mini-cell .name {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.05;
+    color: var(--paper);
+    letter-spacing: -0.01em;
+    font-variation-settings: 'opsz' 60, 'SOFT' 30;
+  }
+
+  .np-mini-arrow {
+    width: 12px;
+    height: 1px;
+    align-self: center;
+    background: rgba(244,240,230,.3);
+    position: relative;
+    flex: 0 0 12px;
+  }
+  .np-mini-arrow::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    border: 3px solid transparent;
+    border-left: 5px solid rgba(244,240,230,.55);
+    transform: translateY(-50%);
+  }
+
+  .np-mini-srcs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .np-mini-srcs > span {
+    position: relative;
+    padding: 8px 4px 0;
+    text-align: center;
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    color: rgba(244,240,230,.55);
+    border-top: 1px dashed rgba(244,240,230,.2);
+  }
+  .np-mini-srcs > span::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 1px;
+    height: 10px;
+    background: rgba(244,240,230,.18);
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     NAVIGATION
+     ============================================================ -->
+<header class="nav" id="nav">
+  <div class="wrap row">
+    <a href="#" class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="172 164 682 658"><path d="M495.3 169.7c5 4.2 8.8 10 10.7 16.3l-.6 7c0 3.9.6 6.8 3.2 9.8 4.6 4 9.7 7.2 14.8 10.5q5.9 4 11.5 8.6l4.4 3.4 2.3 1.8L565 245l2.4 1.8 2.4 1.7 2 1.5c2.9 1.3 4.3.9 7.2 0l2.5-1a30 30 0 0 1 21-.2c6.6 3.2 12 8.4 14.9 15a28 28 0 0 1 .9 14.9 15 15 0 0 0-.3 8.3c3.5 4.3 8.4 7.4 13 10.6q4.2 3 8.3 6.3l3.2 2.4c28 21.5 28 21.5 34 27 2.5 1.7 2.5 1.7 5 1.6q3.7-1.3 7-3a29 29 0 0 1 22.3-.3 37 37 0 0 1 18 18.5 37 37 0 0 1-.8 22.9c-.4 2.3-.4 2.3 0 5a62 62 0 0 0 5.7 6.1l1.7 1.7 5.7 5.5 9 8.8q4.3 4.2 8.3 8.8a223 223 0 0 0 14.3 14.8l7.3 7.3 9.7 9.6 2.2 2.2A213 213 0 0 1 805 457l1.5 1.7c1.5 1.3 1.5 1.3 4.6 1 2.9-.7 2.9-.7 4.9-1.7a38 38 0 0 1 27.8 6.5c6.5 6.2 10 15 10.3 24a32 32 0 0 1-9.8 22.3 31 31 0 0 1-20.6 8.4c-3-.2-5-.5-7.8-1.3-3.9-.9-5.3-1.2-8.9.1a59 59 0 0 0-6.7 7l-11 13.1a253 253 0 0 1-9.9 11q-5.8 6.4-11 13.1-6.5 7.6-13.4 14.8l.6 1.8 1.6 4.8a35 35 0 0 1-.2 24.5 36 36 0 0 1-21.5 18.5c-8.6 1.4-16-.1-23.4-4.7-2.1-.9-2.1-.9-4-.3a58 58 0 0 0-6.7 5.5q-5.1 4.8-10.6 9.1a300 300 0 0 0-16.6 14.8q-4.5 4.2-9.2 8.3-5.2 4.5-10.3 9.3-2.5 2.3-5.2 4.3a32 32 0 0 0-5.5 5.1c0 3.2 0 3.2 1 7 .8 8.5-.3 15.1-5.5 22a28 28 0 0 1-17.2 9.4 26 26 0 0 1-15.2-3.6c-2.8-1-4.3-.6-7.1.2-2 1.4-2 1.4-3.8 3.2q-6 5.3-12.3 10l-4.5 3.5-2.3 1.7q-13.3 10.3-26.2 20.8-7.7 6.3-15.5 12.2-7 5.4-13.7 11l-1.9 1.5-1.8 1.6-4.2 3c-5.6 3.7-5.6 3.7-6.8 7.8l-.2 3.4a30 30 0 0 1-9.6 21.2c-7.4 6-14.6 8.7-24.2 8.1-8.6-1.5-15.5-4.2-20.7-11.4-5.6-9-8-17-5.7-27.5A34 34 0 0 1 463 763h2l-3.4-50.8c-.7-11-.7-11-3-14.1-1.6-1.4-1.6-1.4-4.6-3.1-1.6-2-1.6-2-2.7-4l-1.2-1.8a36 36 0 0 1-2-26.6 35 35 0 0 1 19.4-19c9.4-2.4 17.8-.5 26.5 3.4l.8-1.8a23 23 0 0 1 4.9-6q4-3.7 7.5-8 7-7.7 14.5-14.8 6.1-6 11.6-12.5 4.8-5.2 9.8-10 4.3-4.2 8.3-8.8 6.9-7.7 14.3-14.7 5.1-5 9.8-10.4 7.1-8 14.8-15.3 6.4-6.2 12-13 2.7-2.6 5.7-5c2.3-2.2 3-3.1 3.1-6.4l-.8-6.2c-.3-3.4.2-5.5 1.2-8.7.7-3.4.8-4.8-.9-8l-6-6.8q-4.4-4.7-8.4-10l-15-17.8q-5.2-6-10.2-12.3l-7.4-8.8q-6-7.1-11.6-14.5-7.2-9.4-14.7-18.3l-9.2-11.3-8.4-10.4-12.3-15.3q-6.3-8.2-13.2-16A259 259 0 0 1 483 342l-3 1a39 39 0 0 1-24.6-.7L452 340l-3.1-2a34 34 0 0 1-10.1-21q-.3-13.5 8.2-24c3.7-3.4 7-5.9 12-7l1.7-22 .6-7.5.8-10.8.3-3.4.6-9.3.2-3.1v-3l.2-2.6c-.4-2.3-.4-2.3-2-4.1l-4.2-2.7A26 26 0 0 1 447 203c-2-10.3-.5-18.9 5.2-27.7 11.4-14.6 28.2-13.3 43-5.6m3 45c-1.8 3.3-1.2 4.6-.3 8.3q2.4 5.3 5 10.4l1.6 3 8.3 16.4 1 1.8q3.1 6.4 6 13l1.7 3.4 3.1 6.8 1.5 3.2 1.3 2.8c1.5 2.2 1.5 2.2 3.7 3.2 3.7 0 6.7-1 10-2.3l2.1-.8 6.5-2.3 4.4-1.6 10.8-4 2-10.5c0-3.5 0-3.5-2-6.1q-3.5-2.9-7.2-5.2-3.9-2.6-7.4-5.4l-6.1-4.6-13-9.9-22.7-17.2-2.2-1.7-1.8-1.4c-2.6-1.6-4-1.5-6.4.6M477 224c-2 2-1.7 6-2 8.8l-.2 2.5-2 23.1-.2 3.5q-.7 11-.6 22.1l2.7 1 3.5 1.4 3.5 1.3 3.3 1.3 2.9 1c2.7 1.2 3 2.3 4.1 5 1.3 1.7 1.3 1.7 3 3a64 64 0 0 0 9-2l3.7-1 10.3-3a38 38 0 0 0-4.1-11.7l-1-2-3-6.1-2-4.3-5-10.2-2.2-4.4A983 983 0 0 0 485 223q-4 .2-8 1m77 68.2-6 2-3.7 1.4-3.5 1.3C538 298 538 298 536 300l6 12.4 1.6 3.6 1.7 3.4 1.5 3.2c1.2 2.4 1.2 2.4 2.2 3.4 3.2.8 5.8.8 9 0 2.9-2.8 4.3-6.4 6-10l5.5-10.4 1.4-2.6 1.3-2.6 1.2-2.3c.6-2.1.6-2.1-.2-4.2q-2.1-3.2-5.2-5.9c-4.7 0-9.6 2.6-14 4.2m53 4.8c-1.4 2.7-.7 3.7.2 6.6l.8 3 1 3 .9 3.3 2 6.7 3 10.3 1.9 6.6 1 3.1 1.5 5.5c.7 1.9.7 1.9 1.7 2.9l11.5 1.2 5.7.6 8.7.8 5.5.6 2.6.2c9.4.9 9.4.9 14 .6 2-2.3 2-2.3 3-5a13 13 0 0 0-5.4-6.8l-2-1.6-2.3-1.6-4.6-3.5-2.4-1.8-10.1-8a479 479 0 0 0-16-12.3L620 304l-4-3.3c-4.6-3.8-4.6-3.8-9-3.8m-25 7.9-5.4 10.6-2.5 4.7-1.3 2.4c-2.3 4.5-3.4 7.3-1.8 12.4.9 2.3.9 2.3 1.9 4.3l1 2c1.1 1.7 1.1 1.7 4.1 2.7q5.1.7 10.1 1l2.8.3q8.5.9 17.1.7l-9.7-33.8-1-3-.8-2.8-.7-2.5c-.8-1.9-.8-1.9-2.8-2.9-5.5-1-8-1-11 3.9m-71 .8-2.9.7c-6.7 2-6.7 2-8.7 5.1-.5 3.1-.7 4.6.6 7.5 7 4 14.5 6.8 22 9.7l3.8 1.6 9.2 3.7 3-3-5.3-11.2-1.5-3.2-1.5-3-1.4-3c-2.6-5.2-2.6-5.2-4.3-7.6-4.6 0-8.7 1.4-13 2.7M494 331c-.5 3.6-.1 4.9 2 8l6 6.5 1.5 1.8q3.2 3.7 6 7.7 5.3 7.1 11.1 13.9l16 19.3 6 7.4 9.8 12.3 12.8 15.7a134 134 0 0 0 8.8 9.4l-6.2-20-1-2.9-1.8-5.7-1.9-5.9-2.7-8.6-.9-2.6c-5-15.5-5-15.5-9.3-17.8l-3-.6c-6-1.6-9-3.6-12.2-8.9a33 33 0 0 1-2.5-10.7l-.3-2.4-.2-1.9-2.5-1-9-3.5-4-1.6-5.7-2.2-3.4-1.4-7.1-3C497 331 497 331 494 331m81 25c0 3 0 3 2.3 5.5l3.2 2.7 1.7 1.5 4.8 4.3 2 1.9 6 5.1 1.5 1.3L609 389l1.8 1.5 7.8 6.6c2.4 1.9 2.4 1.9 5.4 2.9q-3.1-12.8-7-25.6l-1.1-3.5-1-3.3-1-3c-.9-2.6-.9-2.6-2.9-5.6-2.6-.6-2.6-.6-5.8-1l-3.5-.3-3.8-.4-3.6-.4q-9.6-1-19.3-.9m50 5a284 284 0 0 0 6.6 23.6l.9 3 .9 2.8.8 2.5c1 2.8 2.3 3.9 4.9 5.2 2.7 1 5 1.7 7.9 1.9 3.3-1.6 5.5-4.3 8-7l6.7-6.2 1.6-1.5q4.7-4.4 9.7-8.3l-1.4-4.8-2.6-8.2a303 303 0 0 0-44-3m-59 8q2.9 11 6.4 21.7l1 3 10.6 32.4 2.7 8 3.6 10.8 1.8 5.5c4 11.3 11 19.6 19 28.4q4.2 4.9 8.1 10.2c1.8 2 1.8 2 4.8 3l3-2q.6-4.4.7-8.6l.1-2.6.4-8.4.2-5.5.6-14.9v-2.5l.1-2.5v-2.2c-.1-1.8-.1-1.8-1.9-3.7l-2.4-1.2A20 20 0 0 1 615 427a27 27 0 0 1-.1-13.1c.1-3.9.1-3.9-1-5.6a64 64 0 0 0-8.4-7.4l-5.5-4.4-9-8q-7-6.6-14.5-12.4c-2.5-2.1-2.5-2.1-5.1-4.9-2.4-2.2-2.4-2.2-5.4-2.2m109.7 20.7-2.7 2.5-1.4 1.4-5 4.6-3.6 3.2-1.7 1.5a38 38 0 0 0-6.3 7.1l1 3 .1 6.4v3.4q0 4.1-1.1 8.2l2.2 1.8 3 2.4 3 2.5q3.1 2.5 6.1 5.4c2.7 1.9 2.7 1.9 5.9 1.9 2.9-1 4-1.7 5.8-4 .6-2 .6-2 1-4.4l.4-2.6.4-3 1.4-9.1 1.5-9.5.9-6 .4-3c1.4-9.5 1.4-9.5 1-13.4-5.5-4.6-7.2-5-12.3-.3M718 387c.6 6.4 2.6 12 4.9 18.1l1.2 3.3 6 16.6 4.3 11.9 2 5.4 1 3.2c1.6 2.5 1.6 2.5 4.6 3.8l3 .7a23 23 0 0 1 15 11l3 9 15.4 3.2c6 1.2 11.5 2.1 17.6 1.8l3-6-5-5.6-4.2-5-2.1-2.4-2-2.3C784 452 784 452 782 452l-.7-1.7a29 29 0 0 0-5.6-6.9q-1.4-1.2-2.8-2.7l-3-2.9-3-3-8-8-12.7-12.6-4.4-4.4Q734 402.3 727 394l-3.8-4-1.7-1.8C720 387 720 387 718 387m-16.2 4.3-1.8.7-3 18.8-1 6.4-1.5 9.2-.4 2.8A74 74 0 0 0 693 445c1.5 1.7 1.5 1.7 3.6 2.8 4 2.5 5.2 4.7 7 9 1.9 3.8 2.7 5 6.7 6.4 8.9 1.1 8.9 1.1 13-1.8 2.4-3.2 4-6.4 4.7-10.4-.4-1.9-.4-1.9-1.2-3.8l-.8-2.3-1-2.4-2-5.2-1-2.6-4.6-12.8-2.7-7.4-1.9-5-2.7-7.6-.8-2.3c-3.3-8.9-3.3-8.9-7.5-8.3M641 441l-.9 17.5-.2 6-.5 8.5-.1 2.7-.3 15.3 5 2c12.5-10.4 12.5-10.4 17.4-15l1.6-1.5c1-1.5 1-1.5.7-3.4l-.7-2.1-.1-4.8v-2.7c.1-2.5.1-2.5 1.2-6-.1-3.5-.1-3.5-2-5.8a124 124 0 0 0-8.1-6.7l-2-1.7c-3.8-2.8-6.5-4.6-11-2.3m62.4 34.3-2 3.7c-3 4.4-8.6 6.2-13.4 8-3.5.5-5.8.4-9.1-.7-5.8-1.9-5.8-1.9-9.1-.2a78 78 0 0 0-6.8 5.9l-2.8 2.2c-4 3.4-6.7 6.1-8.3 11.2-.3 4.4 0 6.7 2.1 10.6 4.8 4.1 10.8 6.4 16.5 9q5.2 2.2 10 5.2c4.8 2.8 4.8 2.8 7.6 2.9 3-1.7 4.6-4.4 6.5-7.2l2.6-3.9 1.4-2 6.8-9.4 1.3-1.8a353 353 0 0 1 12.7-16.4c3.6-4.7 3.6-4.7 3.5-8.1l-.9-2.3-.7-2-.9-1.8-1.4-3.2c-12.7-2-12.7-2-15.6.3m52.7 11c-3.8 4.6-3.8 4.6-7.5 6.1-2.6 1.6-2.6 1.6-3.4 3.7A62 62 0 0 0 744 512q9-2.8 17.4-6.5l2.3-1 12-5 4.6-2 2.1-1c3.6-1.5 6.7-3 9.6-5.5l-1-3a69 69 0 0 0-9.6-2.6L775 484l-3.1-.7c-11.6-2.5-11.6-2.5-15.8 3M732 494l-4.4 5.6-1.4 1.8A618 618 0 0 0 709 525l1 2c18.9-5.9 18.9-5.9 22.2-10.8 1.5-4.3 1.2-8.7.8-13.2l.1-5.4-.1-3.6zm53.6 13.2q-9 4.2-18.1 7.9l-2 .8-7.8 3.2-5.6 2.3-3.3 1.3c-4.8 2.2-4.8 2.2-6.8 4.3-.8 3-.8 3-1.3 6.8l-.2 2-.7 6.4-.6 4.3c-1.5 13-1.5 13-1.2 18.5 2.3 2.5 2.3 2.5 5 4 3.3 0 4.1-1.1 6.4-3.5l2.7-3.3 2.9-3.6 1.5-1.8q3.5-4.1 7.1-8l1.4-1.5 4-4.3a368 368 0 0 0 15.6-18.1q4.7-5.6 9.9-11c2.1-2.3 3.5-3.8 4.5-6.9l-2-3c-4.5 0-7.4 1.4-11.4 3.2m-144.7 25c-4 5.8-3 13-2.9 19.8l.2 13.4v2.5c0 2.3 0 2.3.8 6.1 2.5 2 2.5 2 5 3q7.8-6.6 15.3-13.7l2.2-2q9-8.6 17.5-17.3c-4.4-4.8-9.7-7.3-15.5-10.3l-3.2-1.6-3-1.6-2.8-1.5c-5.6-2.3-9.2-.4-13.6 3.2m81.5 1.7-2.7 1.2-3 1.2-2.8 1.2q-7.1 3-13.9 6.5c1.6 5 4.5 9 7.5 13.2l1.5 2.2c3.7 5.3 3.7 5.3 6 7.6 2.4-.2 2.4-.2 5-.8l2.8-.6c2.2-.6 2.2-.6 3.2-1.6l1.1-9 .5-3.7.4-3.6q1-7.8 1-15.7c-2.6 0-4.2.8-6.6 1.9M610 542c-6.5 10-10.8 21.3-15.3 32.4l-8.8 21-3 7-1.5 3.4q-10 23.5-19.4 47.2c4-1.8 6.7-4.5 9.8-7.7q4.8-5 10-9.7A201 201 0 0 0 594 624a221 221 0 0 1 16-15l1.8-1.5 1.2-1.5c-.3-2.7-.3-2.7-1-6-.4-6.2.6-10.4 3-16l1-3c1.6-1 1.6-1 4-2l3.6-2 3.4-2v-22.2l.1-8v-2.6c0-6 0-6-1.1-8.2-7.8-3-11.4 2-16 8m76.1 11.7-2.2 2.4q-4.1 4.2-8.6 8.1-7.1 6.4-13.8 13.2L659 580l-6 6.1 1 3c5 1 9.6 1 14.6 1l2.4-.1 5.1-.1 7.8-.2 5-.2h2.3c3.8-.1 5.6-.3 8.8-2.4 1.4-2.2 1.4-2.2 2.8-4.8l1.3-2.6c1.1-3.2 1-4.4-.1-7.6l-4.8-7-2.7-3.5-1.3-1.8-3.4-5.1-1.8-2.6c-2 0-2 0-3.9 1.7M581 572c-15 14.9-15 14.9-20.3 21.1q-4.6 4.9-9.3 9.5-4 4-7.6 8.4-4.2 4.5-8.6 8.8-3.8 4-7.5 8.2-3.6 4.1-7.7 8l-7.2 8q-3 3.2-6.3 6.1c-3.5 3.5-3.5 3.5-3.7 7l1.2 2.9 1.1 3.8c1.9 3.2 1.9 3.2 4.7 4.1l4.2.1 3.4.4q5.4.5 10.6-.4c2.2-2 3.3-4 4.6-6.7 2.2-3.7 5.5-5.6 9.4-7.3l3.5-.8c3.5-1.2 3.5-1.2 5.4-3.8l1.5-3.3.9-1.9q4.4-10 8.4-20.4l8.4-20.7 1.5-3.6 1.5-3.5 1.4-3.5 3.2-7.4.9-2 2.4-5.2c1-2.9 1-2.9 0-5.9m83 29c-9 0-9 0-12 3a66 66 0 0 0-4 7 19 19 0 0 1-8.7 5.2c-3.3 1.8-3.3 1.8-4.3 5q-1.9 9-3.3 18.2l-1 6.2c-2.2 13.5-2.2 13.5-1.7 20.4 2.3 2.2 2.3 2.2 5 3 2.9-1.1 5-2.7 7.2-4.8l1.7-1.6 1.9-1.8 3.7-3.5 1.9-1.8 7.7-6.9 6.5-5.8 14.1-12.3q7.1-6 14-12.4l8.3-7.1-1-4.4-.5-2.5c-.5-2.1-.5-2.1-1.5-3.1l-6-.1zm-55.1 25-5.1 5.1q-4.1 4.3-8.7 8.2c-4.8 4-9.2 8.7-13.6 13.2a115 115 0 0 1-8.9 8.2c-2.6 2.2-2.6 2.2-3.7 4a15 15 0 0 0 3.1 9.2c3.4 1.6 6.8 2.3 10.5 3l3 .6q5.1 1.2 10.5 1.4c1.4-1.6 1.4-1.6 2.9-3.8a21 21 0 0 1 15.1-9.9c2-1.3 2-1.3 3.1-4.4l.9-4.9.6-3.5 1.7-10.3 1-6.5.7-4.2.6-3.8q.6-5.9.4-11.7c-6 0-10.1 6.1-14.1 10.1M507 680l-2.7 5.6a30 30 0 0 1-19.3 16.7q-6 1.3-12 1.7c2 37.7 2 37.7 4 55l3.8 1.6 2 .8c2.7.7 3.8.8 6.2-.4 1.9-2.4 1.9-2.4 3.8-5.6l1-1.8 3.3-5.6 2.3-3.9L506 733l1.5-2.6 4.7-8q6.8-11.3 13.9-22.5l1.9-3 1.7-2.6c1.5-2.7 2.5-4.4 1.9-7.5-1.2-3-2.1-4.7-4.6-6.8-6.1-1.7-14-2-20 0m59.1 8.2L564 691c-6 4.8-11.5 5.5-19 5.5-4 .7-4.7 2.3-7 5.5l-3.8 6.3-1 1.8-2.2 3.8-5.7 9.8-1.2 2q-4.1 7-8.5 14l-1.1 1.8-2.3 3.6-7.2 11.6-1.4 2.3c-4.6 7.4-4.6 7.4-5.6 11a16 16 0 0 0 3 4c5-1.6 8.5-4.7 12.5-8l4.3-3.6 2.2-1.7 8.5-6.7q7.3-5.5 14.3-11.4 9-7.3 18.4-14.2 7.1-5.4 14-11.3 9.5-8 19.8-15.1l-.4-4.4-.3-2.4c-.3-2.2-.3-2.2-1.3-4.2q-4.2-1.6-8.6-2.6l-2.4-.7c-12.5-3.5-12.5-3.5-15.9.5"/><path d="M470 366.6c8.8 6.4 11.2 17.6 14.1 27.6l3.5 12.2 1.9 6.5 9.8 34 9 31.3.6 2.1c2.4 7.7 5.9 13.8 13.1 17.7a31 31 0 0 0 9 1.2h12.2l28.7.4h10l3.4.1c2.7.3 2.7.3 5.7 2.3 1.7 5.6.6 9.3-1.7 14.5q-3 5.7-7.3 10.5l-2.4 3.2a31 31 0 0 1-23 10l-4.9.1h-16.3c-17.6.1-34.8-1.9-48.3-14.5-13-14.2-17-33.3-22.3-51.2l-.7-2.3q-3.8-12-6.1-24.3h-2l-.3 3.2q-1.3 8.8-3.4 17.3l-1 4-2.7 11.9-1.8 8L435 543l-.6 2.8-9.8 41.6-3.1 13.1-3.7 15.7-1.4 5.9c-9.2 39.3-9.2 39.3-20.5 46.4a28 28 0 0 1-21.5 2.9c-7-2.5-13-6.6-16.4-13.4-3-7.3-5-14.8-7-22.4l-1.2-4.3-9.9-38q-5.1-20-10.5-40t-10.4-40l-1.4-5.2-1.8-7.4-.6-2.2c-.8-3.3-1.2-6-1.2-9.5h-2l-.6 3.4c-1.6 7-4 13.7-6.2 20.4l-2.3 6.9c-6.6 19.5-16.5 39.1-35.8 48.8-15 6.3-31.1 5.8-47.2 5.8h-19.7c-7.5 0-15-.5-21.2-5.3a24 24 0 0 1-6-20 25 25 0 0 1 13.6-14.2c4.6-1.6 9.2-1.3 14-1.3h13.8l10.5-.1h6.5c8.5 0 16.5-1.3 23-7.3 7.6-9.6 11.4-23 15.5-34.4l1.8-5 9-25.3q4.5-12.6 9.5-25l.9-2.3c2.6-6.3 6.5-12.6 13-15.5a30 30 0 0 1 22.3-.1c12.7 7.8 15.7 23 19.2 36.5l1.5 5.9 1.7 6.4 6.2 23.4 3.8 14.4.8 3 5.6 21a3091 3091 0 0 0 13.8 51.2l.8 2.7.6 2.3c.6 1.7.6 1.7 1.6 2.7l.4-1.7 36-151.9 2-7.9 3-12.5 1-4.6 5.7-22.6.9-3.6a29 29 0 0 1 13.9-18c8.7-4.6 16.8-3.8 25.1 1.4"/></svg>
+      </span>
+      <span>NetPulse AI</span>
+    </a>
+
+    <nav class="nav-links">
+      <a href="#how-it-works">How it works</a>
+
+      <span class="has-drop">
+        <button class="drop-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+          Data Viewer
+          <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 4.5l3 3 3-3"/>
+          </svg>
+        </button>
+        <div class="drop-menu" role="menu">
+          <a href="network-events.html" role="menuitem">Network Events</a>
+          <a href="call-records.html" role="menuitem">Call Records</a>
+          <a href="tickets.html" role="menuitem">Incident Tickets</a>
+        </div>
+      </span>
+
+      <span class="has-drop">
+        <button class="drop-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+          Resources
+          <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 4.5l3 3 3-3"/>
+          </svg>
+        </button>
+        <div class="drop-menu" role="menu">
+          <a href="docs.html" role="menuitem">Documentation</a>
+          <a href="architecture.html" role="menuitem">Architecture</a>
+          <a href="byod.html" role="menuitem">Bring Your Own Data</a>
+        </div>
+      </span>
+
+      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+
+    <div class="nav-cta">
+      <a href="#" class="btn btn-primary">
+        Try NetPulse AI
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+      <button class="menu-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 6h14M3 10h14M3 14h14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     TEMP — wordmark specimen strip (remove after wordmark picked)
+     ============================================================ -->
+<aside class="np-type-test" aria-label="Wordmark specimens (temporary)">
+  <div class="wrap">
+    <div class="np-type-test-head">
+      <span class="np-type-test-eyebrow">Type study · telecom phrases · temporary</span>
+      <span class="np-type-test-note">12 specimens · 3 typefaces · click any to highlight (visual only)</span>
+    </div>
+    <div class="np-type-test-grid">
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Fraunces',serif;font-weight:700;font-variation-settings:'opsz' 144,'SOFT' 30;letter-spacing:-0.025em;">Network Slicing</span>
+        <span class="label">01 · Fraunces 700 · opsz 144 · SOFT 30</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Fraunces',serif;font-weight:500;font-variation-settings:'opsz' 144,'SOFT' 30;letter-spacing:-0.02em;">Packet Core</span>
+        <span class="label">02 · Fraunces 500 · opsz 144 · SOFT 30</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Fraunces',serif;font-weight:300;font-variation-settings:'opsz' 144,'SOFT' 30;letter-spacing:-0.015em;">Backhaul Edge</span>
+        <span class="label">03 · Fraunces 300 · opsz 144 (thin display)</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Fraunces',serif;font-weight:600;font-variation-settings:'opsz' 9,'SOFT' 100;letter-spacing:0;">QoS Guardrail</span>
+        <span class="label">04 · Fraunces 600 · opsz 9 · SOFT 100 (text shapes)</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Fraunces',serif;font-weight:500;font-style:italic;font-variation-settings:'opsz' 144,'SOFT' 60;font-feature-settings:'ss01';letter-spacing:-0.015em;">VoLTE Routing</span>
+        <span class="label">05 · Fraunces 500 italic · ss01 · SOFT 60</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Fraunces',serif;font-weight:600;font-style:italic;font-variation-settings:'opsz' 144,'SOFT' 60;font-feature-settings:'ss01';letter-spacing:-0.02em;">Outage Hotspot</span>
+        <span class="label">06 · Fraunces 600 italic · ss01</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.035em;">Carrier Aggregation</span>
+        <span class="label">07 · Inter 700 · tight tracking</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Inter',sans-serif;font-weight:500;letter-spacing:-0.015em;">Cell Tower Mesh</span>
+        <span class="label">08 · Inter 500 · default tracking</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0;">SDN Fabric</span>
+        <span class="label">09 · Inter 400 · neutral</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'Inter',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.12em;">LATENCY PROBE</span>
+        <span class="label">10 · Inter 600 · all-caps · +120 tracking</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:-0.02em;">Spectrum Tier</span>
+        <span class="label">11 · JetBrains Mono 600</span>
+      </button>
+
+      <button class="specimen" type="button">
+        <span class="word" style="font-family:'JetBrains Mono',monospace;font-weight:500;text-transform:lowercase;letter-spacing:0;">enodeb_mesh</span>
+        <span class="label">12 · JetBrains Mono 500 · snake_case lowercase</span>
+      </button>
+
+    </div>
+  </div>
+</aside>
+
+<!-- ============================================================
+     CTA BAND (moved up — first impression slab right under header)
+     ============================================================ -->
+<section class="cta-band">
+  <div class="wrap">
+    <div>
+      <h2 class="display">
+        Telecom incident<br>
+        ticketing<br>
+        <em>in seconds.</em>
+      </h2>
+      <p>
+        A multi-agent assistant that turns a customer complaint into a
+        structured NOC incident ticket. Built on Google ADK + Vertex AI
+        Gemini, with BigQuery network events, AlloyDB call records, and
+        AlloyDB NL2SQL.
+      </p>
+      <p class="meta">
+        4 ADK sub-agents · SequentialAgent root · BigQuery network events · AlloyDB call records · AlloyDB ticket sink
+      </p>
+      <div class="ctas">
+        <a href="#" class="btn btn-paper">
+          Launch NetPulse AI
+          <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+        <a href="https://github.com/" target="_blank" rel="noopener" class="btn" style="background:transparent;color:var(--paper);border:1px solid rgba(244,240,230,.4);">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="np-mini" aria-hidden="true">
+        <div class="np-mini-rail">
+          <span class="np-mini-rail-l">SequentialAgent</span>
+          <span class="np-mini-rail-r">4 · all on Gemini</span>
+        </div>
+
+        <div class="np-mini-pin np-mini-pin-in">
+          <b>IN</b>
+          <span>customer complaint</span>
+        </div>
+
+        <div class="np-mini-flow">
+          <div class="np-mini-cell">
+            <span class="num">01</span>
+            <span class="name">Classifier</span>
+            <span class="hint">tags category</span>
+          </div>
+          <span class="np-mini-arrow"></span>
+          <div class="np-mini-cell">
+            <span class="num">02</span>
+            <span class="name">Net Inv.</span>
+            <span class="hint">reads BigQuery</span>
+          </div>
+          <span class="np-mini-arrow"></span>
+          <div class="np-mini-cell">
+            <span class="num">03</span>
+            <span class="name">CDR Anlz.</span>
+            <span class="hint">queries AlloyDB</span>
+          </div>
+          <span class="np-mini-arrow"></span>
+          <div class="np-mini-cell">
+            <span class="num">04</span>
+            <span class="name">Formatter</span>
+            <span class="hint">writes ticket</span>
+          </div>
+        </div>
+
+        <div class="np-mini-srcs">
+          <span>native tool</span>
+          <span>BigQuery</span>
+          <span>AlloyDB&nbsp;·&nbsp;NL</span>
+          <span>AlloyDB&nbsp;·&nbsp;W</span>
+        </div>
+
+        <div class="np-mini-pin np-mini-pin-out">
+          <b>OUT</b>
+          <span>incident ticket</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     02 — HOW IT WORKS  (the agent flow strip)
+     ============================================================ -->
+<section id="how-it-works" class="np-flow">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 02 — How it works</span>
+        <h2 class="serif">Four agents, <em>one ticket.</em></h2>
+        <p class="np-flow-lede">
+          A complaint enters the chat. Four ADK sub-agents run in
+          sequence — each reads the previous agent's notes, queries the
+          right data store, and hands forward an enriched session
+          state. The fourth writes the ticket and the run ends.
+        </p>
+      </div>
+      <div class="meta">
+        <a href="docs.html#architecture">Full architecture
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="np-flow-track" role="list" aria-label="Agent pipeline">
+
+      <!-- Top — IN bookend (horizontal pill) -->
+      <div class="np-flow-bookend np-flow-in" role="listitem">
+        <span class="np-flow-bookend-eyebrow">IN</span>
+        <div class="np-flow-bookend-text">
+          <span class="np-flow-bookend-title">Customer complaint</span>
+          <span class="np-flow-bookend-meta">Flask · SSE</span>
+        </div>
+      </div>
+
+      <div class="np-flow-card" data-cell="1" role="listitem">
+        <span class="np-flow-card-num">01</span>
+        <span class="np-flow-card-title">Classifier</span>
+        <span class="np-flow-card-role">Tags category &amp; region from raw complaint text.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">native tool</span>
+        </div>
+      </div>
+
+      <div class="np-flow-card" data-cell="2" role="listitem">
+        <span class="np-flow-card-num">02</span>
+        <span class="np-flow-card-title">Network<br>Investigator</span>
+        <span class="np-flow-card-role">Pulls related outages from BigQuery.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">BigQuery · MCP</span>
+        </div>
+      </div>
+
+      <div class="np-flow-card" data-cell="3" role="listitem">
+        <span class="np-flow-card-num">03</span>
+        <span class="np-flow-card-title">CDR Analyzer</span>
+        <span class="np-flow-card-role">Mines call records via natural language.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">AlloyDB NL2SQL</span>
+        </div>
+      </div>
+
+      <div class="np-flow-card" data-cell="4" role="listitem">
+        <span class="np-flow-card-num">04</span>
+        <span class="np-flow-card-title">Response<br>Formatter</span>
+        <span class="np-flow-card-role">Synthesises &amp; persists the incident ticket.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">AlloyDB · INSERT</span>
+        </div>
+      </div>
+
+      <!-- Bottom — OUT bookend (horizontal pill) -->
+      <div class="np-flow-bookend np-flow-out" role="listitem">
+        <span class="np-flow-bookend-eyebrow">OUT</span>
+        <div class="np-flow-bookend-text">
+          <span class="np-flow-bookend-title">Incident ticket</span>
+          <span class="np-flow-bookend-meta">AlloyDB · NOC</span>
+        </div>
+      </div>
+
+      <!-- Row 2 — five edges between adjacent cells -->
+      <div class="np-flow-edge" data-edge="1" aria-hidden="true">
+        <span class="np-flow-edge-label">prompt</span>
+      </div>
+      <div class="np-flow-edge" data-edge="2" aria-hidden="true">
+        <span class="np-flow-edge-label">+ category, region</span>
+      </div>
+      <div class="np-flow-edge" data-edge="3" aria-hidden="true">
+        <span class="np-flow-edge-label">+ network_findings</span>
+      </div>
+      <div class="np-flow-edge" data-edge="4" aria-hidden="true">
+        <span class="np-flow-edge-label">+ cdr_findings</span>
+      </div>
+      <div class="np-flow-edge" data-edge="5" aria-hidden="true">
+        <span class="np-flow-edge-label">complete state</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     03 — DATA VIEWER (placeholder)
+     ============================================================ -->
+<section id="data-viewer" class="np-grid-section">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 03 — Data Viewer</span>
+        <h2 class="serif">The <em>data</em> behind every ticket.</h2>
+        <p class="np-flow-lede">
+          Read-only views into the live sources the agents query.
+          Useful for poking at edge cases, validating fixtures, or just
+          seeing what the system saw before it wrote a ticket.
+        </p>
+      </div>
+      <div class="meta">
+        <a href="#">All sources
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="np-card-grid">
+      <a href="network-events.html" class="np-card">
+        <span class="np-card-eyebrow">BigQuery · partitioned</span>
+        <h3>Network Events</h3>
+        <p>Outage and maintenance events across 10 cities, day-partitioned and clustered by region/severity.</p>
+        <span class="np-card-meta">
+          <span>50,000 rows</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="call-records.html" class="np-card">
+        <span class="np-card-eyebrow">AlloyDB · NL2SQL</span>
+        <h3>Call Records</h3>
+        <p>Customer Detail Records with anchor-clustered drop and failure events around outage windows.</p>
+        <span class="np-card-meta">
+          <span>5,000 rows</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="tickets.html" class="np-card">
+        <span class="np-card-eyebrow">AlloyDB · write</span>
+        <h3>Incident Tickets</h3>
+        <p>The agents' output destination — every saved ticket lives here with category, severity and recommended action.</p>
+        <span class="np-card-meta">
+          <span>live</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     04 — RESOURCES (placeholder)
+     ============================================================ -->
+<section id="resources" class="np-grid-section">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 04 — Resources</span>
+        <h2 class="serif">Read the <em>build</em>.</h2>
+        <p class="np-flow-lede">
+          Documentation, the full architecture deep-dive, and a guide to
+          wiring NetPulse against your own telco data.
+        </p>
+      </div>
+      <div class="meta">
+        <a href="#">All resources
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="np-card-grid">
+      <a href="docs.html" class="np-card">
+        <span class="np-card-eyebrow">Reference</span>
+        <h3>Documentation</h3>
+        <p>What NetPulse is, what each agent does, and how the pieces fit together. Single-page, plain prose.</p>
+        <span class="np-card-meta">
+          <span>~2,000 words</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="architecture.html" class="np-card">
+        <span class="np-card-eyebrow">Diagram + prose</span>
+        <h3>Architecture</h3>
+        <p>Subsystems, data flow, the model failover ladder, and the non-obvious choices that keep production stable.</p>
+        <span class="np-card-meta">
+          <span>9 subsystems</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="byod.html" class="np-card">
+        <span class="np-card-eyebrow">How-to</span>
+        <h3>Bring Your Own Data</h3>
+        <p>Map your operator's CDR + network events tables into the agent toolset. Schema, prompts, and the gotchas we hit.</p>
+        <span class="np-card-meta">
+          <span>roadmap</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="grid">
+      <div class="foot-brand">
+        <a href="#" class="brand">
+          <span class="mark" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="172 164 682 658"><path d="M495.3 169.7c5 4.2 8.8 10 10.7 16.3l-.6 7c0 3.9.6 6.8 3.2 9.8 4.6 4 9.7 7.2 14.8 10.5q5.9 4 11.5 8.6l4.4 3.4 2.3 1.8L565 245l2.4 1.8 2.4 1.7 2 1.5c2.9 1.3 4.3.9 7.2 0l2.5-1a30 30 0 0 1 21-.2c6.6 3.2 12 8.4 14.9 15a28 28 0 0 1 .9 14.9 15 15 0 0 0-.3 8.3c3.5 4.3 8.4 7.4 13 10.6q4.2 3 8.3 6.3l3.2 2.4c28 21.5 28 21.5 34 27 2.5 1.7 2.5 1.7 5 1.6q3.7-1.3 7-3a29 29 0 0 1 22.3-.3 37 37 0 0 1 18 18.5 37 37 0 0 1-.8 22.9c-.4 2.3-.4 2.3 0 5a62 62 0 0 0 5.7 6.1l1.7 1.7 5.7 5.5 9 8.8q4.3 4.2 8.3 8.8a223 223 0 0 0 14.3 14.8l7.3 7.3 9.7 9.6 2.2 2.2A213 213 0 0 1 805 457l1.5 1.7c1.5 1.3 1.5 1.3 4.6 1 2.9-.7 2.9-.7 4.9-1.7a38 38 0 0 1 27.8 6.5c6.5 6.2 10 15 10.3 24a32 32 0 0 1-9.8 22.3 31 31 0 0 1-20.6 8.4c-3-.2-5-.5-7.8-1.3-3.9-.9-5.3-1.2-8.9.1a59 59 0 0 0-6.7 7l-11 13.1a253 253 0 0 1-9.9 11q-5.8 6.4-11 13.1-6.5 7.6-13.4 14.8l.6 1.8 1.6 4.8a35 35 0 0 1-.2 24.5 36 36 0 0 1-21.5 18.5c-8.6 1.4-16-.1-23.4-4.7-2.1-.9-2.1-.9-4-.3a58 58 0 0 0-6.7 5.5q-5.1 4.8-10.6 9.1a300 300 0 0 0-16.6 14.8q-4.5 4.2-9.2 8.3-5.2 4.5-10.3 9.3-2.5 2.3-5.2 4.3a32 32 0 0 0-5.5 5.1c0 3.2 0 3.2 1 7 .8 8.5-.3 15.1-5.5 22a28 28 0 0 1-17.2 9.4 26 26 0 0 1-15.2-3.6c-2.8-1-4.3-.6-7.1.2-2 1.4-2 1.4-3.8 3.2q-6 5.3-12.3 10l-4.5 3.5-2.3 1.7q-13.3 10.3-26.2 20.8-7.7 6.3-15.5 12.2-7 5.4-13.7 11l-1.9 1.5-1.8 1.6-4.2 3c-5.6 3.7-5.6 3.7-6.8 7.8l-.2 3.4a30 30 0 0 1-9.6 21.2c-7.4 6-14.6 8.7-24.2 8.1-8.6-1.5-15.5-4.2-20.7-11.4-5.6-9-8-17-5.7-27.5A34 34 0 0 1 463 763h2l-3.4-50.8c-.7-11-.7-11-3-14.1-1.6-1.4-1.6-1.4-4.6-3.1-1.6-2-1.6-2-2.7-4l-1.2-1.8a36 36 0 0 1-2-26.6 35 35 0 0 1 19.4-19c9.4-2.4 17.8-.5 26.5 3.4l.8-1.8a23 23 0 0 1 4.9-6q4-3.7 7.5-8 7-7.7 14.5-14.8 6.1-6 11.6-12.5 4.8-5.2 9.8-10 4.3-4.2 8.3-8.8 6.9-7.7 14.3-14.7 5.1-5 9.8-10.4 7.1-8 14.8-15.3 6.4-6.2 12-13 2.7-2.6 5.7-5c2.3-2.2 3-3.1 3.1-6.4l-.8-6.2c-.3-3.4.2-5.5 1.2-8.7.7-3.4.8-4.8-.9-8l-6-6.8q-4.4-4.7-8.4-10l-15-17.8q-5.2-6-10.2-12.3l-7.4-8.8q-6-7.1-11.6-14.5-7.2-9.4-14.7-18.3l-9.2-11.3-8.4-10.4-12.3-15.3q-6.3-8.2-13.2-16A259 259 0 0 1 483 342l-3 1a39 39 0 0 1-24.6-.7L452 340l-3.1-2a34 34 0 0 1-10.1-21q-.3-13.5 8.2-24c3.7-3.4 7-5.9 12-7l1.7-22 .6-7.5.8-10.8.3-3.4.6-9.3.2-3.1v-3l.2-2.6c-.4-2.3-.4-2.3-2-4.1l-4.2-2.7A26 26 0 0 1 447 203c-2-10.3-.5-18.9 5.2-27.7 11.4-14.6 28.2-13.3 43-5.6m3 45c-1.8 3.3-1.2 4.6-.3 8.3q2.4 5.3 5 10.4l1.6 3 8.3 16.4 1 1.8q3.1 6.4 6 13l1.7 3.4 3.1 6.8 1.5 3.2 1.3 2.8c1.5 2.2 1.5 2.2 3.7 3.2 3.7 0 6.7-1 10-2.3l2.1-.8 6.5-2.3 4.4-1.6 10.8-4 2-10.5c0-3.5 0-3.5-2-6.1q-3.5-2.9-7.2-5.2-3.9-2.6-7.4-5.4l-6.1-4.6-13-9.9-22.7-17.2-2.2-1.7-1.8-1.4c-2.6-1.6-4-1.5-6.4.6M477 224c-2 2-1.7 6-2 8.8l-.2 2.5-2 23.1-.2 3.5q-.7 11-.6 22.1l2.7 1 3.5 1.4 3.5 1.3 3.3 1.3 2.9 1c2.7 1.2 3 2.3 4.1 5 1.3 1.7 1.3 1.7 3 3a64 64 0 0 0 9-2l3.7-1 10.3-3a38 38 0 0 0-4.1-11.7l-1-2-3-6.1-2-4.3-5-10.2-2.2-4.4A983 983 0 0 0 485 223q-4 .2-8 1m77 68.2-6 2-3.7 1.4-3.5 1.3C538 298 538 298 536 300l6 12.4 1.6 3.6 1.7 3.4 1.5 3.2c1.2 2.4 1.2 2.4 2.2 3.4 3.2.8 5.8.8 9 0 2.9-2.8 4.3-6.4 6-10l5.5-10.4 1.4-2.6 1.3-2.6 1.2-2.3c.6-2.1.6-2.1-.2-4.2q-2.1-3.2-5.2-5.9c-4.7 0-9.6 2.6-14 4.2m53 4.8c-1.4 2.7-.7 3.7.2 6.6l.8 3 1 3 .9 3.3 2 6.7 3 10.3 1.9 6.6 1 3.1 1.5 5.5c.7 1.9.7 1.9 1.7 2.9l11.5 1.2 5.7.6 8.7.8 5.5.6 2.6.2c9.4.9 9.4.9 14 .6 2-2.3 2-2.3 3-5a13 13 0 0 0-5.4-6.8l-2-1.6-2.3-1.6-4.6-3.5-2.4-1.8-10.1-8a479 479 0 0 0-16-12.3L620 304l-4-3.3c-4.6-3.8-4.6-3.8-9-3.8m-25 7.9-5.4 10.6-2.5 4.7-1.3 2.4c-2.3 4.5-3.4 7.3-1.8 12.4.9 2.3.9 2.3 1.9 4.3l1 2c1.1 1.7 1.1 1.7 4.1 2.7q5.1.7 10.1 1l2.8.3q8.5.9 17.1.7l-9.7-33.8-1-3-.8-2.8-.7-2.5c-.8-1.9-.8-1.9-2.8-2.9-5.5-1-8-1-11 3.9m-71 .8-2.9.7c-6.7 2-6.7 2-8.7 5.1-.5 3.1-.7 4.6.6 7.5 7 4 14.5 6.8 22 9.7l3.8 1.6 9.2 3.7 3-3-5.3-11.2-1.5-3.2-1.5-3-1.4-3c-2.6-5.2-2.6-5.2-4.3-7.6-4.6 0-8.7 1.4-13 2.7M494 331c-.5 3.6-.1 4.9 2 8l6 6.5 1.5 1.8q3.2 3.7 6 7.7 5.3 7.1 11.1 13.9l16 19.3 6 7.4 9.8 12.3 12.8 15.7a134 134 0 0 0 8.8 9.4l-6.2-20-1-2.9-1.8-5.7-1.9-5.9-2.7-8.6-.9-2.6c-5-15.5-5-15.5-9.3-17.8l-3-.6c-6-1.6-9-3.6-12.2-8.9a33 33 0 0 1-2.5-10.7l-.3-2.4-.2-1.9-2.5-1-9-3.5-4-1.6-5.7-2.2-3.4-1.4-7.1-3C497 331 497 331 494 331m81 25c0 3 0 3 2.3 5.5l3.2 2.7 1.7 1.5 4.8 4.3 2 1.9 6 5.1 1.5 1.3L609 389l1.8 1.5 7.8 6.6c2.4 1.9 2.4 1.9 5.4 2.9q-3.1-12.8-7-25.6l-1.1-3.5-1-3.3-1-3c-.9-2.6-.9-2.6-2.9-5.6-2.6-.6-2.6-.6-5.8-1l-3.5-.3-3.8-.4-3.6-.4q-9.6-1-19.3-.9m50 5a284 284 0 0 0 6.6 23.6l.9 3 .9 2.8.8 2.5c1 2.8 2.3 3.9 4.9 5.2 2.7 1 5 1.7 7.9 1.9 3.3-1.6 5.5-4.3 8-7l6.7-6.2 1.6-1.5q4.7-4.4 9.7-8.3l-1.4-4.8-2.6-8.2a303 303 0 0 0-44-3m-59 8q2.9 11 6.4 21.7l1 3 10.6 32.4 2.7 8 3.6 10.8 1.8 5.5c4 11.3 11 19.6 19 28.4q4.2 4.9 8.1 10.2c1.8 2 1.8 2 4.8 3l3-2q.6-4.4.7-8.6l.1-2.6.4-8.4.2-5.5.6-14.9v-2.5l.1-2.5v-2.2c-.1-1.8-.1-1.8-1.9-3.7l-2.4-1.2A20 20 0 0 1 615 427a27 27 0 0 1-.1-13.1c.1-3.9.1-3.9-1-5.6a64 64 0 0 0-8.4-7.4l-5.5-4.4-9-8q-7-6.6-14.5-12.4c-2.5-2.1-2.5-2.1-5.1-4.9-2.4-2.2-2.4-2.2-5.4-2.2m109.7 20.7-2.7 2.5-1.4 1.4-5 4.6-3.6 3.2-1.7 1.5a38 38 0 0 0-6.3 7.1l1 3 .1 6.4v3.4q0 4.1-1.1 8.2l2.2 1.8 3 2.4 3 2.5q3.1 2.5 6.1 5.4c2.7 1.9 2.7 1.9 5.9 1.9 2.9-1 4-1.7 5.8-4 .6-2 .6-2 1-4.4l.4-2.6.4-3 1.4-9.1 1.5-9.5.9-6 .4-3c1.4-9.5 1.4-9.5 1-13.4-5.5-4.6-7.2-5-12.3-.3M718 387c.6 6.4 2.6 12 4.9 18.1l1.2 3.3 6 16.6 4.3 11.9 2 5.4 1 3.2c1.6 2.5 1.6 2.5 4.6 3.8l3 .7a23 23 0 0 1 15 11l3 9 15.4 3.2c6 1.2 11.5 2.1 17.6 1.8l3-6-5-5.6-4.2-5-2.1-2.4-2-2.3C784 452 784 452 782 452l-.7-1.7a29 29 0 0 0-5.6-6.9q-1.4-1.2-2.8-2.7l-3-2.9-3-3-8-8-12.7-12.6-4.4-4.4Q734 402.3 727 394l-3.8-4-1.7-1.8C720 387 720 387 718 387m-16.2 4.3-1.8.7-3 18.8-1 6.4-1.5 9.2-.4 2.8A74 74 0 0 0 693 445c1.5 1.7 1.5 1.7 3.6 2.8 4 2.5 5.2 4.7 7 9 1.9 3.8 2.7 5 6.7 6.4 8.9 1.1 8.9 1.1 13-1.8 2.4-3.2 4-6.4 4.7-10.4-.4-1.9-.4-1.9-1.2-3.8l-.8-2.3-1-2.4-2-5.2-1-2.6-4.6-12.8-2.7-7.4-1.9-5-2.7-7.6-.8-2.3c-3.3-8.9-3.3-8.9-7.5-8.3M641 441l-.9 17.5-.2 6-.5 8.5-.1 2.7-.3 15.3 5 2c12.5-10.4 12.5-10.4 17.4-15l1.6-1.5c1-1.5 1-1.5.7-3.4l-.7-2.1-.1-4.8v-2.7c.1-2.5.1-2.5 1.2-6-.1-3.5-.1-3.5-2-5.8a124 124 0 0 0-8.1-6.7l-2-1.7c-3.8-2.8-6.5-4.6-11-2.3m62.4 34.3-2 3.7c-3 4.4-8.6 6.2-13.4 8-3.5.5-5.8.4-9.1-.7-5.8-1.9-5.8-1.9-9.1-.2a78 78 0 0 0-6.8 5.9l-2.8 2.2c-4 3.4-6.7 6.1-8.3 11.2-.3 4.4 0 6.7 2.1 10.6 4.8 4.1 10.8 6.4 16.5 9q5.2 2.2 10 5.2c4.8 2.8 4.8 2.8 7.6 2.9 3-1.7 4.6-4.4 6.5-7.2l2.6-3.9 1.4-2 6.8-9.4 1.3-1.8a353 353 0 0 1 12.7-16.4c3.6-4.7 3.6-4.7 3.5-8.1l-.9-2.3-.7-2-.9-1.8-1.4-3.2c-12.7-2-12.7-2-15.6.3m52.7 11c-3.8 4.6-3.8 4.6-7.5 6.1-2.6 1.6-2.6 1.6-3.4 3.7A62 62 0 0 0 744 512q9-2.8 17.4-6.5l2.3-1 12-5 4.6-2 2.1-1c3.6-1.5 6.7-3 9.6-5.5l-1-3a69 69 0 0 0-9.6-2.6L775 484l-3.1-.7c-11.6-2.5-11.6-2.5-15.8 3M732 494l-4.4 5.6-1.4 1.8A618 618 0 0 0 709 525l1 2c18.9-5.9 18.9-5.9 22.2-10.8 1.5-4.3 1.2-8.7.8-13.2l.1-5.4-.1-3.6zm53.6 13.2q-9 4.2-18.1 7.9l-2 .8-7.8 3.2-5.6 2.3-3.3 1.3c-4.8 2.2-4.8 2.2-6.8 4.3-.8 3-.8 3-1.3 6.8l-.2 2-.7 6.4-.6 4.3c-1.5 13-1.5 13-1.2 18.5 2.3 2.5 2.3 2.5 5 4 3.3 0 4.1-1.1 6.4-3.5l2.7-3.3 2.9-3.6 1.5-1.8q3.5-4.1 7.1-8l1.4-1.5 4-4.3a368 368 0 0 0 15.6-18.1q4.7-5.6 9.9-11c2.1-2.3 3.5-3.8 4.5-6.9l-2-3c-4.5 0-7.4 1.4-11.4 3.2m-144.7 25c-4 5.8-3 13-2.9 19.8l.2 13.4v2.5c0 2.3 0 2.3.8 6.1 2.5 2 2.5 2 5 3q7.8-6.6 15.3-13.7l2.2-2q9-8.6 17.5-17.3c-4.4-4.8-9.7-7.3-15.5-10.3l-3.2-1.6-3-1.6-2.8-1.5c-5.6-2.3-9.2-.4-13.6 3.2m81.5 1.7-2.7 1.2-3 1.2-2.8 1.2q-7.1 3-13.9 6.5c1.6 5 4.5 9 7.5 13.2l1.5 2.2c3.7 5.3 3.7 5.3 6 7.6 2.4-.2 2.4-.2 5-.8l2.8-.6c2.2-.6 2.2-.6 3.2-1.6l1.1-9 .5-3.7.4-3.6q1-7.8 1-15.7c-2.6 0-4.2.8-6.6 1.9M610 542c-6.5 10-10.8 21.3-15.3 32.4l-8.8 21-3 7-1.5 3.4q-10 23.5-19.4 47.2c4-1.8 6.7-4.5 9.8-7.7q4.8-5 10-9.7A201 201 0 0 0 594 624a221 221 0 0 1 16-15l1.8-1.5 1.2-1.5c-.3-2.7-.3-2.7-1-6-.4-6.2.6-10.4 3-16l1-3c1.6-1 1.6-1 4-2l3.6-2 3.4-2v-22.2l.1-8v-2.6c0-6 0-6-1.1-8.2-7.8-3-11.4 2-16 8m76.1 11.7-2.2 2.4q-4.1 4.2-8.6 8.1-7.1 6.4-13.8 13.2L659 580l-6 6.1 1 3c5 1 9.6 1 14.6 1l2.4-.1 5.1-.1 7.8-.2 5-.2h2.3c3.8-.1 5.6-.3 8.8-2.4 1.4-2.2 1.4-2.2 2.8-4.8l1.3-2.6c1.1-3.2 1-4.4-.1-7.6l-4.8-7-2.7-3.5-1.3-1.8-3.4-5.1-1.8-2.6c-2 0-2 0-3.9 1.7M581 572c-15 14.9-15 14.9-20.3 21.1q-4.6 4.9-9.3 9.5-4 4-7.6 8.4-4.2 4.5-8.6 8.8-3.8 4-7.5 8.2-3.6 4.1-7.7 8l-7.2 8q-3 3.2-6.3 6.1c-3.5 3.5-3.5 3.5-3.7 7l1.2 2.9 1.1 3.8c1.9 3.2 1.9 3.2 4.7 4.1l4.2.1 3.4.4q5.4.5 10.6-.4c2.2-2 3.3-4 4.6-6.7 2.2-3.7 5.5-5.6 9.4-7.3l3.5-.8c3.5-1.2 3.5-1.2 5.4-3.8l1.5-3.3.9-1.9q4.4-10 8.4-20.4l8.4-20.7 1.5-3.6 1.5-3.5 1.4-3.5 3.2-7.4.9-2 2.4-5.2c1-2.9 1-2.9 0-5.9m83 29c-9 0-9 0-12 3a66 66 0 0 0-4 7 19 19 0 0 1-8.7 5.2c-3.3 1.8-3.3 1.8-4.3 5q-1.9 9-3.3 18.2l-1 6.2c-2.2 13.5-2.2 13.5-1.7 20.4 2.3 2.2 2.3 2.2 5 3 2.9-1.1 5-2.7 7.2-4.8l1.7-1.6 1.9-1.8 3.7-3.5 1.9-1.8 7.7-6.9 6.5-5.8 14.1-12.3q7.1-6 14-12.4l8.3-7.1-1-4.4-.5-2.5c-.5-2.1-.5-2.1-1.5-3.1l-6-.1zm-55.1 25-5.1 5.1q-4.1 4.3-8.7 8.2c-4.8 4-9.2 8.7-13.6 13.2a115 115 0 0 1-8.9 8.2c-2.6 2.2-2.6 2.2-3.7 4a15 15 0 0 0 3.1 9.2c3.4 1.6 6.8 2.3 10.5 3l3 .6q5.1 1.2 10.5 1.4c1.4-1.6 1.4-1.6 2.9-3.8a21 21 0 0 1 15.1-9.9c2-1.3 2-1.3 3.1-4.4l.9-4.9.6-3.5 1.7-10.3 1-6.5.7-4.2.6-3.8q.6-5.9.4-11.7c-6 0-10.1 6.1-14.1 10.1M507 680l-2.7 5.6a30 30 0 0 1-19.3 16.7q-6 1.3-12 1.7c2 37.7 2 37.7 4 55l3.8 1.6 2 .8c2.7.7 3.8.8 6.2-.4 1.9-2.4 1.9-2.4 3.8-5.6l1-1.8 3.3-5.6 2.3-3.9L506 733l1.5-2.6 4.7-8q6.8-11.3 13.9-22.5l1.9-3 1.7-2.6c1.5-2.7 2.5-4.4 1.9-7.5-1.2-3-2.1-4.7-4.6-6.8-6.1-1.7-14-2-20 0m59.1 8.2L564 691c-6 4.8-11.5 5.5-19 5.5-4 .7-4.7 2.3-7 5.5l-3.8 6.3-1 1.8-2.2 3.8-5.7 9.8-1.2 2q-4.1 7-8.5 14l-1.1 1.8-2.3 3.6-7.2 11.6-1.4 2.3c-4.6 7.4-4.6 7.4-5.6 11a16 16 0 0 0 3 4c5-1.6 8.5-4.7 12.5-8l4.3-3.6 2.2-1.7 8.5-6.7q7.3-5.5 14.3-11.4 9-7.3 18.4-14.2 7.1-5.4 14-11.3 9.5-8 19.8-15.1l-.4-4.4-.3-2.4c-.3-2.2-.3-2.2-1.3-4.2q-4.2-1.6-8.6-2.6l-2.4-.7c-12.5-3.5-12.5-3.5-15.9.5"/><path d="M470 366.6c8.8 6.4 11.2 17.6 14.1 27.6l3.5 12.2 1.9 6.5 9.8 34 9 31.3.6 2.1c2.4 7.7 5.9 13.8 13.1 17.7a31 31 0 0 0 9 1.2h12.2l28.7.4h10l3.4.1c2.7.3 2.7.3 5.7 2.3 1.7 5.6.6 9.3-1.7 14.5q-3 5.7-7.3 10.5l-2.4 3.2a31 31 0 0 1-23 10l-4.9.1h-16.3c-17.6.1-34.8-1.9-48.3-14.5-13-14.2-17-33.3-22.3-51.2l-.7-2.3q-3.8-12-6.1-24.3h-2l-.3 3.2q-1.3 8.8-3.4 17.3l-1 4-2.7 11.9-1.8 8L435 543l-.6 2.8-9.8 41.6-3.1 13.1-3.7 15.7-1.4 5.9c-9.2 39.3-9.2 39.3-20.5 46.4a28 28 0 0 1-21.5 2.9c-7-2.5-13-6.6-16.4-13.4-3-7.3-5-14.8-7-22.4l-1.2-4.3-9.9-38q-5.1-20-10.5-40t-10.4-40l-1.4-5.2-1.8-7.4-.6-2.2c-.8-3.3-1.2-6-1.2-9.5h-2l-.6 3.4c-1.6 7-4 13.7-6.2 20.4l-2.3 6.9c-6.6 19.5-16.5 39.1-35.8 48.8-15 6.3-31.1 5.8-47.2 5.8h-19.7c-7.5 0-15-.5-21.2-5.3a24 24 0 0 1-6-20 25 25 0 0 1 13.6-14.2c4.6-1.6 9.2-1.3 14-1.3h13.8l10.5-.1h6.5c8.5 0 16.5-1.3 23-7.3 7.6-9.6 11.4-23 15.5-34.4l1.8-5 9-25.3q4.5-12.6 9.5-25l.9-2.3c2.6-6.3 6.5-12.6 13-15.5a30 30 0 0 1 22.3-.1c12.7 7.8 15.7 23 19.2 36.5l1.5 5.9 1.7 6.4 6.2 23.4 3.8 14.4.8 3 5.6 21a3091 3091 0 0 0 13.8 51.2l.8 2.7.6 2.3c.6 1.7.6 1.7 1.6 2.7l.4-1.7 36-151.9 2-7.9 3-12.5 1-4.6 5.7-22.6.9-3.6a29 29 0 0 1 13.9-18c8.7-4.6 16.8-3.8 25.1 1.4"/></svg>
+          </span>
+          <span>NetPulse AI</span>
+        </a>
+        <p>Telecom incident ticketing in seconds — a multi-agent assistant built on Google ADK and Vertex AI Gemini. APAC GenAI Academy 2026.</p>
+      </div>
+
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#">Try NetPulse AI</a></li>
+          <li><a href="#">Workspace demo</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Data Viewer</h5>
+        <ul>
+          <li><a href="network-events.html">Network Events</a></li>
+          <li><a href="call-records.html">Call Records</a></li>
+          <li><a href="tickets.html">Incident Tickets</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="docs.html">Documentation</a></li>
+          <li><a href="architecture.html">Architecture</a></li>
+          <li><a href="byod.html">Bring Your Own Data</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Project</h5>
+        <ul>
+          <li><a href="https://github.com/" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="#">README</a></li>
+          <li><a href="#">APAC GenAI 2026</a></li>
+          <li><a href="#">License</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-base">
+      <span>© 2026 Adityo Nugroho · NetPulse AI</span>
+      <div class="foot-legal">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Acceptable use</a>
+      </div>
+      <div class="foot-social">
+        <a href="https://github.com/" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Sticky-nav border on scroll
+  const nav = document.getElementById('nav');
+  const update = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+
+  // Subtle parallax on the hero blot
+  const blot = document.querySelector('.hero-blot');
+  if (blot && window.matchMedia('(min-width: 720px)').matches) {
+    window.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 14;
+      const y = (e.clientY / window.innerHeight - 0.5) * 14;
+      blot.style.translate = `${x}px ${y}px`;
+    });
+  }
+
+  // TEMP — wordmark specimen click-to-pick (visual only)
+  document.querySelectorAll('.np-type-test .specimen').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.np-type-test .specimen.is-picked')
+        .forEach((p) => p.classList.remove('is-picked'));
+      b.classList.add('is-picked');
+    });
+  });
+</script>
+</body>
+</html>

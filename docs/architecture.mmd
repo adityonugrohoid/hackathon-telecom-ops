@@ -1,93 +1,52 @@
 %%{init: {"flowchart": {"htmlLabels": true, "curve": "basis"}, "themeVariables": {"fontSize": "15px", "fontFamily": "-apple-system, Segoe UI, sans-serif"}}}%%
 flowchart TB
     User([NOC Operator])
+    UI["NetPulse UI<br/><span style='font-size:11px;font-weight:400'>Flask + SSE chat &middot; Cloud Run</span>"]
 
-    subgraph FE["Frontends &middot; Cloud Run"]
-        direction LR
-        UI["NetPulse UI<br/><span style='font-size:11px;font-weight:400'>Flask + SSE chat</span>"]
-        ADK["ADK Dev UI<br/><span style='font-size:11px;font-weight:400'>Events / Trace tabs</span>"]
-    end
-
-    subgraph ORCH["ADK SequentialAgent &middot; telecom_ops"]
+    subgraph ORCH["ADK SequentialAgent &middot; telecom_ops &middot; 4 LlmAgents on Gemini"]
         direction TB
-        Runner["Runner + InMemorySessionService"]
-        A1["1 &middot; Classifier<br/><span style='font-size:11px;font-weight:400'>LlmAgent &middot; Gemini 2.5 Flash</span>"]
-        A2["2 &middot; Network Investigator<br/><span style='font-size:11px;font-weight:400'>LlmAgent &middot; Gemini 2.5 Flash</span>"]
-        A3["3 &middot; CDR Analyzer<br/><span style='font-size:11px;font-weight:400'>LlmAgent &middot; Gemini 2.5 Flash</span>"]
-        A4["4 &middot; Response Formatter<br/><span style='font-size:11px;font-weight:400'>LlmAgent &middot; Gemini 2.5 Flash</span>"]
-        Runner --> A1
+        A1["1 &middot; Classifier"]
+        A2["2 &middot; Network Investigator"]
+        A3["3 &middot; CDR Analyzer"]
+        A4["4 &middot; Response Formatter"]
         A1 -- "category, region" --> A2
         A2 -- "+ network_findings" --> A3
         A3 -- "+ cdr_findings" --> A4
     end
 
-    subgraph TOOLS["Tool Layer"]
-        direction LR
-        T1["classify_issue<br/><span style='font-size:11px;font-weight:400'>native Python</span>"]
-        T2["telecom_network_toolset<br/><span style='font-size:11px;font-weight:400'>8 BQ tools via toolbox-core</span>"]
-        T3["query_cdr<br/><span style='font-size:11px;font-weight:400'>SQLAlchemy + pg8000</span>"]
-        T4["save_incident_ticket<br/><span style='font-size:11px;font-weight:400'>SQLAlchemy + pg8000</span>"]
-    end
+    MCP["MCP Toolbox<br/><span style='font-size:11px;font-weight:400'>Cloud Run</span>"]
 
-    subgraph BACKENDS["Backends &middot; Google Cloud"]
+    subgraph DATA["Backends &middot; Google Cloud"]
         direction LR
-        SS[("session.state<br/><span style='font-size:11px;font-weight:400'>InMemory</span>")]
-        MCP["MCP Toolbox<br/><span style='font-size:11px;font-weight:400'>Cloud Run</span>"]
-        BQ[("BigQuery<br/><span style='font-size:11px;font-weight:400'>telecom_network.network_events</span>")]
-        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>call_records</span>")]
+        BQ[("BigQuery<br/><span style='font-size:11px;font-weight:400'>network_events</span>")]
+        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>call_records &middot; NL2SQL</span>")]
         ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>incident_tickets</span>")]
     end
 
-    Vertex["Vertex AI Gemini 2.5 Flash<br/><span style='font-size:11px;font-weight:400'>asia-southeast1</span>"]
+    Vertex["Vertex AI Gemini<br/><span style='font-size:11px;font-weight:400'>3.1 Flash-Lite + 2.5 Flash failover</span>"]
 
-    User --> UI
-    User --> ADK
-    UI --> Runner
-    ADK --> Runner
-
-    A1 --> T1
-    A2 --> T2
-    A3 --> T3
-    A4 --> T4
-
-    T1 -- "writes" --> SS
-    T2 --> MCP
-    MCP --> BQ
-    T3 --> ADB1
-    T4 -- "INSERT" --> ADB2
-
-    A1 -. "LLM call" .-> Vertex
-    A2 -. "LLM call" .-> Vertex
-    A3 -. "LLM call" .-> Vertex
-    A4 -. "LLM call" .-> Vertex
+    User --> UI --> A1
+    A2 --> MCP --> BQ
+    A3 --> MCP
+    MCP -- "NL2SQL" --> ADB1
+    A4 -- "INSERT" --> ADB2
+    ORCH -. "LLM calls" .-> Vertex
 
     classDef user fill:#0d47a1,stroke:#0d47a1,color:#ffffff,font-weight:600
     classDef fe fill:#1a73e8,stroke:#0d47a1,color:#ffffff,font-weight:600
-    classDef runner fill:#4338ca,stroke:#312e81,color:#ffffff,font-weight:600
     classDef adk fill:#ede9fe,stroke:#7c3aed,color:#4c1d95,font-weight:600
-    classDef local fill:#ccfbf1,stroke:#0f766e,color:#134e4a,font-weight:600
     classDef mcp fill:#a7f3d0,stroke:#065f46,color:#065f46,font-weight:600
     classDef alloydb fill:#fde68a,stroke:#92400e,color:#92400e,font-weight:600
     classDef alloydbWrite fill:#fca5a5,stroke:#991b1b,color:#7f1d1d,font-weight:600
     classDef vertex fill:#fbcfe8,stroke:#be185d,color:#831843,font-weight:600
 
     class User user
-    class UI,ADK fe
-    class Runner runner
+    class UI fe
     class A1,A2,A3,A4 adk
-    class T1 local
-    class T2 mcp
-    class T3 alloydb
-    class T4 alloydbWrite
-    class SS local
     class MCP,BQ mcp
     class ADB1 alloydb
     class ADB2 alloydbWrite
     class Vertex vertex
 
-    style FE         fill:#f0f4fa,stroke:#1a73e8,stroke-width:2px
-    style ORCH       fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px
-    style TOOLS      fill:#fafafa,stroke:#9ca3af,stroke-width:2px
-    style BACKENDS   fill:#f9fafb,stroke:#9ca3af,stroke-width:2px
-
-    linkStyle 17,18,19,20 stroke:#ec4899,stroke-width:2px
+    style ORCH fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px
+    style DATA fill:#f9fafb,stroke:#9ca3af,stroke-width:2px
