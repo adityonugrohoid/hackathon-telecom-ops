@@ -89,10 +89,9 @@ action plan.</p>
 <p>The core ADK package <code>telecom_ops</code> exposes a
 <code>SequentialAgent</code> that runs four <code>LlmAgent</code> sub-agents
 in order: classifier, network investigator, CDR analyzer, response
-formatter. Each agent reads the previous one's session-state notes,
-queries the right data store through the MCP toolbox, and hands forward
-an enriched state. The fourth writes a structured ticket to AlloyDB and
-the run ends.</p>
+formatter. Each one reads the shared session state, queries its data
+store through the MCP toolbox, and enriches the state for the next.
+The fourth writes a structured ticket to AlloyDB and the run ends.</p>
 <div class="docs-arch-figure">
   <img src="img/architecture.png" alt="NetPulse AI architecture diagram">
   <div class="docs-arch-caption">User &rarr; UI &rarr; SequentialAgent (4 LlmAgents on Gemini) &rarr; MCP Toolbox &rarr; BigQuery + AlloyDB</div>
@@ -104,7 +103,7 @@ analyzer joins on the time window the network investigator returned;
 the formatter needs all three to write a coherent ticket. A
 <code>SequentialAgent</code> models this as code rather than encoding it
 into a prompt, so the dependency stays correct under prompt churn.</p>
-<h3>Why MCP Toolbox in front of the warehouses</h3>
+<h3>Why MCP Toolbox in front of the data stores</h3>
 <p>Direct BigQuery MCP endpoints returned 403 / connection-closed on
 Cloud Run during early integration. The toolbox-as-intermediary pattern
 works reliably and gives one place to evolve tool definitions without
@@ -186,7 +185,7 @@ data, the region whitelist, and the natural-language prompt examples in
   <span class="eyebrow accent">/ 06 — Phase history</span>
   <h2 class="serif">Phase history <em>over time</em></h2>
   
-<p>NetPulse AI shipped to production through a series of timeboxed
+<p>NetPulse AI was built through a series of timeboxed
 phases. Each phase landed in a single PR (in most cases) and was
 visually verified end-to-end before the next began.</p>
 <ul class="docs-news"><li><span class="date">April 29, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Phase 12 — Vertex model-ladder failover replaces region ladder</a><span class="arrow">&rarr;</span></li><li><span class="date">April 28, 2026</span><span class="cat">Architecture</span><a class="title" href="#phases">Phase 11 — AlloyDB AI NL2SQL replaces hand-written CDR SQL</a><span class="arrow">&rarr;</span></li><li><span class="date">April 27, 2026</span><span class="cat">Refactor</span><a class="title" href="#phases">Phase 10 — MCP toolbox refactor 8 tools → 2 universal tools</a><span class="arrow">&rarr;</span></li><li><span class="date">April 26, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Phase 9 — Flash-Lite collapse + observer pill model unification</a><span class="arrow">&rarr;</span></li><li><span class="date">April 25, 2026</span><span class="cat">Ship</span><a class="title" href="#phases">Phase 8 — Single consolidated Cloud Run redeploy</a><span class="arrow">&rarr;</span></li><li><span class="date">April 24, 2026</span><span class="cat">Foundation</span><a class="title" href="#phases">Phases 1–7 — Refinement runway: audit → tokens → region failover → visual redesign → UX fixes → reproducibility → story polish</a><span class="arrow">&rarr;</span></li><li><span class="date">April 23, 2026</span><span class="cat">Milestone</span><a class="title" href="#phases">Top 100 — APAC GenAI Academy 2026 selection</a><span class="arrow">&rarr;</span></li></ul>
