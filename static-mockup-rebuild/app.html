@@ -25,38 +25,11 @@
     </a>
 
     <nav class="nav-links">
-      <a href="#how-it-works">How it works</a>
+      <a href="index.html#how-it-works">How it works</a>
+      <a href="index.html#data-viewer">Data Viewer</a>
+      <a href="index.html#resources">Resources</a>
       <a href="app.html">Workspace</a>
-
-      <span class="has-drop">
-        <button class="drop-trigger" type="button" aria-haspopup="true" aria-expanded="false">
-          Data Viewer
-          <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M3 4.5l3 3 3-3"/>
-          </svg>
-        </button>
-        <div class="drop-menu" role="menu">
-          <a href="network-events.html" role="menuitem">Network Events</a>
-          <a href="call-records.html" role="menuitem">Call Records</a>
-          <a href="tickets.html" role="menuitem">Incident Tickets</a>
-        </div>
-      </span>
-
-      <span class="has-drop">
-        <button class="drop-trigger" type="button" aria-haspopup="true" aria-expanded="false">
-          Resources
-          <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M3 4.5l3 3 3-3"/>
-          </svg>
-        </button>
-        <div class="drop-menu" role="menu">
-          <a href="docs.html" role="menuitem">Documentation</a>
-          <a href="docs.html#architecture" role="menuitem">Architecture</a>
-          <a href="docs.html#byod" role="menuitem">Bring Your Own Data</a>
-        </div>
-      </span>
-
-      <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
     </nav>
 
     <div class="nav-cta">
@@ -77,37 +50,116 @@
 
 <main class="wrap">
 
-  <div class="app-shell-narrow">
-    <div class="app-prompt" role="form" aria-label="Submit a customer complaint">
-      <div class="app-prompt-row">
-        <input class="app-prompt-input" type="text" placeholder="Describe a telecom incident&hellip;" aria-label="Describe a telecom incident">
-        <button class="app-prompt-submit app-prompt-submit-coral" type="button">
-          Investigate
-          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h8M7 3l4 4-4 4"/></svg>
-        </button>
+  <!-- TOP TWO-PANE: prompt (left) · processing ticket (right) -->
+  <section class="app-split" aria-label="Submit complaint and watch the incident report assemble">
+
+    <div class="app-split-left">
+      <div class="app-prompt" role="form" aria-label="Submit a customer complaint">
+        <textarea class="app-prompt-input" rows="4" aria-label="Describe a telecom incident" placeholder="Describe a telecom incident&hellip;">we have massive drop calls in Semarang for the last 3 days</textarea>
+        <div class="app-prompt-foot">
+          <button class="app-prompt-submit app-prompt-submit-coral" type="button">
+            Investigate
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h8M7 3l4 4-4 4"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="app-chips" aria-label="Sample complaints">
+        <button class="app-chip" type="button">Major dropped calls in Surabaya</button>
+        <button class="app-chip" type="button">Slow internet in Jakarta during peak hours</button>
+        <button class="app-chip" type="button">Customer charged twice for international calls</button>
+        <button class="app-chip" type="button">Router keeps disconnecting in Bandung</button>
       </div>
     </div>
 
-    <div class="app-chips" aria-label="Sample complaints">
-      <button class="app-chip" type="button">Major dropped calls in Surabaya</button>
-      <button class="app-chip" type="button">Slow internet in Jakarta during peak hours</button>
-      <button class="app-chip" type="button">Customer charged twice for international calls</button>
-      <button class="app-chip" type="button">Router keeps disconnecting in Bandung</button>
+    <div class="app-split-right">
+      <article class="app-ticket-form" aria-label="Incident report — being assembled">
+        <header class="app-ticket-form-head">
+          <span class="app-ticket-form-eyebrow">/ Incident Report</span>
+          <span class="app-ticket-form-title">Ticket #&mdash;</span>
+          <span class="app-ticket-form-pill" role="status">
+            <span class="app-ticket-form-spin" aria-hidden="true"></span>
+            Compiling
+          </span>
+        </header>
+        <dl class="app-ticket-form-rows">
+          <div class="app-ticket-form-row">
+            <dt>Class ID</dt>
+            <dd><span class="app-skeleton-line is-short"></span></dd>
+          </div>
+          <div class="app-ticket-form-row">
+            <dt>Classification</dt>
+            <dd><span class="app-skeleton-line is-medium"></span></dd>
+          </div>
+          <div class="app-ticket-form-row">
+            <dt>Region</dt>
+            <dd><span class="app-skeleton-line is-short"></span></dd>
+          </div>
+          <div class="app-ticket-form-row">
+            <dt>Network Events</dt>
+            <dd>
+              <span class="app-skeleton-line is-long"></span>
+              <span class="app-skeleton-line is-medium"></span>
+            </dd>
+          </div>
+          <div class="app-ticket-form-row">
+            <dt>CDR Findings</dt>
+            <dd>
+              <span class="app-skeleton-line is-long"></span>
+              <span class="app-skeleton-line is-medium"></span>
+            </dd>
+          </div>
+          <div class="app-ticket-form-row">
+            <dt>Recommendation</dt>
+            <dd>
+              <span class="app-skeleton-line is-long"></span>
+              <span class="app-skeleton-line is-long"></span>
+              <span class="app-skeleton-line is-short"></span>
+            </dd>
+          </div>
+        </dl>
+        <div class="app-ticket-form-progress" role="status" aria-live="polite">
+          <span class="app-ticket-form-progress-dot" aria-hidden="true"></span>
+          <span>response_formatter is writing the ticket to AlloyDB&hellip;</span>
+        </div>
+      </article>
     </div>
+
+  </section>
+
+  <!-- AGENT RUN — sequential cards with terminal-feel reasoning panels -->
+  <div class="app-run-head">
+    <span class="eyebrow">/ Agent run</span>
+    <h2>Sequential investigation, four steps</h2>
+    <span class="meta">3 of 4 agents complete</span>
   </div>
 
-  <ol class="app-timeline" aria-label="Agent run timeline" style="margin-top:48px;">
+  <ol class="app-timeline" aria-label="Agent run timeline">
 
-    <li class="app-step" data-agent="classifier">
+    <!-- 1. Classifier — DONE -->
+    <li class="app-step is-done" data-agent="classifier">
       <span class="app-step-dot">1</span>
       <div class="app-step-card">
         <div class="app-step-head">
           <span class="app-step-name">Classifier</span>
-          <span class="app-step-status">waiting</span>
+          <span class="app-step-status is-done">Done</span>
+          <span class="app-step-time">+0.7s</span>
         </div>
         <div class="app-step-source">
           <span class="app-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="app-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
+        </div>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">classifier&nbsp;·&nbsp;<span class="agent">classify_issue</span></span>
+            <span class="meta">gemini-3.1-flash-lite</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <span class="app-step-terminal-prose">Categorising the issue. The user is reporting widespread voice drops in Semarang for the last 3 days, which strongly indicates a network event.</span>
+            <span class="app-step-terminal-cmd">classify_issue(complaint="we have massive drop calls in Semarang for the last 3 days")</span>
+            <span class="app-step-terminal-out"><span class="line"><span class="k">category</span>    : <span class="v">network</span></span><span class="line"><span class="k">region</span>      : <span class="v">Semarang</span></span><span class="line"><span class="k">reasoning</span>   : <span class="dim">The user reports widespread voice drops, which</span></span><span class="line">              <span class="dim">indicates a network event.</span></span></span>
+          </div>
         </div>
         <div class="app-step-handoff">
           <span class="app-step-handoff-label">passes to next</span>
@@ -116,18 +168,32 @@
       </div>
     </li>
 
-    <li class="app-step" data-agent="network_investigator">
+    <!-- 2. Network Investigator — DONE -->
+    <li class="app-step is-done" data-agent="network_investigator">
       <span class="app-step-dot">2</span>
       <div class="app-step-card">
         <div class="app-step-head">
           <span class="app-step-name">Network Investigator</span>
-          <span class="app-step-status">waiting</span>
+          <span class="app-step-status is-done">Done</span>
+          <span class="app-step-time">+2.3s</span>
         </div>
         <div class="app-step-source">
           <span class="app-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="app-source-tag mcp">MCP&nbsp;TOOLBOX</span>
           <span class="app-source-tag bq">BIGQUERY</span>
           <code>plated-complex-491512-n6.telecom_network.network_events</code>
+        </div>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">network_investigator&nbsp;·&nbsp;<span class="agent">query_network_events</span></span>
+            <span class="meta">gemini-3.1-flash-lite</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <span class="app-step-terminal-cmd">query_network_events(region="Semarang", days_back=3, severity="*", category="*")</span>
+            <span class="app-step-terminal-out"><span class="line"><span class="dim">[1571398]</span> [outage]      [normal]   [2026-04-26 06:51:43+00]  affected:<span class="v">21,342</span></span><span class="line"><span class="dim">[1572441]</span> [degradation] [moderate] [2026-04-26 02:41:08+00]  affected:<span class="v">14,201</span></span><span class="line"><span class="dim">[1572118]</span> [outage]      [major]    [2026-04-25 23:11:22+00]  affected:<span class="v">78,531</span></span><span class="line"><span class="dim">[1571012]</span> [outage]      [normal]   [2026-04-25 18:08:00+00]  affected:<span class="v">9,402</span></span><span class="line"><span class="dim">[1570811]</span> [degradation] [minor]    [2026-04-25 09:22:14+00]  affected:<span class="v">11,203</span></span><span class="line"><span class="dim">[1570502]</span> [outage]      [major]    [2026-04-24 14:55:09+00]  affected:<span class="v">424,110</span></span><span class="line"><span class="k">→ 6 rows · 558,789 customers affected · ran 0.41s</span></span></span>
+            <span class="app-step-terminal-prose">Six events in Semarang over the last 3 days, including a major fiber-cut outage on the SMG core that affected 424,110 customers. Two further outages and three degradation events follow a pattern consistent with infrastructure damage and tower-capacity strain in the SMG-002 sector.</span>
+          </div>
         </div>
         <div class="app-step-handoff">
           <span class="app-step-handoff-label">passes to next</span>
@@ -136,17 +202,32 @@
       </div>
     </li>
 
-    <li class="app-step" data-agent="cdr_analyzer">
+    <!-- 3. CDR Analyzer — DONE -->
+    <li class="app-step is-done" data-agent="cdr_analyzer">
       <span class="app-step-dot">3</span>
       <div class="app-step-card">
         <div class="app-step-head">
           <span class="app-step-name">CDR Analyzer</span>
-          <span class="app-step-status">waiting</span>
+          <span class="app-step-status is-done">Done</span>
+          <span class="app-step-time">+3.1s</span>
         </div>
         <div class="app-step-source">
           <span class="app-source-tag adk">ADK&nbsp;AGENT</span>
-          <span class="app-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+          <span class="app-source-tag mcp">MCP&nbsp;TOOLBOX</span>
+          <span class="app-source-tag alloydb">ALLOYDB&nbsp;NL2SQL</span>
           <code>SELECT</code> from <code>call_records</code>
+        </div>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">cdr_analyzer&nbsp;·&nbsp;<span class="agent">query_cdr_nl</span></span>
+            <span class="meta">alloydb-ai-nl · gemini-2.5-flash</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <span class="app-step-terminal-cmd">query_cdr_nl(question="how many voice calls dropped in Semarang in the last 3 days, grouped by tower")</span>
+            <span class="app-step-terminal-out"><span class="line"><span class="k">tower</span>      <span class="k">dropped</span>  <span class="k">baseline</span>  <span class="k">ratio</span></span><span class="line">SMG-002    <span class="v">217</span>      18        <span class="v">12.1×</span></span><span class="line">SMG-005    <span class="v">154</span>      14        <span class="v">11.0×</span></span><span class="line">SMG-001    <span class="v">89</span>       9         <span class="v">9.9×</span></span><span class="line">SMG-014    <span class="v">73</span>       11        <span class="v">6.6×</span></span><span class="line">SMG-007    <span class="v">48</span>       8         <span class="v">6.0×</span></span><span class="line"><span class="k">→ 581 dropped voice calls (vs 60 baseline) · ran 1.84s</span></span></span>
+            <span class="app-step-terminal-prose">Significant dropped-voice clusters at SMG-002 and SMG-005 align with the network outages flagged upstream. The 12× drop-rate spike concentrates between 06:00&ndash;09:00 local; SMG-014 and SMG-007 show secondary spikes consistent with traffic reroutes from the failed cells.</span>
+          </div>
         </div>
         <div class="app-step-handoff">
           <span class="app-step-handoff-label">passes to next</span>
@@ -155,12 +236,14 @@
       </div>
     </li>
 
-    <li class="app-step" data-agent="response_formatter">
+    <!-- 4. Response Formatter — RUNNING -->
+    <li class="app-step is-running" data-agent="response_formatter">
       <span class="app-step-dot">4</span>
       <div class="app-step-card">
         <div class="app-step-head">
           <span class="app-step-name">Response Formatter</span>
-          <span class="app-step-status">waiting</span>
+          <span class="app-step-status is-running">Running</span>
+          <span class="app-step-time">streaming&hellip;</span>
         </div>
         <div class="app-step-source">
           <span class="app-source-tag adk">ADK&nbsp;AGENT</span>
@@ -168,25 +251,60 @@
           <span class="app-source-tag alloydb">ALLOYDB&nbsp;WRITE</span>
           <code>INSERT</code> into <code>incident_tickets</code>
         </div>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">response_formatter&nbsp;·&nbsp;<span class="agent">save_incident_ticket</span></span>
+            <span class="meta">gemini-3.1-flash-lite · writing</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <span class="app-step-terminal-cmd">save_incident_ticket(category="network", region="Semarang", severity="major",<br>&nbsp;&nbsp;&nbsp;&nbsp;related_events=[1571398, 1572441, 1572118, 1571012, 1570811, 1570502],<br>&nbsp;&nbsp;&nbsp;&nbsp;cdr_findings={"top_tower":"SMG-002","drop_ratio":12.1, &hellip;},<br>&nbsp;&nbsp;&nbsp;&nbsp;recommendation="Dispatch radio team to SMG-002 / SMG-005&hellip;")</span>
+            <span class="app-step-terminal-out"><span class="line"><span class="dim">→ synthesising findings&hellip;</span></span><span class="line"><span class="dim">→ writing INSERT INTO incident_tickets RETURNING ticket_id</span></span><span class="line"><span class="dim">→ </span><span class="app-step-terminal-cursor" aria-hidden="true"></span></span></span>
+          </div>
+        </div>
       </div>
     </li>
 
   </ol>
 
+  <!-- IMPACT ROLLUP — populated from upstream agents -->
   <aside class="app-impact-card" aria-label="Customer impact rollup">
     <span class="app-impact-icon" aria-hidden="true">!</span>
     <div class="app-impact-card-body">
       <div class="app-impact-headline">
-        <span class="app-impact-headline-num">&mdash;</span>
+        <span class="app-impact-headline-num">558,789</span>
         <span class="app-impact-headline-label">customers affected</span>
       </div>
       <div class="app-impact-substats">
-        <span>&mdash; events</span>
+        <span>6 events</span>
         <span>&middot;</span>
-        <span>&mdash; since onset</span>
+        <span>3 days since onset</span>
+        <span>&middot;</span>
+        <span>581 dropped calls (vs 60 baseline)</span>
       </div>
     </div>
   </aside>
+
+  <!-- NOC ACTION CHIPS — static category-based recommendations -->
+  <section class="app-noc" style="margin-top: 24px;" aria-label="Recommended NOC actions">
+    <span class="app-noc-head">Recommended NOC actions for category: <strong>network</strong></span>
+    <div class="app-noc-chips">
+      <span class="app-noc-chip is-primary">Dispatch radio team</span>
+      <span class="app-noc-chip">Open tower work order</span>
+      <span class="app-noc-chip">Subscribe customer to status page</span>
+      <span class="app-noc-chip">Run RUM / routing health check</span>
+      <span class="app-noc-chip">Push update to public outage page</span>
+    </div>
+  </section>
+
+  <!-- Cross-link strip -->
+  <nav class="dv-cross" aria-label="Related pages">
+    <span class="dv-cross-eyebrow">see also</span>
+    <a href="network-events.html">Network events &rarr;</a>
+    <a href="call-records.html">Call records &rarr;</a>
+    <a href="tickets.html">Incident tickets &rarr;</a>
+    <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub repo &rarr;</a>
+  </nav>
 
 </main>
 
@@ -206,9 +324,8 @@
       <div class="foot-col">
         <h5>Product</h5>
         <ul>
-          <li><a href="#how-it-works">How it works</a></li>
-          <li><a href="app.html">Workspace</a></li>
-          <li><a href="#">Try NetPulse AI</a></li>
+          <li><a href="index.html#how-it-works">How it works</a></li>
+          <li><a href="app.html">Try NetPulse AI</a></li>
         </ul>
       </div>
       <div class="foot-col">
@@ -230,23 +347,17 @@
       <div class="foot-col">
         <h5>Project</h5>
         <ul>
-          <li><a href="https://github.com/" target="_blank" rel="noopener">GitHub</a></li>
-          <li><a href="#">README</a></li>
-          <li><a href="#">APAC GenAI 2026</a></li>
-          <li><a href="#">License</a></li>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">README</a></li>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          <li><a href="https://hack2skill.com/event/apac-genaiacademy?tab=overview&utm_source=hack2skill&utm_medium=homepage" target="_blank" rel="noopener">APAC GenAI 2026</a></li>
         </ul>
       </div>
     </div>
 
     <div class="foot-base">
       <span>© 2026 Adityo Nugroho · NetPulse AI</span>
-      <div class="foot-legal">
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">Acceptable use</a>
-      </div>
       <div class="foot-social">
-        <a href="https://github.com/" target="_blank" rel="noopener" aria-label="GitHub">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
           </svg>

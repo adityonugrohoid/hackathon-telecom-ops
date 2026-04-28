@@ -1,11 +1,15 @@
 # NetPulse AI — Static Mockup Rebuild
 
-A clean-room rebuild of the NetPulse AI marketing surface, built from
-scratch on top of `landing-trial.html` (the canonical design reference
-promoted 2026-04-27). Replaces the earlier `static-mockup/` folder,
-which was abandoned after a frustrating iteration loop.
+A clean-room rebuild of the NetPulse AI surface, built from scratch on
+top of `landing-trial.html` (the canonical design reference promoted
+2026-04-27). The earlier `static-mockup/` folder has been deleted —
+this rebuild is the single source of truth.
 
-Currently five pages: landing + docs + three data viewers.
+**Status: LOCKED 2026-04-28.** Six pages — landing + docs + three data
+viewers + workspace (`app.html`). Next move is the full LIVE migration
+to `netpulse-ui/templates/`; see
+[`docs/MIGRATION-CANONICAL-DESIGN.md`](../docs/MIGRATION-CANONICAL-DESIGN.md)
+for the porting plan. User triggers the migration explicitly.
 
 ## How to view
 
@@ -31,9 +35,10 @@ static-mockup-rebuild/
 ├── network-events.html        ← / 02 — Data Viewer · BigQuery
 ├── call-records.html          ← / 02 — Data Viewer · AlloyDB · NL
 ├── tickets.html               ← / 02 — Data Viewer · AlloyDB · Write
+├── app.html                   ← workspace mockup (matches live /app — empty/initial state)
 ├── _build_dv.py               ← one-off generator for the 3 data viewer pages
 ├── _build_docs.py             ← one-off generator for docs.html
-├── css/site.css               ← shared stylesheet, ~2,650 lines (extracted from inline)
+├── css/site.css               ← shared stylesheet, ~3,000 lines (extracted from inline)
 ├── js/site.js                 ← sticky-nav handler, shared
 └── img/
     ├── np-mark.svg            ← logo sprite (not in active use; pages still inline the SVG via header)
@@ -79,6 +84,37 @@ Each follows the same 8-section template:
 7. Cross-link strip — links to the other 2 viewers
 8. Footer (mirror)
 
+### app.html (workspace mockup)
+
+**Final form 2026-04-28.** Renders a mid-run snapshot of the live
+NetPulse workspace: 3 of 4 agents complete, ticket form still
+compiling. Deterministic tool-tone — Inter throughout the body,
+JetBrains Mono on labels + code pills, **no italic Fraunces in the
+workspace surface** (Fraunces upright is reserved for the header brand
+and footer tagline only).
+
+| # | Section | Notes |
+|---|---|---|
+| — | Header / footer | Same nav + foot as the other 5 pages. |
+| 1 | **Top split-pane (1fr / 2fr)** | Left = `.app-prompt` card with `<textarea rows="4">` prefilled with sample complaint, Investigate button anchored bottom-right above a hairline; sample chips sit OUTSIDE the card in the spare left-column space below. Right = `.app-ticket-form` in **dark/ink** with skeleton-shimmer rows (Class ID / Classification / Region / Network Events / CDR Findings / Recommendation), coral "Compiling" pill + spinner, and a pulsing progress dot (`response_formatter is writing the ticket to AlloyDB…`). Coral shimmer overlay sweeps across the dark surface. Below 920 px the split collapses to one column. |
+| 2 | **4-step `.app-timeline`** with terminal panels | Each `.app-step-card` carries name + status pill (`Done` green / `Running` coral) + timing + unified pandan-green source badges + a `.app-step-terminal` panel (paper-2 bar with traffic-light dots + `agent_name · tool_name` label + model meta on the right; paper-white body with 3 tiers). Cards 1–3 `is-done`, card 4 `is-running` with animated cursor. |
+| 2a | Terminal-panel content tiers | (a) `.app-step-terminal-prose` — Inter, coral left-rule pull (the agent's reasoning summary). (b) `.app-step-terminal-cmd` — JetBrains Mono `$ tool_call(...)` with coral `$` prefix. (c) `.app-step-terminal-out` — JetBrains Mono output rows with `white-space: pre` to preserve column alignment; bolded `affected:` totals on network rows, KVP keys on classifier output, ratio columns on CDR table. |
+| 3 | Populated impact card + NOC chips | Coral-bar `.app-impact-card` (558,789 customers · 6 events · 3 days · 581 dropped calls). Below: `.app-noc` chip strip, "Dispatch radio team" primary (ink-filled). |
+| 4 | See-also strip | Reuses `.dv-cross` from the data viewer pages — mono "see also" eyebrow + 4 inline arrow links (Network events · Call records · Incident tickets · GitHub repo). Same markup pattern as the 3 data viewers. |
+
+CSS for the workspace lives in two appended blocks at the bottom of
+`css/site.css`: "WORKSPACE / APP PAGE" (original empty-state shapes,
+~3,090 lines through here) and "WORKSPACE REDESIGN — top split pane
++ terminal-feel panels" plus "WORKSPACE REDESIGN v2 — 1/3 prompt ·
+2/3 dark ticket · see-also" (the active iteration). Source-badge
+variants (`.app-source-tag.adk` / `.mcp` / `.bq` / `.alloydb` /
+`.local`) are all unified to a single pandan-green style.
+
+CSS rules for ticket card / NOC chips / impact 3-cell grid (`.app-ticket`,
+`.app-noc-chip`, `.app-impact`) survive in `site.css` even though they
+are no longer rendered on `app.html` — they remain available for a
+future "completed run" snapshot variant.
+
 ## Key design decisions (current state)
 
 - **Brand wordmark** — Inter 700 with letter-spacing −0.035em.
@@ -115,16 +151,14 @@ Each follows the same 8-section template:
 - **`img/np-mark.svg` sprite** is created but unused — pages still inline
   the logo SVG via the duplicated header markup. If/when we want to slim
   the HTML, refactor to `<svg><use href="img/np-mark.svg#mark"/></svg>`.
-- **Old `static-mockup/`** folder still exists at the repo root. Has
-  uncommitted WIP edits from the abandoned iteration loop. Decide:
-  delete it, leave as historical reference, or archive.
-- **Live UI not yet redeployed** — I removed `(#82)` from
-  `netpulse-ui/templates/landing.html` but the production Cloud Run
-  revision still serves the old text. Redeploy when ready.
 - **Not yet ported to Flask.** The `netpulse-ui/templates/landing.html`
   + `chat.html` in production are unchanged from before the rebuild
-  iteration began. Porting is a separate decision ("design approved"
-  vs. "ship to prod").
+  iteration began. The migration plan is captured in
+  [`docs/MIGRATION-CANONICAL-DESIGN.md`](../docs/MIGRATION-CANONICAL-DESIGN.md);
+  user triggers the LIVE migration explicitly.
+- **`#82` removal** rides on the prod migration — already edited in
+  `netpulse-ui/templates/landing.html` but never deployed; will land
+  with the Cloud Run redeploy.
 
 ## Build scripts
 
@@ -148,16 +182,17 @@ acceptable for known-good one-off generators against a known input file.
 
 If you're picking this up in a fresh session:
 
-1. **The page surface is complete** for landing + docs + 3 data viewers.
-   The dropdown nav resolves end-to-end (Documentation → docs.html,
-   Architecture → docs.html#architecture, BYOD → docs.html#byod).
-2. **Likely next moves**, in priority order:
+1. **Status: LOCKED 2026-04-28.** All six pages are complete and the
+   surface is signed off — landing + docs + 3 data viewers + app
+   workspace. The old `static-mockup/` folder has been deleted; this
+   rebuild is the single source of truth.
+2. **Next move: full LIVE migration to `netpulse-ui/templates/`.** Read
+   [`../docs/MIGRATION-CANONICAL-DESIGN.md`](../docs/MIGRATION-CANONICAL-DESIGN.md)
+   first — covers what ships, migration order, what must not break,
+   verification, and rollback. **Do not start without explicit user
+   signal.**
+3. **Smaller polish items** that can land independently of the
+   migration:
    - Pick a final wordmark, remove the temp specimen strip from `index.html`.
    - Prune the orphan CSS (~250 lines) in `css/site.css`.
-   - Decide the fate of the old `static-mockup/` folder (delete vs.
-     archive).
-   - Port the rebuild design to `netpulse-ui/templates/` so the
-     production Cloud Run service inherits the new look. This is a
-     larger task; do it after the static mockup is signed off.
-   - Redeploy `netpulse-ui` to push the `#82` removal live.
-3. **Hackathon Top-10 prototype refinement deadline** is **2026-04-30**.
+4. **Hackathon Top-10 prototype refinement deadline** is **2026-04-30**.
