@@ -2950,11 +2950,25 @@
     flex-wrap: wrap;
     margin-bottom: 8px;
   }
+  .app-step-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .app-step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .app-step-num::before { content: 'AGENT · '; }
   .app-step-name {
-    font-family: 'Fraunces', serif;
-    font-size: 20px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
     color: var(--ink);
   }
   .app-step-via {
@@ -3305,27 +3319,43 @@
   }
 
   /* ============================================================
-     WORKSPACE REDESIGN — top split pane + terminal-feel panels
+     WORKSPACE REDESIGN — page title, single-column prompt, terminal panels,
+     ticket form moved to the bottom of the run
      ============================================================ */
 
-  /* Two-pane: prompt+chips (left) + animated processing ticket (right) */
-  .app-split {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 24px;
+  /* Page title — distinct from .app-run-head (no eyebrow / no meta pill) */
+  .app-page-title {
     margin-top: 56px;
-    align-items: start;
+    max-width: 760px;
   }
-  .app-split-left,
-  .app-split-right { min-width: 0; }
-  .app-split .app-prompt { margin-top: 0; }
+  .app-page-title h1 {
+    font-size: 42px;
+    line-height: 1.02;
+    margin: 0 0 14px;
+  }
+  .app-page-title p {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 0;
+    max-width: 640px;
+  }
 
-  /* Right-pane: incident-ticket form, processing state */
+  /* Single-column prompt section (replaces the prior 1fr/2fr split) */
+  .app-prompt-section {
+    margin-top: 24px;
+    max-width: 760px;
+  }
+  .app-prompt-section .app-prompt { margin-top: 0; }
+
+  /* Incident ticket form — final output at the bottom of the agent run */
   .app-ticket-form {
     background: var(--paper-white, #FAF7EE);
     border: 1px solid var(--hairline);
     border-radius: 16px;
     padding: 22px 24px;
+    margin-top: 32px;
     position: relative;
     overflow: hidden;
   }
@@ -3619,6 +3649,9 @@
   }
 
   @media (max-width: 920px) {
+    .app-page-title { margin-top: 28px; }
+    .app-page-title h1 { font-size: 32px; }
+    .app-prompt-section { margin-top: 18px; }
     .app-split {
       grid-template-columns: 1fr;
       gap: 20px;
@@ -3717,4 +3750,45 @@
 
   @media (max-width: 920px) {
     .app-split { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================================
+     APP STATUSBAR — slim run-info bar replacing the marketing footer
+     ============================================================ */
+  .app-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--hairline);
+    padding: 10px 28px;
+    margin-top: 48px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+    background: var(--paper);
+  }
+  .app-statusbar-runinfo {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-statusbar-link {
+    flex: 0 0 auto;
+    color: var(--ink-2);
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color .15s ease, background .15s ease;
+  }
+  .app-statusbar-link:hover {
+    color: var(--accent-deep);
+    background: rgba(204,120,92,.06);
+  }
+  @media (max-width: 920px) {
+    .app-statusbar { padding: 10px 18px; font-size: 11px; }
+    .app-statusbar-runinfo { white-space: normal; }
   }
