@@ -1,114 +1,427 @@
-{% extends "base.html" %}
-{% block title %}Telecom incident triage in seconds{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NetPulse AI &mdash; Telecom incident ticketing in seconds</title>
+<meta name="description" content="A multi-agent assistant that turns a customer complaint into a structured NOC incident ticket. Built on Google ADK and Vertex AI Gemini." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body>
 
-{% block nav %}
-<nav class="np-tabs np-tabs-landing">
-  <a class="np-tab" href="#how-it-works">How it works</a>
-  <a class="np-tab" href="#try-it">Try it</a>
-  <a class="np-tab" href="#data-viewers">Data viewers</a>
-  <a class="np-tab" href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
-  <a class="np-tab np-tab-cta" href="{{ url_for('app_workspace') }}">Launch&nbsp;&rarr;</a>
-</nav>
-{% endblock %}
+<header class="nav" id="nav">
+  <div class="wrap row">
+    {% include "_brand.html" %}
 
-{% block content %}
-<section class="np-hero">
-  <p class="np-hero-eyebrow">APAC GenAI Academy 2026 &middot; Top 100</p>
-  <h1 class="np-hero-title">Telecom incident triage <span class="np-hero-accent">in seconds.</span></h1>
-  <p class="np-hero-sub">
-    A multi-agent assistant that turns a customer complaint into a structured
-    NOC incident ticket. Built with Google ADK, Vertex AI Gemini 2.5 Flash,
-    BigQuery, and AlloyDB.
-  </p>
-  <div class="np-hero-cta">
-    <a class="np-btn np-btn-primary" href="{{ url_for('app_workspace') }}">Launch NetPulse AI &rarr;</a>
-    <a class="np-btn np-btn-ghost" href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">View on GitHub</a>
-  </div>
-  <ul class="np-tech-strip">
-    <li><span class="np-tech-dot"></span>4 ADK sub-agents orchestrated by a SequentialAgent root</li>
-    <li><span class="np-tech-dot"></span>BigQuery network events &middot; AlloyDB call records &middot; AlloyDB ticket sink</li>
-    <li><span class="np-tech-dot"></span>Vertex AI failover ladder: <code>global &rarr; asia-southeast2 &rarr; asia-southeast1 &rarr; us-central1</code></li>
-  </ul>
-</section>
+    <nav class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#data-viewer">Data Viewer</a>
+      <a href="#resources">Resources</a>
+      <a href="{{ url_for('app_workspace') }}">Workspace</a>
+      <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
+    </nav>
 
-<section id="how-it-works" class="np-section">
-  <h2 class="np-section-title">How it works</h2>
-  <p class="np-section-sub">Four sequential agents, each with a single job. The output of one becomes the input of the next.</p>
-  <ol class="np-steps">
-    <li class="np-step-card">
-      <div class="np-step-num">1</div>
-      <h3 class="np-step-title">Classifier</h3>
-      <p class="np-step-body">Reads the complaint and returns <code>category</code> + <code>region</code>. Native Python tool, no external I/O.</p>
-      <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
-    </li>
-    <li class="np-step-card">
-      <div class="np-step-num">2</div>
-      <h3 class="np-step-title">Network Investigator</h3>
-      <p class="np-step-body">Queries BigQuery for active outages in the affected region via the MCP Toolbox.</p>
-      <span class="np-source-tag bq">BIGQUERY</span>
-      <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
-    </li>
-    <li class="np-step-card">
-      <div class="np-step-num">3</div>
-      <h3 class="np-step-title">CDR Analyzer</h3>
-      <p class="np-step-body">Inspects AlloyDB call records to confirm or rule out the customer's experience.</p>
-      <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
-    </li>
-    <li class="np-step-card">
-      <div class="np-step-num">4</div>
-      <h3 class="np-step-title">Response Formatter</h3>
-      <p class="np-step-body">Synthesises the findings into a structured incident ticket and writes it to AlloyDB.</p>
-      <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
-    </li>
-  </ol>
-</section>
-
-<section id="try-it" class="np-section np-section-alt">
-  <h2 class="np-section-title">Try one of these</h2>
-  <p class="np-section-sub">Click any complaint to launch the workspace pre-loaded and ready to triage.</p>
-  <div class="np-try-chips">
-    {% for q in examples %}
-      <a class="np-chip np-chip-launch" href="{{ url_for('app_workspace') }}?seed={{ q | urlencode }}&autorun=1">
-        <span class="np-chip-text">{{ q }}</span>
-        <span class="np-chip-cta">launch &rarr;</span>
+    <div class="nav-cta">
+      <a href="{{ url_for('app_workspace') }}" class="btn btn-primary">
+        Try NetPulse AI
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
       </a>
-    {% endfor %}
+      <button class="menu-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 6h14M3 10h14M3 14h14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="cta-band">
+  <div class="wrap">
+    <div>
+      <h2 class="display">
+        From customer complaint to NOC ticket<br>
+        <em>in seconds.</em>
+      </h2>
+      <p>
+        Multi-agent assistant on Google ADK + Vertex AI Gemini. BigQuery
+        scans partitioned outage history. AlloyDB handles CDR lookups
+        via NL2SQL and persists the ticket.
+      </p>
+      <p class="meta">
+        4 ADK sub-agents &middot; SequentialAgent root &middot; MCP Toolbox &middot; BigQuery &middot; AlloyDB
+      </p>
+      <div class="ctas">
+        <a href="{{ url_for('app_workspace') }}" class="btn btn-paper">
+          Launch NetPulse AI
+          <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+        <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener" class="btn" style="background:transparent;color:var(--paper);border:1px solid rgba(244,240,230,.4);">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="np-mini" aria-hidden="true">
+        <div class="np-mini-rail">
+          <span class="np-mini-rail-l">SequentialAgent</span>
+          <span class="np-mini-rail-r">4 &middot; all on Gemini</span>
+        </div>
+
+        <div class="np-mini-pin np-mini-pin-in">
+          <div class="np-mini-pin-row">
+            <b>IN</b>
+            <span class="np-mini-quote">Slow internet in Jakarta during peak hours</span>
+          </div>
+        </div>
+
+        <div class="np-mini-flow">
+          <div class="np-mini-cell">
+            <span class="num">01</span>
+            <span class="name">Classifier</span>
+            <span class="hint">tags category</span>
+          </div>
+          <span class="np-mini-arrow"></span>
+          <div class="np-mini-cell">
+            <span class="num">02</span>
+            <span class="name">Net Inv.</span>
+            <span class="hint">reads BigQuery</span>
+          </div>
+          <span class="np-mini-arrow"></span>
+          <div class="np-mini-cell">
+            <span class="num">03</span>
+            <span class="name">CDR Anlz.</span>
+            <span class="hint">queries AlloyDB</span>
+          </div>
+          <span class="np-mini-arrow"></span>
+          <div class="np-mini-cell">
+            <span class="num">04</span>
+            <span class="name">Formatter</span>
+            <span class="hint">writes ticket</span>
+          </div>
+        </div>
+
+        <div class="np-mini-srcs">
+          <span>native tool</span>
+          <span>BigQuery</span>
+          <span>AlloyDB&nbsp;&middot;&nbsp;NL</span>
+          <span>AlloyDB&nbsp;&middot;&nbsp;W</span>
+        </div>
+
+        <div class="np-mini-pin np-mini-pin-out">
+          <div class="np-mini-pin-row">
+            <b>OUT</b>
+            <span class="np-mini-tid">Ticket #35</span>
+          </div>
+          <div class="np-mini-chips">
+            <span class="np-mini-chip is-cat">network</span>
+            <span class="np-mini-chip is-region">Jakarta</span>
+            <span class="np-mini-chip is-severity">critical</span>
+          </div>
+          <div class="np-mini-rec">Monitor backbone stability after the recent failover; conduct post-incident review of backhaul path.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section id="data-viewers" class="np-section">
-  <h2 class="np-section-title">What's inside</h2>
-  <p class="np-section-sub">Inspect the source data the agents consult and the tickets they generate.</p>
-  <div class="np-viewer-cards">
-    <a class="np-viewer-card" href="{{ url_for('network_events') }}">
-      <span class="np-source-tag bq">BIGQUERY</span>
-      <h3 class="np-viewer-title">Network Events</h3>
-      <p class="np-viewer-body">Live outage and degradation events across all regions, queried directly from BigQuery.</p>
-      <span class="np-viewer-cta">Explore events &rarr;</span>
-    </a>
-    <a class="np-viewer-card" href="{{ url_for('call_records') }}">
-      <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
-      <h3 class="np-viewer-title">Call Records</h3>
-      <p class="np-viewer-body">Per-call CDR rows the agents query for evidence of dropped, failed, or unusual call patterns.</p>
-      <span class="np-viewer-cta">Browse calls &rarr;</span>
-    </a>
-    <a class="np-viewer-card" href="{{ url_for('tickets') }}">
-      <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
-      <h3 class="np-viewer-title">Incident Tickets</h3>
-      <p class="np-viewer-body">Every ticket generated by the response_formatter agent, newest first.</p>
-      <span class="np-viewer-cta">View tickets &rarr;</span>
-    </a>
+<section id="how-it-works" class="np-flow">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 01 &mdash; How it works</span>
+        <h2 class="serif">Four agents, <em>one ticket.</em></h2>
+        <p class="np-flow-lede">
+          A complaint enters the chat. Four ADK sub-agents run in
+          sequence &mdash; each one reads the shared session state, queries
+          its data store, and enriches the state for the next. The
+          fourth writes the ticket and the run ends.
+        </p>
+      </div>
+      <div class="meta">
+        <a href="{{ url_for('docs') }}#architecture">Full architecture
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="np-flow-track" role="list" aria-label="Agent pipeline">
+
+      <div class="np-flow-bookend np-flow-in" role="listitem">
+        <span class="np-flow-bookend-eyebrow">IN</span>
+        <span class="np-flow-bookend-title">Customer complaint</span>
+        <span class="np-flow-bookend-meta">Flask &middot; SSE chat</span>
+        <div class="np-flow-card-output">
+          <span class="np-flow-card-output-label">&rarr; prompt</span>
+          <span class="np-flow-card-output-value">customer_complaint</span>
+        </div>
+      </div>
+
+      <div class="np-flow-chevron" aria-hidden="true">&rsaquo;</div>
+
+      <div class="np-flow-card" role="listitem">
+        <span class="np-flow-card-num">01</span>
+        <span class="np-flow-card-title">Classifier</span>
+        <span class="np-flow-card-role">Tags category &amp; region from raw complaint text.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">native tool</span>
+        </div>
+        <div class="np-flow-card-output">
+          <span class="np-flow-card-output-label">&rarr; emits</span>
+          <span class="np-flow-card-output-value">category, region</span>
+        </div>
+      </div>
+
+      <div class="np-flow-chevron" aria-hidden="true">&rsaquo;</div>
+
+      <div class="np-flow-card" role="listitem">
+        <span class="np-flow-card-num">02</span>
+        <span class="np-flow-card-title">Network Investigator</span>
+        <span class="np-flow-card-role">Pulls related outages from BigQuery.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">BigQuery &middot; MCP</span>
+        </div>
+        <div class="np-flow-card-output">
+          <span class="np-flow-card-output-label">&rarr; emits</span>
+          <span class="np-flow-card-output-value">network_findings</span>
+        </div>
+      </div>
+
+      <div class="np-flow-chevron" aria-hidden="true">&rsaquo;</div>
+
+      <div class="np-flow-card" role="listitem">
+        <span class="np-flow-card-num">03</span>
+        <span class="np-flow-card-title">CDR Analyzer</span>
+        <span class="np-flow-card-role">Queries call records via natural language.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">AlloyDB NL2SQL</span>
+        </div>
+        <div class="np-flow-card-output">
+          <span class="np-flow-card-output-label">&rarr; emits</span>
+          <span class="np-flow-card-output-value">cdr_findings</span>
+        </div>
+      </div>
+
+      <div class="np-flow-chevron" aria-hidden="true">&rsaquo;</div>
+
+      <div class="np-flow-card" role="listitem">
+        <span class="np-flow-card-num">04</span>
+        <span class="np-flow-card-title">Response Formatter</span>
+        <span class="np-flow-card-role">Synthesises &amp; persists the incident ticket.</span>
+        <div class="np-flow-card-stack">
+          <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
+          <span class="np-flow-tag">AlloyDB &middot; INSERT</span>
+        </div>
+        <div class="np-flow-card-output">
+          <span class="np-flow-card-output-label">&rarr; emits</span>
+          <span class="np-flow-card-output-value">incident_tickets</span>
+        </div>
+      </div>
+
+      <div class="np-flow-chevron" aria-hidden="true">&rsaquo;</div>
+
+      <div class="np-flow-bookend np-flow-out" role="listitem">
+        <span class="np-flow-bookend-eyebrow">OUT</span>
+        <span class="np-flow-bookend-title">Incident ticket</span>
+        <span class="np-flow-bookend-meta">AlloyDB &middot; NOC dispatch</span>
+        <div class="np-flow-card-output">
+          <span class="np-flow-card-output-label">&rarr; persists</span>
+          <span class="np-flow-card-output-value">incident_report</span>
+        </div>
+      </div>
+
+    </div>
   </div>
 </section>
 
-<footer class="np-footer">
-  <p>
-    APAC GenAI Academy 2026 &middot; Top 100 &middot; Built by Adityo Nugroho.
-  </p>
-  <p>
-    <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub repository</a>
-    &middot;
-    <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops#architecture" target="_blank" rel="noopener">Architecture diagram</a>
-  </p>
+<section id="data-viewer" class="np-grid-section">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 02 &mdash; Data Viewer</span>
+        <h2 class="serif">The <em>data</em> behind every ticket.</h2>
+        <p class="np-flow-lede">
+          Read-only views into the live sources the agents query &mdash; for
+          poking at edge cases, validating fixtures, or seeing what the
+          system saw before writing a ticket.
+        </p>
+      </div>
+      <div class="meta">
+        <a href="{{ url_for('docs') }}#data">All sources
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="np-card-grid">
+      <a href="{{ url_for('network_events') }}" class="np-card">
+        <span class="np-card-eyebrow">BigQuery &middot; partitioned</span>
+        <h3>Network Events</h3>
+        <p>Outage and maintenance events across 10 cities, day-partitioned and clustered by region/severity.</p>
+        <span class="np-card-meta">
+          <span class="np-card-pill">50,000 rows</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="{{ url_for('call_records') }}" class="np-card">
+        <span class="np-card-eyebrow">AlloyDB &middot; NL2SQL</span>
+        <h3>Call Records</h3>
+        <p>Call Detail Records with anchor-clustered drop and failure events around outage windows.</p>
+        <span class="np-card-meta">
+          <span class="np-card-pill">5,000 rows</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="{{ url_for('tickets') }}" class="np-card">
+        <span class="np-card-eyebrow">AlloyDB &middot; write</span>
+        <h3>Incident Tickets</h3>
+        <p>The agents&rsquo; output destination &mdash; every saved ticket lives here with category, severity and recommended action.</p>
+        <span class="np-card-meta">
+          <span class="np-card-pill">live writes</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="resources" class="np-grid-section">
+  <div class="wrap">
+    <header class="section-head">
+      <div class="lead">
+        <span class="eyebrow accent">/ 03 &mdash; Resources</span>
+        <h2 class="serif">Read the <em>build.</em></h2>
+        <p class="np-flow-lede">
+          Documentation, the full architecture deep-dive, and a guide to
+          wiring NetPulse against your own telco data.
+        </p>
+      </div>
+      <div class="meta">
+        <a href="{{ url_for('docs') }}#about">All resources
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M3 7h8M7 3l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <div class="np-card-grid">
+      <a href="{{ url_for('docs') }}" class="np-card">
+        <span class="np-card-eyebrow">Reference</span>
+        <h3>Documentation</h3>
+        <p>What NetPulse is, what each agent does, and how the pieces fit together. Single-page, plain prose.</p>
+        <span class="np-card-meta">
+          <span class="np-card-pill">7 sections</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="{{ url_for('docs') }}#architecture" class="np-card">
+        <span class="np-card-eyebrow">Deep-dive</span>
+        <h3>Architecture</h3>
+        <p>Subsystems, data flow, the model failover ladder, and the non-obvious choices that keep the system stable.</p>
+        <span class="np-card-meta">
+          <span class="np-card-pill">end-to-end flow</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+
+      <a href="{{ url_for('docs') }}#byod" class="np-card">
+        <span class="np-card-eyebrow">How-to</span>
+        <h3>Bring Your Own Data</h3>
+        <p>Map your operator&rsquo;s CDR + network events tables into the agent toolset. Schema, prompts, and the gotchas we hit.</p>
+        <span class="np-card-meta">
+          <span class="np-card-pill">schema + prompts</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="grid">
+      <div class="foot-brand">
+        {% include "_brand.html" %}
+        <p>Telecom incident ticketing in seconds &mdash; a multi-agent assistant built on Google ADK and Vertex AI Gemini. APAC GenAI Academy 2026.</p>
+      </div>
+
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="{{ url_for('app_workspace') }}">Try NetPulse AI</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Data Viewer</h5>
+        <ul>
+          <li><a href="{{ url_for('network_events') }}">Network Events</a></li>
+          <li><a href="{{ url_for('call_records') }}">Call Records</a></li>
+          <li><a href="{{ url_for('tickets') }}">Incident Tickets</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="{{ url_for('docs') }}">Documentation</a></li>
+          <li><a href="{{ url_for('docs') }}#architecture">Architecture</a></li>
+          <li><a href="{{ url_for('docs') }}#byod">Bring Your Own Data</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Project</h5>
+        <ul>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">README</a></li>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          <li><a href="https://hack2skill.com/event/apac-genaiacademy?tab=overview&utm_source=hack2skill&utm_medium=homepage" target="_blank" rel="noopener">APAC GenAI 2026</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-base">
+      <span>&copy; 2026 Adityo Nugroho &middot; NetPulse AI</span>
+      <div class="foot-social">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
 </footer>
-{% endblock %}
+
+<script src="{{ url_for('static', filename='site.js') }}"></script>
+<script>
+  const blot = document.querySelector('.hero-blot');
+  if (blot && window.matchMedia('(min-width: 720px)').matches) {
+    window.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 14;
+      const y = (e.clientY / window.innerHeight - 0.5) * 14;
+      blot.style.translate = `${x}px ${y}px`;
+    });
+  }
+</script>
+</body>
+</html>
