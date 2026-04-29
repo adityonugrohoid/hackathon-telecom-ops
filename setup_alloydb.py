@@ -119,17 +119,29 @@ def truncate_and_load(
     columns: list[str],
     rows: list[dict[str, str]],
 ) -> None:
-    """TRUNCATE the target then bulk-insert rows. Caller advances the sequence."""
+    """TRUNCATE the target then bulk-insert rows in one round-trip.
+
+    Builds a single multi-row `INSERT ... VALUES (...), (...), ...` statement
+    so the entire batch lands in one network round-trip. pg8000's executemany
+    issues one round-trip per row, which makes 500-row seeds painfully slow
+    over WAN — this collapses to ~1 round-trip total.
+    """
     logger.info("TRUNCATE %s and reload %d rows", table, len(rows))
     conn.execute(sqlalchemy.text(f"TRUNCATE TABLE {table} RESTART IDENTITY"))
     if not rows:
         return
-    placeholders = ", ".join(f":{c}" for c in columns)
+    row_placeholders: list[str] = []
+    flat_params: dict[str, str | None] = {}
+    for i, r in enumerate(rows):
+        keys = [f"{c}_{i}" for c in columns]
+        row_placeholders.append("(" + ", ".join(f":{k}" for k in keys) + ")")
+        for c, k in zip(columns, keys):
+            flat_params[k] = r.get(c) or None
     insert_sql = sqlalchemy.text(
-        f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
+        f"INSERT INTO {table} ({', '.join(columns)}) "
+        f"VALUES {', '.join(row_placeholders)}"
     )
-    payload = [{c: (r.get(c) or None) for c in columns} for r in rows]
-    conn.execute(insert_sql, payload)
+    conn.execute(insert_sql, flat_params)
 
 
 def restart_sequence(

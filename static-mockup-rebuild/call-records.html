@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Call records — NetPulse AI</title>
+<meta name="description" content="NetPulse AI data viewer — AlloyDB · NL2SQL." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap row">
+    <a href="index.html" class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="172 164 682 658"><path d="M495.3 169.7c5 4.2 8.8 10 10.7 16.3l-.6 7c0 3.9.6 6.8 3.2 9.8 4.6 4 9.7 7.2 14.8 10.5q5.9 4 11.5 8.6l4.4 3.4 2.3 1.8L565 245l2.4 1.8 2.4 1.7 2 1.5c2.9 1.3 4.3.9 7.2 0l2.5-1a30 30 0 0 1 21-.2c6.6 3.2 12 8.4 14.9 15a28 28 0 0 1 .9 14.9 15 15 0 0 0-.3 8.3c3.5 4.3 8.4 7.4 13 10.6q4.2 3 8.3 6.3l3.2 2.4c28 21.5 28 21.5 34 27 2.5 1.7 2.5 1.7 5 1.6q3.7-1.3 7-3a29 29 0 0 1 22.3-.3 37 37 0 0 1 18 18.5 37 37 0 0 1-.8 22.9c-.4 2.3-.4 2.3 0 5a62 62 0 0 0 5.7 6.1l1.7 1.7 5.7 5.5 9 8.8q4.3 4.2 8.3 8.8a223 223 0 0 0 14.3 14.8l7.3 7.3 9.7 9.6 2.2 2.2A213 213 0 0 1 805 457l1.5 1.7c1.5 1.3 1.5 1.3 4.6 1 2.9-.7 2.9-.7 4.9-1.7a38 38 0 0 1 27.8 6.5c6.5 6.2 10 15 10.3 24a32 32 0 0 1-9.8 22.3 31 31 0 0 1-20.6 8.4c-3-.2-5-.5-7.8-1.3-3.9-.9-5.3-1.2-8.9.1a59 59 0 0 0-6.7 7l-11 13.1a253 253 0 0 1-9.9 11q-5.8 6.4-11 13.1-6.5 7.6-13.4 14.8l.6 1.8 1.6 4.8a35 35 0 0 1-.2 24.5 36 36 0 0 1-21.5 18.5c-8.6 1.4-16-.1-23.4-4.7-2.1-.9-2.1-.9-4-.3a58 58 0 0 0-6.7 5.5q-5.1 4.8-10.6 9.1a300 300 0 0 0-16.6 14.8q-4.5 4.2-9.2 8.3-5.2 4.5-10.3 9.3-2.5 2.3-5.2 4.3a32 32 0 0 0-5.5 5.1c0 3.2 0 3.2 1 7 .8 8.5-.3 15.1-5.5 22a28 28 0 0 1-17.2 9.4 26 26 0 0 1-15.2-3.6c-2.8-1-4.3-.6-7.1.2-2 1.4-2 1.4-3.8 3.2q-6 5.3-12.3 10l-4.5 3.5-2.3 1.7q-13.3 10.3-26.2 20.8-7.7 6.3-15.5 12.2-7 5.4-13.7 11l-1.9 1.5-1.8 1.6-4.2 3c-5.6 3.7-5.6 3.7-6.8 7.8l-.2 3.4a30 30 0 0 1-9.6 21.2c-7.4 6-14.6 8.7-24.2 8.1-8.6-1.5-15.5-4.2-20.7-11.4-5.6-9-8-17-5.7-27.5A34 34 0 0 1 463 763h2l-3.4-50.8c-.7-11-.7-11-3-14.1-1.6-1.4-1.6-1.4-4.6-3.1-1.6-2-1.6-2-2.7-4l-1.2-1.8a36 36 0 0 1-2-26.6 35 35 0 0 1 19.4-19c9.4-2.4 17.8-.5 26.5 3.4l.8-1.8a23 23 0 0 1 4.9-6q4-3.7 7.5-8 7-7.7 14.5-14.8 6.1-6 11.6-12.5 4.8-5.2 9.8-10 4.3-4.2 8.3-8.8 6.9-7.7 14.3-14.7 5.1-5 9.8-10.4 7.1-8 14.8-15.3 6.4-6.2 12-13 2.7-2.6 5.7-5c2.3-2.2 3-3.1 3.1-6.4l-.8-6.2c-.3-3.4.2-5.5 1.2-8.7.7-3.4.8-4.8-.9-8l-6-6.8q-4.4-4.7-8.4-10l-15-17.8q-5.2-6-10.2-12.3l-7.4-8.8q-6-7.1-11.6-14.5-7.2-9.4-14.7-18.3l-9.2-11.3-8.4-10.4-12.3-15.3q-6.3-8.2-13.2-16A259 259 0 0 1 483 342l-3 1a39 39 0 0 1-24.6-.7L452 340l-3.1-2a34 34 0 0 1-10.1-21q-.3-13.5 8.2-24c3.7-3.4 7-5.9 12-7l1.7-22 .6-7.5.8-10.8.3-3.4.6-9.3.2-3.1v-3l.2-2.6c-.4-2.3-.4-2.3-2-4.1l-4.2-2.7A26 26 0 0 1 447 203c-2-10.3-.5-18.9 5.2-27.7 11.4-14.6 28.2-13.3 43-5.6m3 45c-1.8 3.3-1.2 4.6-.3 8.3q2.4 5.3 5 10.4l1.6 3 8.3 16.4 1 1.8q3.1 6.4 6 13l1.7 3.4 3.1 6.8 1.5 3.2 1.3 2.8c1.5 2.2 1.5 2.2 3.7 3.2 3.7 0 6.7-1 10-2.3l2.1-.8 6.5-2.3 4.4-1.6 10.8-4 2-10.5c0-3.5 0-3.5-2-6.1q-3.5-2.9-7.2-5.2-3.9-2.6-7.4-5.4l-6.1-4.6-13-9.9-22.7-17.2-2.2-1.7-1.8-1.4c-2.6-1.6-4-1.5-6.4.6M477 224c-2 2-1.7 6-2 8.8l-.2 2.5-2 23.1-.2 3.5q-.7 11-.6 22.1l2.7 1 3.5 1.4 3.5 1.3 3.3 1.3 2.9 1c2.7 1.2 3 2.3 4.1 5 1.3 1.7 1.3 1.7 3 3a64 64 0 0 0 9-2l3.7-1 10.3-3a38 38 0 0 0-4.1-11.7l-1-2-3-6.1-2-4.3-5-10.2-2.2-4.4A983 983 0 0 0 485 223q-4 .2-8 1m77 68.2-6 2-3.7 1.4-3.5 1.3C538 298 538 298 536 300l6 12.4 1.6 3.6 1.7 3.4 1.5 3.2c1.2 2.4 1.2 2.4 2.2 3.4 3.2.8 5.8.8 9 0 2.9-2.8 4.3-6.4 6-10l5.5-10.4 1.4-2.6 1.3-2.6 1.2-2.3c.6-2.1.6-2.1-.2-4.2q-2.1-3.2-5.2-5.9c-4.7 0-9.6 2.6-14 4.2m53 4.8c-1.4 2.7-.7 3.7.2 6.6l.8 3 1 3 .9 3.3 2 6.7 3 10.3 1.9 6.6 1 3.1 1.5 5.5c.7 1.9.7 1.9 1.7 2.9l11.5 1.2 5.7.6 8.7.8 5.5.6 2.6.2c9.4.9 9.4.9 14 .6 2-2.3 2-2.3 3-5a13 13 0 0 0-5.4-6.8l-2-1.6-2.3-1.6-4.6-3.5-2.4-1.8-10.1-8a479 479 0 0 0-16-12.3L620 304l-4-3.3c-4.6-3.8-4.6-3.8-9-3.8m-25 7.9-5.4 10.6-2.5 4.7-1.3 2.4c-2.3 4.5-3.4 7.3-1.8 12.4.9 2.3.9 2.3 1.9 4.3l1 2c1.1 1.7 1.1 1.7 4.1 2.7q5.1.7 10.1 1l2.8.3q8.5.9 17.1.7l-9.7-33.8-1-3-.8-2.8-.7-2.5c-.8-1.9-.8-1.9-2.8-2.9-5.5-1-8-1-11 3.9m-71 .8-2.9.7c-6.7 2-6.7 2-8.7 5.1-.5 3.1-.7 4.6.6 7.5 7 4 14.5 6.8 22 9.7l3.8 1.6 9.2 3.7 3-3-5.3-11.2-1.5-3.2-1.5-3-1.4-3c-2.6-5.2-2.6-5.2-4.3-7.6-4.6 0-8.7 1.4-13 2.7M494 331c-.5 3.6-.1 4.9 2 8l6 6.5 1.5 1.8q3.2 3.7 6 7.7 5.3 7.1 11.1 13.9l16 19.3 6 7.4 9.8 12.3 12.8 15.7a134 134 0 0 0 8.8 9.4l-6.2-20-1-2.9-1.8-5.7-1.9-5.9-2.7-8.6-.9-2.6c-5-15.5-5-15.5-9.3-17.8l-3-.6c-6-1.6-9-3.6-12.2-8.9a33 33 0 0 1-2.5-10.7l-.3-2.4-.2-1.9-2.5-1-9-3.5-4-1.6-5.7-2.2-3.4-1.4-7.1-3C497 331 497 331 494 331m81 25c0 3 0 3 2.3 5.5l3.2 2.7 1.7 1.5 4.8 4.3 2 1.9 6 5.1 1.5 1.3L609 389l1.8 1.5 7.8 6.6c2.4 1.9 2.4 1.9 5.4 2.9q-3.1-12.8-7-25.6l-1.1-3.5-1-3.3-1-3c-.9-2.6-.9-2.6-2.9-5.6-2.6-.6-2.6-.6-5.8-1l-3.5-.3-3.8-.4-3.6-.4q-9.6-1-19.3-.9m50 5a284 284 0 0 0 6.6 23.6l.9 3 .9 2.8.8 2.5c1 2.8 2.3 3.9 4.9 5.2 2.7 1 5 1.7 7.9 1.9 3.3-1.6 5.5-4.3 8-7l6.7-6.2 1.6-1.5q4.7-4.4 9.7-8.3l-1.4-4.8-2.6-8.2a303 303 0 0 0-44-3m-59 8q2.9 11 6.4 21.7l1 3 10.6 32.4 2.7 8 3.6 10.8 1.8 5.5c4 11.3 11 19.6 19 28.4q4.2 4.9 8.1 10.2c1.8 2 1.8 2 4.8 3l3-2q.6-4.4.7-8.6l.1-2.6.4-8.4.2-5.5.6-14.9v-2.5l.1-2.5v-2.2c-.1-1.8-.1-1.8-1.9-3.7l-2.4-1.2A20 20 0 0 1 615 427a27 27 0 0 1-.1-13.1c.1-3.9.1-3.9-1-5.6a64 64 0 0 0-8.4-7.4l-5.5-4.4-9-8q-7-6.6-14.5-12.4c-2.5-2.1-2.5-2.1-5.1-4.9-2.4-2.2-2.4-2.2-5.4-2.2m109.7 20.7-2.7 2.5-1.4 1.4-5 4.6-3.6 3.2-1.7 1.5a38 38 0 0 0-6.3 7.1l1 3 .1 6.4v3.4q0 4.1-1.1 8.2l2.2 1.8 3 2.4 3 2.5q3.1 2.5 6.1 5.4c2.7 1.9 2.7 1.9 5.9 1.9 2.9-1 4-1.7 5.8-4 .6-2 .6-2 1-4.4l.4-2.6.4-3 1.4-9.1 1.5-9.5.9-6 .4-3c1.4-9.5 1.4-9.5 1-13.4-5.5-4.6-7.2-5-12.3-.3M718 387c.6 6.4 2.6 12 4.9 18.1l1.2 3.3 6 16.6 4.3 11.9 2 5.4 1 3.2c1.6 2.5 1.6 2.5 4.6 3.8l3 .7a23 23 0 0 1 15 11l3 9 15.4 3.2c6 1.2 11.5 2.1 17.6 1.8l3-6-5-5.6-4.2-5-2.1-2.4-2-2.3C784 452 784 452 782 452l-.7-1.7a29 29 0 0 0-5.6-6.9q-1.4-1.2-2.8-2.7l-3-2.9-3-3-8-8-12.7-12.6-4.4-4.4Q734 402.3 727 394l-3.8-4-1.7-1.8C720 387 720 387 718 387m-16.2 4.3-1.8.7-3 18.8-1 6.4-1.5 9.2-.4 2.8A74 74 0 0 0 693 445c1.5 1.7 1.5 1.7 3.6 2.8 4 2.5 5.2 4.7 7 9 1.9 3.8 2.7 5 6.7 6.4 8.9 1.1 8.9 1.1 13-1.8 2.4-3.2 4-6.4 4.7-10.4-.4-1.9-.4-1.9-1.2-3.8l-.8-2.3-1-2.4-2-5.2-1-2.6-4.6-12.8-2.7-7.4-1.9-5-2.7-7.6-.8-2.3c-3.3-8.9-3.3-8.9-7.5-8.3M641 441l-.9 17.5-.2 6-.5 8.5-.1 2.7-.3 15.3 5 2c12.5-10.4 12.5-10.4 17.4-15l1.6-1.5c1-1.5 1-1.5.7-3.4l-.7-2.1-.1-4.8v-2.7c.1-2.5.1-2.5 1.2-6-.1-3.5-.1-3.5-2-5.8a124 124 0 0 0-8.1-6.7l-2-1.7c-3.8-2.8-6.5-4.6-11-2.3m62.4 34.3-2 3.7c-3 4.4-8.6 6.2-13.4 8-3.5.5-5.8.4-9.1-.7-5.8-1.9-5.8-1.9-9.1-.2a78 78 0 0 0-6.8 5.9l-2.8 2.2c-4 3.4-6.7 6.1-8.3 11.2-.3 4.4 0 6.7 2.1 10.6 4.8 4.1 10.8 6.4 16.5 9q5.2 2.2 10 5.2c4.8 2.8 4.8 2.8 7.6 2.9 3-1.7 4.6-4.4 6.5-7.2l2.6-3.9 1.4-2 6.8-9.4 1.3-1.8a353 353 0 0 1 12.7-16.4c3.6-4.7 3.6-4.7 3.5-8.1l-.9-2.3-.7-2-.9-1.8-1.4-3.2c-12.7-2-12.7-2-15.6.3m52.7 11c-3.8 4.6-3.8 4.6-7.5 6.1-2.6 1.6-2.6 1.6-3.4 3.7A62 62 0 0 0 744 512q9-2.8 17.4-6.5l2.3-1 12-5 4.6-2 2.1-1c3.6-1.5 6.7-3 9.6-5.5l-1-3a69 69 0 0 0-9.6-2.6L775 484l-3.1-.7c-11.6-2.5-11.6-2.5-15.8 3M732 494l-4.4 5.6-1.4 1.8A618 618 0 0 0 709 525l1 2c18.9-5.9 18.9-5.9 22.2-10.8 1.5-4.3 1.2-8.7.8-13.2l.1-5.4-.1-3.6zm53.6 13.2q-9 4.2-18.1 7.9l-2 .8-7.8 3.2-5.6 2.3-3.3 1.3c-4.8 2.2-4.8 2.2-6.8 4.3-.8 3-.8 3-1.3 6.8l-.2 2-.7 6.4-.6 4.3c-1.5 13-1.5 13-1.2 18.5 2.3 2.5 2.3 2.5 5 4 3.3 0 4.1-1.1 6.4-3.5l2.7-3.3 2.9-3.6 1.5-1.8q3.5-4.1 7.1-8l1.4-1.5 4-4.3a368 368 0 0 0 15.6-18.1q4.7-5.6 9.9-11c2.1-2.3 3.5-3.8 4.5-6.9l-2-3c-4.5 0-7.4 1.4-11.4 3.2m-144.7 25c-4 5.8-3 13-2.9 19.8l.2 13.4v2.5c0 2.3 0 2.3.8 6.1 2.5 2 2.5 2 5 3q7.8-6.6 15.3-13.7l2.2-2q9-8.6 17.5-17.3c-4.4-4.8-9.7-7.3-15.5-10.3l-3.2-1.6-3-1.6-2.8-1.5c-5.6-2.3-9.2-.4-13.6 3.2m81.5 1.7-2.7 1.2-3 1.2-2.8 1.2q-7.1 3-13.9 6.5c1.6 5 4.5 9 7.5 13.2l1.5 2.2c3.7 5.3 3.7 5.3 6 7.6 2.4-.2 2.4-.2 5-.8l2.8-.6c2.2-.6 2.2-.6 3.2-1.6l1.1-9 .5-3.7.4-3.6q1-7.8 1-15.7c-2.6 0-4.2.8-6.6 1.9M610 542c-6.5 10-10.8 21.3-15.3 32.4l-8.8 21-3 7-1.5 3.4q-10 23.5-19.4 47.2c4-1.8 6.7-4.5 9.8-7.7q4.8-5 10-9.7A201 201 0 0 0 594 624a221 221 0 0 1 16-15l1.8-1.5 1.2-1.5c-.3-2.7-.3-2.7-1-6-.4-6.2.6-10.4 3-16l1-3c1.6-1 1.6-1 4-2l3.6-2 3.4-2v-22.2l.1-8v-2.6c0-6 0-6-1.1-8.2-7.8-3-11.4 2-16 8m76.1 11.7-2.2 2.4q-4.1 4.2-8.6 8.1-7.1 6.4-13.8 13.2L659 580l-6 6.1 1 3c5 1 9.6 1 14.6 1l2.4-.1 5.1-.1 7.8-.2 5-.2h2.3c3.8-.1 5.6-.3 8.8-2.4 1.4-2.2 1.4-2.2 2.8-4.8l1.3-2.6c1.1-3.2 1-4.4-.1-7.6l-4.8-7-2.7-3.5-1.3-1.8-3.4-5.1-1.8-2.6c-2 0-2 0-3.9 1.7M581 572c-15 14.9-15 14.9-20.3 21.1q-4.6 4.9-9.3 9.5-4 4-7.6 8.4-4.2 4.5-8.6 8.8-3.8 4-7.5 8.2-3.6 4.1-7.7 8l-7.2 8q-3 3.2-6.3 6.1c-3.5 3.5-3.5 3.5-3.7 7l1.2 2.9 1.1 3.8c1.9 3.2 1.9 3.2 4.7 4.1l4.2.1 3.4.4q5.4.5 10.6-.4c2.2-2 3.3-4 4.6-6.7 2.2-3.7 5.5-5.6 9.4-7.3l3.5-.8c3.5-1.2 3.5-1.2 5.4-3.8l1.5-3.3.9-1.9q4.4-10 8.4-20.4l8.4-20.7 1.5-3.6 1.5-3.5 1.4-3.5 3.2-7.4.9-2 2.4-5.2c1-2.9 1-2.9 0-5.9m83 29c-9 0-9 0-12 3a66 66 0 0 0-4 7 19 19 0 0 1-8.7 5.2c-3.3 1.8-3.3 1.8-4.3 5q-1.9 9-3.3 18.2l-1 6.2c-2.2 13.5-2.2 13.5-1.7 20.4 2.3 2.2 2.3 2.2 5 3 2.9-1.1 5-2.7 7.2-4.8l1.7-1.6 1.9-1.8 3.7-3.5 1.9-1.8 7.7-6.9 6.5-5.8 14.1-12.3q7.1-6 14-12.4l8.3-7.1-1-4.4-.5-2.5c-.5-2.1-.5-2.1-1.5-3.1l-6-.1zm-55.1 25-5.1 5.1q-4.1 4.3-8.7 8.2c-4.8 4-9.2 8.7-13.6 13.2a115 115 0 0 1-8.9 8.2c-2.6 2.2-2.6 2.2-3.7 4a15 15 0 0 0 3.1 9.2c3.4 1.6 6.8 2.3 10.5 3l3 .6q5.1 1.2 10.5 1.4c1.4-1.6 1.4-1.6 2.9-3.8a21 21 0 0 1 15.1-9.9c2-1.3 2-1.3 3.1-4.4l.9-4.9.6-3.5 1.7-10.3 1-6.5.7-4.2.6-3.8q.6-5.9.4-11.7c-6 0-10.1 6.1-14.1 10.1M507 680l-2.7 5.6a30 30 0 0 1-19.3 16.7q-6 1.3-12 1.7c2 37.7 2 37.7 4 55l3.8 1.6 2 .8c2.7.7 3.8.8 6.2-.4 1.9-2.4 1.9-2.4 3.8-5.6l1-1.8 3.3-5.6 2.3-3.9L506 733l1.5-2.6 4.7-8q6.8-11.3 13.9-22.5l1.9-3 1.7-2.6c1.5-2.7 2.5-4.4 1.9-7.5-1.2-3-2.1-4.7-4.6-6.8-6.1-1.7-14-2-20 0m59.1 8.2L564 691c-6 4.8-11.5 5.5-19 5.5-4 .7-4.7 2.3-7 5.5l-3.8 6.3-1 1.8-2.2 3.8-5.7 9.8-1.2 2q-4.1 7-8.5 14l-1.1 1.8-2.3 3.6-7.2 11.6-1.4 2.3c-4.6 7.4-4.6 7.4-5.6 11a16 16 0 0 0 3 4c5-1.6 8.5-4.7 12.5-8l4.3-3.6 2.2-1.7 8.5-6.7q7.3-5.5 14.3-11.4 9-7.3 18.4-14.2 7.1-5.4 14-11.3 9.5-8 19.8-15.1l-.4-4.4-.3-2.4c-.3-2.2-.3-2.2-1.3-4.2q-4.2-1.6-8.6-2.6l-2.4-.7c-12.5-3.5-12.5-3.5-15.9.5"/><path d="M470 366.6c8.8 6.4 11.2 17.6 14.1 27.6l3.5 12.2 1.9 6.5 9.8 34 9 31.3.6 2.1c2.4 7.7 5.9 13.8 13.1 17.7a31 31 0 0 0 9 1.2h12.2l28.7.4h10l3.4.1c2.7.3 2.7.3 5.7 2.3 1.7 5.6.6 9.3-1.7 14.5q-3 5.7-7.3 10.5l-2.4 3.2a31 31 0 0 1-23 10l-4.9.1h-16.3c-17.6.1-34.8-1.9-48.3-14.5-13-14.2-17-33.3-22.3-51.2l-.7-2.3q-3.8-12-6.1-24.3h-2l-.3 3.2q-1.3 8.8-3.4 17.3l-1 4-2.7 11.9-1.8 8L435 543l-.6 2.8-9.8 41.6-3.1 13.1-3.7 15.7-1.4 5.9c-9.2 39.3-9.2 39.3-20.5 46.4a28 28 0 0 1-21.5 2.9c-7-2.5-13-6.6-16.4-13.4-3-7.3-5-14.8-7-22.4l-1.2-4.3-9.9-38q-5.1-20-10.5-40t-10.4-40l-1.4-5.2-1.8-7.4-.6-2.2c-.8-3.3-1.2-6-1.2-9.5h-2l-.6 3.4c-1.6 7-4 13.7-6.2 20.4l-2.3 6.9c-6.6 19.5-16.5 39.1-35.8 48.8-15 6.3-31.1 5.8-47.2 5.8h-19.7c-7.5 0-15-.5-21.2-5.3a24 24 0 0 1-6-20 25 25 0 0 1 13.6-14.2c4.6-1.6 9.2-1.3 14-1.3h13.8l10.5-.1h6.5c8.5 0 16.5-1.3 23-7.3 7.6-9.6 11.4-23 15.5-34.4l1.8-5 9-25.3q4.5-12.6 9.5-25l.9-2.3c2.6-6.3 6.5-12.6 13-15.5a30 30 0 0 1 22.3-.1c12.7 7.8 15.7 23 19.2 36.5l1.5 5.9 1.7 6.4 6.2 23.4 3.8 14.4.8 3 5.6 21a3091 3091 0 0 0 13.8 51.2l.8 2.7.6 2.3c.6 1.7.6 1.7 1.6 2.7l.4-1.7 36-151.9 2-7.9 3-12.5 1-4.6 5.7-22.6.9-3.6a29 29 0 0 1 13.9-18c8.7-4.6 16.8-3.8 25.1 1.4"/></svg>
+      </span>
+      <span>NetPulse AI</span>
+    </a>
+
+    <div class="app-toolbar-center" role="status" aria-label="Connection status and model" style="display: flex; align-items: center; justify-content: center; gap: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3);">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>AlloyDB</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>MCP&nbsp;toolbox</span>
+      <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
+      <span aria-label="Active model" style="color: var(--ink-2);">gemini-3.1-flash-lite-preview</span>
+    </div>
+
+    <div class="nav-cta">
+      <a href="app.html" class="btn btn-primary">
+        Try NetPulse AI
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- Page hero -->
+<section class="dv-hero" style="border-bottom: none; padding: 40px 0 28px;">
+  <div class="wrap">
+    <h1 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: clamp(36px, 5vw, 56px); line-height: 1.05; letter-spacing: -0.035em; color: var(--ink); margin: 0;">Call records</h1>
+    <div class="dv-meta-row" style="margin-top: 12px;">
+        <span class="dv-meta-pill"><b>table</b> public.call_records</span>
+        <span class="dv-meta-pill"><b>access</b> AlloyDB AI · NL2SQL</span>
+        <span class="dv-meta-pill"><b>role</b> netpulse_nl_reader</span>
+        <span class="dv-meta-pill"><b>rows</b> 5,000</span>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+
+  <!-- Source banner -->
+  <div class="dv-source-banner" role="note" style="margin: 24px 0 32px;">
+    <span class="dv-source-banner-eyebrow">about this data</span>
+    <p>The CDR Analyzer agent poses one English question to the MCP toolbox tool <code>query_cdr_nl</code>, which forwards it to <code>alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1)</code>. AlloyDB AI translates the question to SQL using a registered Gemini model, executes it, and returns rows under the read-only role <code>netpulse_nl_reader</code>.</p>
+  </div>
+
+  <!-- Filter bar -->
+  <form class="dv-filter" method="get" action="">
+    <span class="dv-cross-eyebrow" style="flex-basis:100%">filters</span>
+    <div class="dv-field">
+          <label for="region">Region</label>
+          <select id="region" name="region">
+            <option value="" selected>All</option>
+            <option value="Jakarta">Jakarta</option>
+            <option value="Surabaya">Surabaya</option>
+            <option value="Bandung">Bandung</option>
+            <option value="Medan">Medan</option>
+            <option value="Semarang">Semarang</option>
+            <option value="Yogyakarta">Yogyakarta</option>
+            <option value="Denpasar">Denpasar</option>
+            <option value="Makassar">Makassar</option>
+            <option value="Palembang">Palembang</option>
+            <option value="Balikpapan">Balikpapan</option>
+          </select>
+        </div>
+        <div class="dv-field">
+          <label for="call_status">Status</label>
+          <select id="call_status" name="call_status">
+            <option value="" selected>All</option>
+            <option value="completed">completed</option>
+            <option value="dropped">dropped</option>
+            <option value="failed">failed</option>
+          </select>
+        </div>
+        <div class="dv-field">
+          <label for="call_type">Type</label>
+          <select id="call_type" name="call_type">
+            <option value="" selected>All</option>
+            <option value="voice">voice</option>
+            <option value="sms">sms</option>
+            <option value="data">data</option>
+          </select>
+        </div>
+        <div class="dv-field">
+          <label for="limit">Limit</label>
+          <input id="limit" name="limit" type="number" min="1" max="500" value="50">
+        </div>
+    <div class="dv-filter-actions">
+      <button type="submit" class="dv-btn">Apply</button>
+      <a href="" class="dv-btn dv-btn-ghost" role="button">Reset</a>
+    </div>
+  </form>
+
+  <!-- Table card -->
+  <div class="dv-table-card" role="region" aria-label="Result rows">
+    <div class="dv-table-meta">
+      <span>Showing <b>10</b> of <b>—</b> rows · sample data</span>
+      <span>last loaded · just now</span>
+    </div>
+    <div class="dv-table-scroll">
+      <table class="dv-table">
+        <thead><tr><th>call_id</th><th>caller_number</th><th>receiver_number</th><th>call_type</th><th>duration_seconds</th><th>data_usage_mb</th><th>call_date</th><th>region</th><th>cell_tower_id</th><th>call_status</th></tr></thead>
+        <tbody>
+        <tr><td>cdr_902817</td><td>+62 812-4421-3309</td><td>+62 877-1108-9920</td><td>voice</td><td>12</td><td>0.0</td><td>2026-04-26 08:24:11</td><td>Jakarta</td><td>JKT-T0042</td><td><span class="dv-chip cs-dropped">dropped</span></td></tr>
+        <tr><td>cdr_902816</td><td>+62 813-9981-7720</td><td>+62 813-7762-0114</td><td>voice</td><td>0</td><td>0.0</td><td>2026-04-26 08:24:08</td><td>Jakarta</td><td>JKT-T0042</td><td><span class="dv-chip cs-failed">failed</span></td></tr>
+        <tr><td>cdr_902815</td><td>+62 814-2210-4456</td><td>+62 818-7714-0080</td><td>data</td><td>184</td><td>44.7</td><td>2026-04-26 08:23:55</td><td>Jakarta</td><td>JKT-T0029</td><td><span class="dv-chip cs-completed">completed</span></td></tr>
+        <tr><td>cdr_902814</td><td>+62 819-9981-1102</td><td>+62 821-2245-7708</td><td>voice</td><td>302</td><td>0.0</td><td>2026-04-26 08:23:41</td><td>Jakarta</td><td>JKT-T0017</td><td><span class="dv-chip cs-completed">completed</span></td></tr>
+        <tr><td>cdr_902813</td><td>+62 812-4998-6612</td><td>+62 813-2244-1809</td><td>sms</td><td>0</td><td>0.001</td><td>2026-04-26 08:23:18</td><td>Jakarta</td><td>JKT-T0042</td><td><span class="dv-chip cs-failed">failed</span></td></tr>
+        <tr><td>cdr_902765</td><td>+62 877-3300-1182</td><td>+62 819-2210-7708</td><td>voice</td><td>0</td><td>0.0</td><td>2026-04-26 07:14:00</td><td>Surabaya</td><td>SBY-T0008</td><td><span class="dv-chip cs-failed">failed</span></td></tr>
+        <tr><td>cdr_902708</td><td>+62 813-7782-9911</td><td>+62 814-1109-3340</td><td>voice</td><td>47</td><td>0.0</td><td>2026-04-25 19:55:22</td><td>Bandung</td><td>BDG-T0011</td><td><span class="dv-chip cs-dropped">dropped</span></td></tr>
+        <tr><td>cdr_902612</td><td>+62 818-1142-7700</td><td>+62 821-2210-3398</td><td>data</td><td>812</td><td>210.4</td><td>2026-04-25 14:08:30</td><td>Yogyakarta</td><td>YGY-T0019</td><td><span class="dv-chip cs-completed">completed</span></td></tr>
+        <tr><td>cdr_902504</td><td>+62 813-9981-3340</td><td>+62 877-3398-1102</td><td>voice</td><td>0</td><td>0.0</td><td>2026-04-24 22:14:42</td><td>Yogyakarta</td><td>YGY-T0027</td><td><span class="dv-chip cs-failed">failed</span></td></tr>
+        <tr><td>cdr_902487</td><td>+62 812-1102-9981</td><td>+62 819-9920-1108</td><td>voice</td><td>256</td><td>0.0</td><td>2026-04-24 18:01:55</td><td>Makassar</td><td>MKS-T0003</td><td><span class="dv-chip cs-completed">completed</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Schema callout -->
+  <section class="dv-schema">
+    <h2 class="serif">What you&rsquo;re looking <em>at</em></h2>
+    <dl class="dv-schema-list">
+      <dt>call_id</dt>
+      <dd>Synthetic CDR identifier (PK). Stable across reseeds via deterministic generator.</dd>
+      <dt>caller_number</dt>
+      <dd>Originating MSISDN. Anonymised &mdash; safe to display in viewers.</dd>
+      <dt>receiver_number</dt>
+      <dd>Terminating MSISDN. Same anonymisation.</dd>
+      <dt>call_type</dt>
+      <dd><code>voice</code> · <code>sms</code> · <code>data</code>. Drives volumetric rollups in the analyzer.</dd>
+      <dt>duration_seconds</dt>
+      <dd>Voice / data session length. Zero for failed setups and SMS messages.</dd>
+      <dt>data_usage_mb</dt>
+      <dd>Data volume for <code>data</code> calls; zero otherwise.</dd>
+      <dt>call_date</dt>
+      <dd>Session start in UTC. CDR Analyzer joins this against <code>started_at</code> windows from the Network Investigator.</dd>
+      <dt>region</dt>
+      <dd>City-level metro derived from the originating cell tower.</dd>
+      <dt>cell_tower_id</dt>
+      <dd>Identifier of the originating tower. Useful for narrowing post-incident root-cause analysis.</dd>
+      <dt>call_status</dt>
+      <dd><code>completed</code> · <code>dropped</code> · <code>failed</code>. Failed/dropped clusters around outage windows by design in the seed.</dd>
+    </dl>
+  </section>
+
+  <!-- Cross-link strip -->
+  <nav class="dv-cross" aria-label="Other data viewers">
+    <span class="dv-cross-eyebrow">see also</span>
+    <a href="network-events.html">Network events &rarr;</a>
+    <a href="tickets.html">Incident tickets &rarr;</a>
+  </nav>
+
+</div>
+
+<footer class="foot" style="border-top: none;">
+  <div class="wrap">
+    <div class="foot-base">
+      <span>© 2026 Adityo Nugroho · NetPulse AI</span>
+      <div class="foot-social">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js"></script>
+</body>
+</html>

@@ -4,17 +4,23 @@
    Layer 1 (this file): tokens. Loaded BEFORE style.css.
    Layer 2 (style.css): components consume tokens via var(--*).
 
-   Curated from heliodoron-ui-identity/tokens/heliodoron.css:
-   - Spacing, layout, radius, motion, typography sizing/weights/leading/
-     tracking, breakpoint conventions: lifted verbatim (open methodology).
-   - Font families: substituted with system stacks (no external font load).
-   - Palette + semantic mappings: authored fresh for NetPulse, calibrated
-     to match the current style.css values so the refactor is visually
-     identical.
+   Identity v1 — heliodoron-ui-identity/tokens/heliodoron.css applied:
+   - Spacing, layout, radius, motion, type sizing/weights/leading/tracking,
+     breakpoints: lifted verbatim from heliodoron.
+   - Font families: heliodoron (Geist + Newsreader + JetBrains Mono),
+     loaded from jsdelivr @fontsource-variable packages.
+   - Neutrals: heliodoron sand ramp (warm-gold, hue 85 oklch) replacing
+     the cool-gray ramp from v0.
+   - Brand: surya (warm-gold oklch) replacing Material blue.
+   - Status ladder, category accents, backend palettes: NetPulse-canonical
+     (incident-severity hues stay distinct; v1 keeps these as-is).
 
    Source heliodoron commit: 0923dfb (snapshot 2026-04-25).
-   See REFINEMENT-AUDIT.md §5.0a for full rationale.
    ============================================================================ */
+
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@latest/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/newsreader@latest/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@latest/index.css');
 
 :root {
   /* ─── Spacing (4px base; fluid above space-5) ─── */
@@ -96,43 +102,63 @@
   --tracking-body:   0em;
   --tracking-ui:    -0.0025em;
 
-  /* ─── Typography — families (system stacks; no external font load) ─── */
-  --font-sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+  /* ─── Typography — families (heliodoron: Geist / Newsreader / JetBrains Mono).
+     Loaded via @fontsource-variable on jsdelivr (see @import at top of file).
+     System-stack fallbacks first if the variable font has not loaded yet. ─── */
+  --font-sans:  'Geist Variable', 'Geist', system-ui, -apple-system, "Segoe UI",
                 Arial, sans-serif;
-  --font-serif: ui-serif, Georgia, "Times New Roman", serif;
-  --font-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-                "Liberation Mono", monospace;
+  --font-serif: 'Newsreader Variable', 'Newsreader', ui-serif, Georgia,
+                "Times New Roman", serif;
+  --font-mono:  'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace,
+                SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   /* ─── Breakpoints (Tailwind-default, for @media queries) ─── */
   /*   sm 640px · md 768px · lg 1024px · xl 1280px · 2xl 1536px */
 }
 
 /* ============================================================================
-   NetPulse palette + semantic mappings
+   NetPulse palette — heliodoron sand + surya identity
    ----------------------------------------------------------------------------
-   Cool-neutral ramp keyed to Tailwind gray (anchors: #1f2937 ink, #6b7280 mid,
-   custom #f0f4fa cool-tinted page bg). Brand: Material blue (telecom signal).
-   Status: canonical six-step incident severity scale.
+   Neutrals: heliodoron sand ramp (oklch hue 85, warm-gold tint).
+   Brand: surya (warm-gold anchor) replacing Material blue.
+   Status: canonical six-step incident severity scale (kept as-is — semantic
+   distinctness for incident triage outweighs full palette unification).
    ============================================================================ */
 
 :root {
-  /* ─── Neutral ramp ─── */
-  --np-neutral-000: #ffffff;
-  --np-neutral-050: #f0f4fa;   /* page bg — cool tint */
-  --np-neutral-100: #f3f4f6;   /* sunken surface, code chip bg */
-  --np-neutral-200: #e5e7eb;   /* hairline border */
-  --np-neutral-300: #d1d5db;   /* strong border */
-  --np-neutral-500: #6b7280;   /* tertiary / muted text */
-  --np-neutral-650: #4b5563;   /* secondary text */
-  --np-neutral-950: #1f2937;   /* primary ink */
+  /* ─── Neutral ramp (heliodoron sand, oklch hue 85) ─── */
+  --np-neutral-000: oklch(100% 0     0);     /* white */
+  --np-neutral-050: oklch(98%  0.008 85);    /* sand-050 — page bg */
+  --np-neutral-100: oklch(97%  0.012 85);    /* sand-100 — sunken */
+  --np-neutral-200: oklch(92%  0.022 85);    /* sand-200 — hairline border */
+  --np-neutral-300: oklch(85%  0.025 85);    /* sand-300 — strong border */
+  --np-neutral-500: oklch(58%  0.018 85);    /* sand-500 — tertiary text */
+  --np-neutral-650: oklch(37%  0.010 85);    /* sand-650 — secondary text */
+  --np-neutral-950: oklch(13%  0.003 60);    /* sand-950 — primary ink */
 
-  /* ─── Brand ─── */
-  --np-brand:             #1a73e8;   /* Material blue 600 — telecom signal */
-  --np-brand-interactive: #0d47a1;   /* Material blue 900 — hover/active */
+  /* ─── Brand (heliodoron surya — warm-gold anchor) ─── */
+  --np-brand:             oklch(70% 0.140 65);   /* surya — anchor / CTA */
+  --np-brand-interactive: oklch(62% 0.150 60);   /* surya-interactive — hover/active */
+  --np-brand-deep:        oklch(38% 0.110 55);   /* deep amber-bronze — high-presence
+                                                    surfaces (header bg, dark-surface
+                                                    accents). Retains warm-gold hue
+                                                    while reading as substantial /
+                                                    structural rather than CTA. */
+
+  /* ─── Heliodoron Indonesian accent palette (oklch).
+     Restrained chroma matching heliodoron's editorial discipline. Available
+     for accents/badges without repurposing the brand surya. ─── */
+  --np-santan:    oklch(89% 0.030 85);    /* cream tint */
+  --np-pandan:    oklch(60% 0.085 135);   /* deep pandan green — data/source */
+  --np-tebu:      oklch(83% 0.028 175);   /* mint tint */
+  --np-laut:      oklch(62% 0.100 230);   /* sea blue */
+  --np-batik:     oklch(80% 0.035 275);   /* indigo tint */
+  --np-rosella:   oklch(60% 0.125 10);    /* deep hibiscus */
+  --np-terakota:  oklch(85% 0.030 35);    /* earth-clay tint */
 
   /* ─── Accent (carries existing aliases for back-compat) ─── */
-  --np-accent: #00bfa5;              /* teal — success / "done" */
-  --np-error:  #c5221f;              /* validation / error */
+  --np-accent: #00bfa5;                          /* teal — success / "done" */
+  --np-error:  oklch(55% 0.165 25);              /* heliodoron error */
 
   /* ─── Status (incident severity ladder) ─── */
   --np-status-critical: #dc2626;     /* red 600 */
@@ -152,8 +178,8 @@
   --np-shadow-header: 0 2px 8px rgba(0,0,0,0.15);
   --np-shadow-card:   0 2px 8px rgba(0,0,0,0.06);
 
-  /* ─── Focus ring (WCAG AA) ─── */
-  --np-focus: #2563eb;               /* blue 600 — saturated focus tone */
+  /* ─── Focus ring (WCAG AA, heliodoron) ─── */
+  --np-focus: oklch(60% 0.150 235);  /* heliodoron focus — saturated blue */
 
   /* ─── Backend palettes (consumed by source-tag pills, banners, tool calls).
      Each backend gets bg+fg; banners derive border/accent from --c-*-fg via

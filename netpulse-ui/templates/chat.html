@@ -24,6 +24,7 @@
           <span class="np-timeline-step">1</span>
           <h3>Classifier</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -48,6 +49,7 @@
           <span class="np-timeline-step">2</span>
           <h3>Network Investigator</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -74,6 +76,7 @@
           <span class="np-timeline-step">3</span>
           <h3>CDR Analyzer</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -99,6 +102,7 @@
           <span class="np-timeline-step">4</span>
           <h3>Response Formatter</h3>
           <span class="np-status">waiting</span>
+          <span class="np-region-trace" hidden></span>
         </header>
         <div class="np-card-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
@@ -112,17 +116,17 @@
   </ol>
 
   <aside class="np-impact-card" hidden>
-    <div class="np-impact-primary">
-      <span class="np-impact-icon" aria-hidden="true">!</span>
-      <span class="np-impact-affected">--</span>
-      <span class="np-impact-affected-label">customers affected</span>
-      <span class="np-impact-sep">|</span>
-      <span class="np-impact-elapsed">--</span>
-      <span class="np-impact-elapsed-label">since onset</span>
-    </div>
-    <div class="np-impact-meta">
-      <span class="np-impact-events">--</span>
-      <div class="np-impact-sevs"></div>
+    <span class="np-impact-icon" aria-hidden="true">!</span>
+    <div class="np-impact-body">
+      <div class="np-impact-headline">
+        <span class="np-impact-affected">--</span>
+        <span class="np-impact-affected-label">customers affected</span>
+      </div>
+      <div class="np-impact-meta">
+        <span class="np-impact-events-wrap" hidden><strong class="np-impact-events">--</strong> events</span>
+        <span class="np-impact-elapsed-wrap" hidden><strong class="np-impact-elapsed">--</strong> since onset</span>
+        <div class="np-impact-sevs"></div>
+      </div>
     </div>
   </aside>
 
@@ -233,13 +237,28 @@ var CATEGORY_ACTIONS = {
   ],
 };
 
+// MCP Toolbox tools return a JSON-encoded STRING (per
+// google.adk.flows.llm_flows.functions.__build_response_event, ADK then
+// wraps non-dict returns as `{"result": "<string>"}`). So the chat UI sees
+// `result.result` as a JSON string of the row array, not an Array. This
+// extractor walks both shapes — string-encoded and direct — recursing once
+// through any single intermediate JSON-string field.
 function npExtractRows(result) {
   if (!result) return [];
   if (Array.isArray(result)) return result;
+  if (typeof result === 'string') {
+    try { return npExtractRows(JSON.parse(result)); }
+    catch (e) { return []; }
+  }
   if (typeof result !== 'object') return [];
   var keys = ['rows', 'records', 'events', 'result', 'data'];
   for (var i = 0; i < keys.length; i++) {
-    if (Array.isArray(result[keys[i]])) return result[keys[i]];
+    var v = result[keys[i]];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+      var nested = npExtractRows(v);
+      if (nested.length) return nested;
+    }
   }
   return [];
 }
@@ -284,13 +303,21 @@ function npComputeImpact(rows) {
   var sevCounts = {critical: 0, high: 0, major: 0, medium: 0, minor: 0, low: 0, info: 0};
   rows.forEach(function (r) {
     if (!r) return;
+    // BigQuery INT64 sometimes serializes as a string — coerce both.
+    // Also handle aggregate-summary rows that use total_affected instead of
+    // affected_customers (query_affected_customers_summary tool output).
     var raw = r.affected_customers;
+    if (raw === undefined || raw === null || raw === '') raw = r.total_affected;
     var n = (typeof raw === 'number') ? raw : parseInt(raw, 10);
-    if (!isNaN(n)) totalAffected += n;
+    if (!isNaN(n) && n > 0) totalAffected += n;
     var sev = r.severity ? String(r.severity).toLowerCase() : '';
     if (sev in sevCounts) sevCounts[sev]++;
-    if (r.started_at) {
-      var t = Date.parse(r.started_at);
+    var ts = r.started_at || r.event_time || r.timestamp;
+    if (ts) {
+      // Date.parse handles both "2026-04-26T07:14:14+00:00" (ISO) and
+      // "2026-04-26 07:14:14" (space-separated, what data_queries.py emits)
+      // on modern engines.
+      var t = Date.parse(ts);
       if (!isNaN(t) && (earliest === null || t < earliest)) earliest = t;
     }
   });
@@ -307,9 +334,27 @@ function npRenderImpact() {
   if (!npImpact) { card.hidden = true; return; }
   card.hidden = false;
   card.querySelector('.np-impact-affected').textContent = npFormatNum(npImpact.affected);
-  card.querySelector('.np-impact-elapsed').textContent = npFormatElapsed(npImpact.earliestIso) || '--';
-  card.querySelector('.np-impact-events').textContent =
-    npImpact.events + ' event' + (npImpact.events === 1 ? '' : 's');
+
+  // Each meta element hides its own wrapper when the underlying data is
+  // missing — keeps the card from showing "-- since onset" placeholders
+  // when started_at / event count is not available in the row payload.
+  var elapsed = npFormatElapsed(npImpact.earliestIso);
+  var elapsedWrap = card.querySelector('.np-impact-elapsed-wrap');
+  if (elapsed) {
+    card.querySelector('.np-impact-elapsed').textContent = elapsed;
+    elapsedWrap.hidden = false;
+  } else {
+    elapsedWrap.hidden = true;
+  }
+
+  var eventsWrap = card.querySelector('.np-impact-events-wrap');
+  if (npImpact.events > 0) {
+    card.querySelector('.np-impact-events').textContent = npImpact.events;
+    eventsWrap.hidden = false;
+  } else {
+    eventsWrap.hidden = true;
+  }
+
   var sevHost = card.querySelector('.np-impact-sevs');
   while (sevHost.firstChild) sevHost.removeChild(sevHost.firstChild);
   IMPACT_SEV_ORDER.forEach(function (sev) {
@@ -368,6 +413,12 @@ function npReset() {
     entry.querySelector('.np-text').textContent = '';
     var msg = entry.querySelector('.np-error-msg');
     if (msg) msg.parentNode.removeChild(msg);
+    var trace = entry.querySelector('.np-region-trace');
+    if (trace) {
+      trace.hidden = true;
+      trace.classList.remove('np-region-trace-failover');
+      while (trace.firstChild) trace.removeChild(trace.firstChild);
+    }
   });
   var f = document.querySelector('.np-final');
   f.hidden = true;
@@ -480,6 +531,72 @@ function npOnLoad() {
 }
 window.addEventListener('DOMContentLoaded', npOnLoad);
 
+// §3.2 — per-attempt Vertex AI model-ladder telemetry. agent_runner emits one
+// `region_attempt` event per RegionFailoverGemini attempt with shape
+// `{type:'region_attempt', agent, region, outcome, message?}`. The `region`
+// field carries the MODEL NAME the attempt ran on (the field name is preserved
+// from the prior region-failover design to minimize SSE diff). We progressively
+// build a trace chip in the matching timeline entry's header:
+//   first ok                 → "via gemini-3.1-flash-lite-preview"
+//   429-retry then ok        → "via gemini-3.1-flash-lite-preview" (same model collapses)
+//   persistent 429 swaps     → "via gemini-3.1-flash-lite-preview ↪ gemini-2.5-flash"
+// The chip carries a 'failover' modifier class while a hop is mid-walk so the
+// chip reads as warning-tinted; a successful settle drops the modifier and
+// flips dataset.settled='1' so the NEXT walk (ADK runs 2 LLM calls per agent)
+// resets the chip rather than appending to it.
+function npRenderRegionAttempt(ev) {
+  if (!ev.agent || !ev.region) return;
+  var entry = document.querySelector('.np-timeline-entry[data-agent="' + ev.agent + '"]');
+  if (!entry) return;
+  var chip = entry.querySelector('.np-region-trace');
+  if (!chip) return;
+  chip.hidden = false;
+  // ADK makes 2 LLM calls per agent (tool selection + tool-result interpretation),
+  // so each agent run produces TWO independent walks of ATTEMPT_SCHEDULE. Without
+  // resetting between walks the chip reads as one giant chain like
+  // "primary ↪ fallback ↪ primary ↪ fallback" which falsely suggests the wrapper
+  // bounced back to primary. The 'settled' flag is set on every 'ok' event; the
+  // next attempt event after a settle clears the chip and starts a fresh walk so
+  // the chip always reflects the path of the MOST RECENT LLM call.
+  if (chip.dataset.settled === '1') {
+    while (chip.firstChild) chip.removeChild(chip.firstChild);
+    chip.dataset.settled = '0';
+  }
+  if (!chip.firstChild) {
+    var prefix = document.createElement('span');
+    prefix.className = 'np-region-trace-prefix';
+    prefix.textContent = 'via ';
+    chip.appendChild(prefix);
+    var first = document.createElement('span');
+    first.className = 'np-region-trace-region';
+    first.textContent = ev.region;
+    chip.appendChild(first);
+  } else {
+    // chip already has at least one region — append "↪ region" only if the new
+    // region differs from the last one already shown (defends against duplicate
+    // events on the streaming-bypass branch).
+    var existing = chip.querySelectorAll('.np-region-trace-region');
+    var last = existing[existing.length - 1];
+    if (!last || last.textContent !== ev.region) {
+      var sep = document.createElement('span');
+      sep.className = 'np-region-trace-sep';
+      sep.textContent = ' ↪ ';  // U+21AA — "redirected to" (model-fallback semantic)
+      chip.appendChild(sep);
+      var next = document.createElement('span');
+      next.className = 'np-region-trace-region';
+      next.textContent = ev.region;
+      chip.appendChild(next);
+    }
+  }
+  if (ev.outcome === 'failover') {
+    chip.classList.add('np-region-trace-failover');
+    chip.dataset.settled = '0';
+  } else {
+    chip.classList.remove('np-region-trace-failover');
+    chip.dataset.settled = '1';
+  }
+}
+
 // §1.1 — agent-scoped error rendering: agent_runner emits `{type:'error', agent, tool?, message}`
 // when a tool returns status='error' (e.g., save_incident_ticket's enum guard) or when ADK wraps
 // a thrown exception. The targeted timeline entry gets a sticky red state + inline error message;
@@ -520,6 +637,10 @@ function npHandle(ev) {
     } else {
       npRenderGlobalError(ev);
     }
+    return;
+  }
+  if (ev.type === 'region_attempt') {
+    npRenderRegionAttempt(ev);
     return;
   }
   if (ev.type === 'complete') {

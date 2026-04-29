@@ -21,9 +21,13 @@ body {
   min-height: 100vh;
 }
 
-/* Header */
+/* Header — deep amber-bronze for substantial structural presence.
+   Uses --np-brand-deep (oklch 38%) as the anchor so white text + the white
+   logo plate clear WCAG AA easily, and the gradient lands in
+   --np-brand-interactive (oklch 62%) for a heliodoron sunset transition that
+   stays on the warm-gold hue family. */
 .np-header {
-  background: linear-gradient(135deg, var(--np-primary-dark) 0%, var(--np-primary) 100%);
+  background: linear-gradient(135deg, var(--np-brand-deep) 0%, var(--np-brand-interactive) 100%);
   color: #fff;
   padding: 18px 32px;
   display: flex;
@@ -231,8 +235,8 @@ body {
   animation: np-dot-pulse 1.4s infinite;
 }
 .np-timeline-entry.done .np-timeline-dot {
-  background: var(--np-accent);
-  box-shadow: 0 0 0 2px var(--np-accent);
+  background: var(--np-pandan);
+  box-shadow: 0 0 0 2px var(--np-pandan);
 }
 .np-timeline-entry.error .np-timeline-dot {
   background: var(--np-error);
@@ -260,7 +264,7 @@ body {
   border-left-color: var(--np-primary);
 }
 .np-timeline-entry.done .np-timeline-content {
-  border-left-color: var(--np-accent);
+  border-left-color: var(--np-pandan);
 }
 .np-timeline-entry.error .np-timeline-content {
   border-left-color: var(--np-error);
@@ -347,8 +351,10 @@ body {
   border-radius: var(--radius-xs);
 }
 
-/* Backend tag pills — shared by card source, nav, banner, and inline tool calls.
-   Per-variant colors live at :root in the --c-* tokens above. */
+/* Backend tag pills — unified single-color badge across all backends.
+   The label text carries the context (BIGQUERY, ALLOYDB, etc.); color stays
+   uniform on --np-pandan to read as one consistent badge family. The per-
+   backend --c-* tokens still drive banner backgrounds in the workspace. */
 .np-source-tag,
 .np-tool-tag {
   display: inline-block;
@@ -361,14 +367,9 @@ body {
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 1.4;
+  background: color-mix(in oklab, var(--np-pandan) 14%, transparent);
+  color: var(--np-pandan);
 }
-.np-source-tag.adk,           .np-tool-tag.adk           { background: var(--c-adk-bg);            color: var(--c-adk-fg); }
-.np-source-tag.local,         .np-tool-tag.local         { background: var(--c-local-bg);          color: var(--c-local-fg); }
-.np-source-tag.mcp,           .np-tool-tag.mcp           { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
-.np-source-tag.bq,            .np-tool-tag.bq            { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
-.np-source-tag.alloydb,       .np-tool-tag.alloydb       { background: var(--c-alloydb-bg);        color: var(--c-alloydb-fg); }
-.np-source-tag.alloydb-write,
-.np-tool-tag.alloydb-write    { background: var(--c-alloydb-write-bg);  color: var(--c-alloydb-write-fg); }
 
 .np-tool-tag { margin-right: var(--space-1); }
 .np-status {
@@ -385,7 +386,7 @@ body {
   color: #fff;
   animation: np-pulse 1.4s infinite;
 }
-.np-timeline-entry.done .np-status { background: var(--np-accent); color: #fff; }
+.np-timeline-entry.done .np-status { background: var(--np-pandan); color: #fff; }
 .np-timeline-entry.error .np-status {
   background: var(--np-error);
   color: #fff;
@@ -614,6 +615,10 @@ body {
   margin-bottom: var(--space-2);
   font-size: 13px;
 }
+.np-rowcount-hint {
+  color: var(--np-error);
+  font-weight: 500;
+}
 .np-table {
   width: 100%;
   border-collapse: collapse;
@@ -683,6 +688,11 @@ body {
 .np-badge-status-acknowledged { background: color-mix(in srgb, var(--np-status-major)    12%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    35%, transparent); }
 .np-badge-status-resolved     { background: color-mix(in srgb, var(--np-status-resolved) 12%, transparent); color: var(--np-status-resolved); border-color: color-mix(in srgb, var(--np-status-resolved) 35%, transparent); }
 
+/* Call status badges (call_records.call_status enum: completed | dropped | failed) */
+.np-badge-call-completed { background: color-mix(in srgb, var(--np-status-resolved) 14%, transparent); color: var(--np-status-resolved); border-color: color-mix(in srgb, var(--np-status-resolved) 40%, transparent); }
+.np-badge-call-dropped   { background: color-mix(in srgb, var(--np-status-major)    14%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    40%, transparent); }
+.np-badge-call-failed    { background: color-mix(in srgb, var(--np-status-critical) 14%, transparent); color: var(--np-status-critical); border-color: color-mix(in srgb, var(--np-status-critical) 40%, transparent); }
+
 /* Region badge — neutral tone, just for visual grouping in the ticket card */
 .np-badge-region {
   background: var(--surface-sunken);
@@ -692,11 +702,72 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* §3.2 — Per-attempt Vertex AI region trace chip
+   ----------------------------------------------------------------------------
+   Built progressively in the timeline-entry header by npRenderRegionAttempt
+   from the SSE region_attempt events. Default tone is neutral (success); the
+   .np-region-trace-failover modifier swaps to a warning tint while a hop is
+   mid-walk so the chip reads as "we had to try the next region".
+   The leading globe glyph is part of the prefix span so the chip width grows
+   only with the regions actually attempted. */
+.np-region-trace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.np-region-trace::before {
+  content: "🌐";
+  margin-right: 4px;
+  font-size: 11px;
+}
+.np-region-trace-prefix {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+  margin-right: 2px;
+}
+.np-region-trace-region {
+  color: var(--np-primary-dark);
+  font-weight: var(--weight-semibold);
+}
+.np-region-trace-sep {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+}
+.np-region-trace-failover {
+  background: color-mix(in srgb, var(--np-status-major) 12%, transparent);
+  color: var(--np-status-major);
+  border-color: color-mix(in srgb, var(--np-status-major) 35%, transparent);
+}
+.np-region-trace-failover .np-region-trace-region {
+  color: var(--np-status-major);
+}
+.np-region-trace-failover .np-region-trace-prefix,
+.np-region-trace-failover .np-region-trace-sep {
+  color: color-mix(in srgb, var(--np-status-major) 70%, transparent);
+}
+
 /* §5.5 — Customer-impact card
    ----------------------------------------------------------------------------
    Renders above the final ticket once network_investigator's tool_response
    arrives. Aggregates affected_customers, severity counts, and onset elapsed
-   from the BQ rows. */
+   from the BQ rows.
+
+   Layout: icon-left + content-right. Content is split into a HEADLINE row
+   (the affected count as the lede) and a META row (elapsed + event count
+   + severity badges). The headline number is prominent (h1-tier), the
+   meta supports it. Each metric stays on its own line on narrow widths so
+   the card stays readable when cramped. */
 .np-impact-card {
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--np-status-critical) 8%, var(--surface-raised)) 0%,
@@ -707,59 +778,70 @@ body {
   padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-4);
   box-shadow: var(--shadow-soft);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.np-impact-primary {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4);
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  font-size: var(--type-body-sm);
-  color: var(--text-secondary);
 }
 .np-impact-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--np-status-critical);
   color: #fff;
   font-weight: var(--weight-bold);
-  font-size: 14px;
+  font-size: 18px;
   flex-shrink: 0;
 }
-.np-impact-affected,
-.np-impact-elapsed {
-  font-size: var(--type-h2);
+.np-impact-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.np-impact-headline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--type-body-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-tight);
+}
+.np-impact-affected {
+  font-size: var(--type-display-2);
   font-weight: var(--weight-bold);
   color: var(--text-primary);
   letter-spacing: var(--tracking-tight);
   font-variant-numeric: tabular-nums;
+  line-height: var(--leading-display);
 }
-.np-impact-affected-label,
-.np-impact-elapsed-label {
+.np-impact-affected-label {
   color: var(--text-secondary);
-}
-.np-impact-sep {
-  color: var(--text-tertiary);
-  margin: 0 var(--space-2);
-  user-select: none;
+  font-size: var(--type-body);
+  font-weight: var(--weight-medium);
 }
 .np-impact-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-3) var(--space-4);
   font-size: var(--type-detail);
   color: var(--text-secondary);
 }
-.np-impact-events {
+.np-impact-meta > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.np-impact-meta strong {
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 .np-impact-sevs {
   display: flex;
@@ -823,10 +905,7 @@ body {
   margin-bottom: var(--space-5);
 }
 .np-hero-accent {
-  background: linear-gradient(135deg, var(--np-primary) 0%, var(--np-accent) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--np-pandan);
 }
 .np-hero-sub {
   font-size: var(--type-body-lg);

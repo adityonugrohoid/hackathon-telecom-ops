@@ -21,6 +21,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Quick Demo](#quick-demo)
 - [Demo](#demo)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
@@ -49,6 +50,18 @@ When a customer reports something like *"Major dropped calls in Surabaya"*, a NO
 4. **Synthesizes** an incident ticket with a NOC recommendation, persisted to AlloyDB and surfaced to the operator.
 
 The whole workflow runs as a Google ADK `SequentialAgent` orchestrating four `LlmAgent` sub-agents, each backed by Gemini 2.5 Flash on Vertex AI. End-to-end latency is **25-30 seconds** including all four LLM calls and three live database round-trips.
+
+## Quick Demo
+
+A 90-second tour. No login, no setup, no terminal:
+
+1. **Open the live UI** → [https://netpulse-ui-486319900424.us-central1.run.app](https://netpulse-ui-486319900424.us-central1.run.app). The hero landing page explains the four-agent pipeline and lists three pre-seeded example complaints.
+2. **Click any launch chip** (e.g., *"Customer reports failed calls in Jakarta"*). The chip handoff prefills the chat input and auto-submits via `?seed=...&autorun=1`, so you land directly on the workspace with the run already in flight.
+3. **Watch the timeline animate** — `Classifier → Network Investigator → CDR Analyzer → Response Formatter`. Each entry shows its data source pills, the live tool calls (`query_network_events(...)` or `weekly_outage_trend(region='Jakarta', weeks_back=12, ...)`, `query_cdr_nl(question='How many dropped and failed calls in Jakarta in the last 7 days, grouped by cell_tower_id?')`, `save_incident_ticket(...)`), and a tiny `via gemini-3.1-flash-lite-preview` chip in the header showing which Vertex AI model answered. Under preview-pool 429 pressure, the chip extends to `via gemini-3.1-flash-lite-preview ↪ gemini-2.5-flash` — failure visible as one model-swap hop, not a hard 500.
+4. **Read the customer-impact card** that fades in once the network investigator returns its rows: total customers affected (summed across BQ network events), severity histogram, and elapsed-since-onset (`~Xm`/`~Xh`/`~Xd`).
+5. **Land on the saved incident report** at the bottom: a category badge (network/billing/hardware/service/general), region badge, severity badge, the model's structured `INCIDENT REPORT`, and a recommended-NOC-actions chip panel keyed off the category. The ticket itself is now persisted in AlloyDB — switch to the **Incident Tickets** tab in the top nav and you'll see the row at the top of the list.
+
+Want to see the underlying ADK trace? The fallback service ([`telecom-ops-assistant`](https://telecom-ops-assistant-486319900424.us-central1.run.app)) is the same engine wrapped in the `adk web` Dev UI — `/events` shows every sub-agent turn and `/trace` shows span-by-span timing for every LLM call and tool invocation.
 
 ## Demo
 
@@ -91,20 +104,20 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 - **Cross-source evidence correlation.** Automatically links BigQuery network events with AlloyDB CDR rows to surface root causes (e.g., a dropped call from cell tower JKT-002 correlated with the major fiber cut event EVT001).
 - **Persistent structured output.** Every run inserts an auditable row in AlloyDB `incident_tickets` with category, region, related events, CDR findings, and a NOC recommendation. Queryable, joinable, archivable, not a transient chat response.
 - **Two frontends, one engine.** A custom NetPulse UI (Flask + Server-Sent Events) for branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
-- **APAC-optimized inference with region failover.** Vertex AI Gemini 2.5 Flash defaults to the `global` multi-region pool, then fails over per-LlmAgent through `asia-southeast2` → `asia-southeast1` → `us-central1` on `RESOURCE_EXHAUSTED`. Each agent walks the ladder independently, so one agent's quota miss does not bind the others. Implementation in `telecom_ops/vertex_failover.py`.
+- **Vertex AI failover with graceful model degradation (visible in the UI).** Every LLM call routes through `RegionFailoverGemini`, which targets the single `global` Vertex endpoint and walks a 3-attempt **model ladder** on `RESOURCE_EXHAUSTED` 429 or `asyncio.TimeoutError`: attempt 1 (primary `gemini-3.1-flash-lite-preview`, 10s ceiling), attempt 2 (same primary after a 0.5s sleep, 20s ceiling), attempt 3 (`gemini-2.5-flash` GA fallback, 30s ceiling). Each model has its own quota bucket, so the GA fallback is a real escape hatch under preview-pool pressure. Per-attempt telemetry surfaces in the chat workspace as a `via gemini-3.1-flash-lite-preview` chip on each timeline entry; on a model swap, the chip extends to `via gemini-3.1-flash-lite-preview ↪ gemini-2.5-flash` (the `↪` is the standard "redirected to" glyph). Implementation in `telecom_ops/vertex_failover.py`; UI wiring via the `region_attempt` SSE event in `netpulse-ui/agent_runner.py`.
 - **Boot-resilient by design.** MCP Toolbox client wrapped in `try/except`, AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive idle-connection reaping, agent runner is lazy-loaded so frontend tabs that don't need the agent stay functional even if the toolbox is cold.
-- **Validated end-to-end.** 32 incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission stress testing. Zero `429 RESOURCE_EXHAUSTED` errors after the asia-southeast1 region switch.
+- **Validated end-to-end.** 70+ incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission and refinement-phase stress testing. Zero unrecovered demo failures — every preview-model 429 either clears on the same-model retry (most cases) or surfaces visibly as a model swap chip (`↪ gemini-2.5-flash`) and still produces a complete ticket.
 
 ## Tech Stack
 
 | Component | Technology | Why |
 |---|---|---|
 | Agent framework | **Google ADK 1.14.0** | `SequentialAgent` + `LlmAgent` give built-in state management, `output_key` chaining, and the native function-calling tool protocol, all with zero glue code |
-| LLM | **Gemini 2.5 Flash on Vertex AI** | Best latency/cost for APAC; Vertex AI bypasses Google AI Studio rate limits |
-| Inference region | **`global` with ranked failover** | Default to Google's multi-region pool (`global`); on `RESOURCE_EXHAUSTED`, fail over through `asia-southeast2` → `asia-southeast1` → `us-central1`. Per-LlmAgent failover state in `telecom_ops/vertex_failover.py`. |
+| LLM (per agent) | **Gemini 3.1 Flash-Lite preview** for all four agents (`MODEL_FAST = MODEL_SYNTHESIS` since Phase 9 round 2) | Speed-tier model end-to-end (~0.6–1.9s per call). Pro-preview was tried on synthesis but proved `global`-only on this project, making the failover ladder a structural no-op. Re-splitting the constant is safe under the new model ladder — attempt 3's `gemini-2.5-flash` fallback covers any global-only primary. |
+| Inference region | **Single `global` endpoint + 3-attempt model ladder** | Targets Google's multi-region pool (`global`); on `RESOURCE_EXHAUSTED` 429 OR `asyncio.TimeoutError`, walks `ATTEMPT_SCHEDULE`: attempt 1 (primary, 10s) → attempt 2 (primary after 0.5s sleep, 20s) → attempt 3 (`gemini-2.5-flash` GA fallback, 30s). The ladder swaps **models**, not regions, because preview models like `gemini-3.1-flash-lite-preview` are gated to `global` only on this project — the prior region ladder always 404'd on us-central1. Per-LlmAgent failover state in `telecom_ops/vertex_failover.py`. |
 | Tool gateway | **MCP Toolbox for Databases** (Cloud Run) | Direct BigQuery MCP returns 403 on Cloud Run; Toolbox is the proven ADK-compatible bridge |
-| Analytical store | **BigQuery** (`telecom_network.network_events`) | 30-row dataset of outages, maintenance, degradations, restorations across 5 Indonesian cities |
-| Operational store | **AlloyDB for PostgreSQL 17** | Hosts `call_records` (50 rows of CDR data) and `incident_tickets` (persistent agent output) |
+| Analytical store | **BigQuery** (`telecom_network.network_events`) | 50 000-event dataset across 10 Indonesian cities, 2025-11-01 → 2026-04-30. **DAY-partitioned on `started_at` and clustered by `(region, severity)`** so the new `weekly_outage_trend` rollup prunes to the requested window (a 7-day query reads ~25 KB instead of the full table). |
+| Operational store + NL2SQL | **AlloyDB for PostgreSQL 17** with the `alloydb_ai_nl` extension | Hosts `call_records` (5 000 CDRs with realistic dropped/failed clustering around per-city anchor windows) and `incident_tickets` (persistent agent output). The `cdr_analyzer` agent calls `query_cdr_nl(question='…')`; the toolbox routes to `alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1)` and connects as a read-only role (`netpulse_nl_reader`, `SELECT` on `call_records` only) so destructive NL is structurally blocked. Setup script: `scripts/setup_alloydb_nl.py`. |
 | Operational store driver | **SQLAlchemy 2 + pg8000** | Pure-Python wire driver, works in Cloud Run without C extensions |
 | Custom UI | **Flask 3 + Server-Sent Events** | Streams ADK events into animated chat cards; uses `fetch()` + `ReadableStream` (POST + SSE) |
 | Async-to-sync bridge | **threading.Thread + queue.Queue** | Drains the async ADK Runner from a sync Flask request handler without buffering |
@@ -114,6 +127,15 @@ Streaming sub-agent conversation showing each `LlmAgent` taking its turn, callin
 ## Architecture
 
 The mermaid block below renders natively on GitHub. A pre-rendered PNG also lives at [`docs/architecture.png`](docs/architecture.png) for use in slides and offline viewing.
+
+**What's load-bearing in the diagram:**
+
+- **`SequentialAgent` over four `LlmAgent`s, not one big agent with four tools.** Each sub-agent owns one responsibility, one tool (or one toolset), and one `output_key` written into `session.state`. Downstream agents read that state via `{key?}` defensive substitution so a partial chain still produces a graceful report.
+- **MCP Toolbox is the BigQuery bridge — not the direct BigQuery MCP endpoint.** The direct endpoint returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent; the Toolbox-as-intermediary pattern is the proven workaround. 2 universal parameterized tools live in `tools.yaml`: `query_network_events(region, severity, event_type, days_back, limit)` and `query_affected_customers_summary(region, days_back)`. Adding a new city is a CSV change, not a toolbox redeploy.
+- **Vertex AI uses a model ladder at a single endpoint, not a region ladder.** Every LLM-call edge in the diagram routes through `RegionFailoverGemini` (name preserved from the prior region-failover design), which targets `global` and walks `gemini-3.1-flash-lite-preview (10s) → gemini-3.1-flash-lite-preview after 0.5s sleep (20s) → gemini-2.5-flash (30s)` on `RESOURCE_EXHAUSTED` 429 OR `asyncio.TimeoutError`. Only one HTTP call is ever in flight per agent (the next attempt cancels the prior). State is per-`LlmAgent`, so one agent's quota miss doesn't bind the others. Per-attempt model telemetry surfaces in the chat UI's timeline header.
+- **Two frontends, one engine.** Both `NetPulse UI` (Flask + SSE) and `ADK Dev UI` (`/events` + `/trace`) call the same `Runner + InMemorySessionService + root_agent`. The custom UI is the demo surface; the Dev UI is the free debug surface. Building one didn't require rebuilding the other.
+- **Async ADK Runner ↔ sync Flask via thread + queue.** The Flask SSE generator pulls from a `queue.Queue` populated by a per-request worker thread that runs its own asyncio loop. The naive `asyncio.run()` wrapper buffers all events into a list before yielding, which breaks the chat-card animation — that's why this bridge looks heavier than it needs to be at first glance.
+- **AlloyDB is read AND write.** `call_records` (read by CDR Analyzer) and `incident_tickets` (written by Response Formatter) are two tables in the same Postgres-compatible cluster. Both engines use `pool_pre_ping=True` + `pool_recycle=300` to survive AlloyDB's idle TCP reaper.
 
 ```mermaid
 %%{init: {"flowchart": {"htmlLabels": true, "curve": "basis"}, "themeVariables": {"fontSize": "15px", "fontFamily": "-apple-system, Segoe UI, sans-serif"}}}%%
@@ -142,8 +164,8 @@ flowchart TB
     subgraph TOOLS["Tool Layer"]
         direction LR
         T1["classify_issue<br/><span style='font-size:11px;font-weight:400'>native Python</span>"]
-        T2["telecom_network_toolset<br/><span style='font-size:11px;font-weight:400'>8 BQ tools via toolbox-core</span>"]
-        T3["query_cdr<br/><span style='font-size:11px;font-weight:400'>SQLAlchemy + pg8000</span>"]
+        T2["telecom_network_toolset<br/><span style='font-size:11px;font-weight:400'>3 BQ tools via toolbox-core (incl. weekly_outage_trend)</span>"]
+        T3["cdr_nl_toolset → query_cdr_nl<br/><span style='font-size:11px;font-weight:400'>AlloyDB AI NL2SQL via toolbox-core</span>"]
         T4["save_incident_ticket<br/><span style='font-size:11px;font-weight:400'>SQLAlchemy + pg8000</span>"]
     end
 
@@ -156,7 +178,7 @@ flowchart TB
         ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400'>incident_tickets</span>")]
     end
 
-    Vertex["Vertex AI Gemini 2.5 Flash<br/><span style='font-size:11px;font-weight:400'>global → asia-southeast2 → asia-southeast1 → us-central1</span>"]
+    Vertex["Vertex AI · global<br/><span style='font-size:11px;font-weight:400'>gemini-3.1-flash-lite-preview ↪ gemini-2.5-flash (model ladder)</span>"]
 
     User --> UI
     User --> ADK
@@ -218,8 +240,8 @@ flowchart TB
 | # | Agent | Tool | Backend | Session-state output |
 |---|---|---|---|---|
 | 1 | **Classifier** | `classify_issue` | in-memory only | `category`, `region`, `complaint`, `reasoning`, `classification` |
-| 2 | **Network Investigator** | `telecom_network_toolset` (8 tools) | MCP Toolbox → BigQuery | `network_findings` |
-| 3 | **CDR Analyzer** | `query_cdr` | AlloyDB `call_records` (read) | `cdr_findings`, `cdr_results` |
+| 2 | **Network Investigator** | `telecom_network_toolset` (3 tools: `query_network_events`, `query_affected_customers_summary`, and the partition-pruning `weekly_outage_trend` rollup) | MCP Toolbox → BigQuery | `network_findings` |
+| 3 | **CDR Analyzer** | `cdr_nl_toolset` → `query_cdr_nl(question)` (AlloyDB AI NL2SQL) | MCP Toolbox → AlloyDB `alloydb_ai_nl.execute_nl_query` (read-only role) | `cdr_findings` |
 | 4 | **Response Formatter** | `save_incident_ticket` | AlloyDB `incident_tickets` (write) | `final_report`, `ticket_id` |
 
 Each agent is an `LlmAgent` with:
@@ -253,11 +275,11 @@ Input: *"Customer reports failed calls in Jakarta"*
 | Step | Agent | What happens |
 |---|---|---|
 | 1 | Classifier (~3 s) | LLM picks `category=network`, `region=Jakarta` and writes them to session state |
-| 2 | Network Investigator (~10 s) | LLM calls `query_events_jakarta` via MCP Toolbox; gets back 9 BigQuery rows including EVT001 (fiber cut, critical), EVT016 (degradation, minor), EVT024 (LTE congestion, major); summarizes |
-| 3 | CDR Analyzer (~12 s) | LLM calls `query_cdr(region="Jakarta", status_filter="")`; gets 11 AlloyDB rows (7 completed, 3 dropped, 1 failed); correlates the failed call with EVT024 and the dropped calls with EVT001/EVT016 |
+| 2 | Network Investigator (~3 s) | LLM picks `weekly_outage_trend(region='Jakarta', weeks_back=12)` (the complaint mentions "trend" / "lately") via MCP Toolbox; gets 12 weekly rollup rows from BigQuery — `event_count`, `critical_count`, `major_count`, `total_affected`, `avg_mttr_minutes` — and summarizes the worst weeks |
+| 3 | CDR Analyzer (~3 s) | LLM calls `query_cdr_nl(question="How many dropped and failed calls in Jakarta in the last 30 days, grouped by cell_tower_id?")`; AlloyDB AI NL2SQL translates the question to SQL and returns 6 rows (one per JKT-001..006 tower); the LLM correlates the JKT-002/003 spike with the network findings |
 | 4 | Response Formatter (~5 s) | LLM calls `save_incident_ticket(...)`; AlloyDB returns `ticket_id=15`; emits the final structured INCIDENT REPORT |
 
-End-to-end: **~30 seconds**, three database round-trips, zero human intervention.
+End-to-end: **~15 seconds**, three database round-trips (BQ partitioned + clustered scan, AlloyDB AI NL2SQL on `call_records`, AlloyDB INSERT on `incident_tickets`), zero human intervention.
 
 ## Getting Started
 
@@ -346,12 +368,25 @@ Bootstrap a fresh project with the included sample data:
 export GOOGLE_CLOUD_PROJECT=your-project
 export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/legacy_credentials/<account>/adc.json
 export DATABASE_URL='postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres'
-bash scripts/setup_byo.sh --seed
+export NL_READER_PASSWORD='<strong-password-meeting-complexity>'  # only for --nl-setup
+bash scripts/setup_byo.sh --seed --nl-setup
 ```
 
 Without `--seed`, the script only creates the dataset + tables (idempotent —
 safe to re-run on an existing deployment). With `--seed`, the seeded tables
-are TRUNCATE+RELOAD'd from the CSVs, restoring the canonical demo state.
+are TRUNCATE+RELOAD'd from the CSVs, restoring the canonical demo state. With
+`--nl-setup`, the AlloyDB AI NL2SQL stack also gets installed: the
+`alloydb_ai_nl` extension, an LLM model registration, the `netpulse_cdr_config`
+configuration with `call_records` registered, schema-context generation
+(blocking 3-5 min), and the `netpulse_nl_reader` read-only role used by the
+MCP Toolbox. Requires the `alloydb_ai_nl.enabled=on` instance flag to be set
+beforehand:
+
+```bash
+gcloud alloydb instances update <instance> \
+  --cluster=<cluster> --region=<region> \
+  --database-flags=password.enforce_complexity=on,alloydb_ai_nl.enabled=on
+```
 
 Multi-tenant SaaS UI (login, per-tenant dataset isolation) is roadmapped for v2.
 The data layer is already deployable against any compatible infrastructure.
@@ -386,8 +421,11 @@ hackathon-telecom-ops/
 │
 ├── setup_alloydb.py                      # Idempotent DDL for call_records + incident_tickets (+ optional --seed)
 ├── scripts/
-│   ├── setup_bigquery.py                 # Idempotent DDL for the BigQuery network_events table (+ optional --seed)
-│   └── setup_byo.sh                      # Orchestrator: runs setup_bigquery.py + setup_alloydb.py
+│   ├── setup_bigquery.py                 # Idempotent DDL for the BigQuery network_events table (+ optional --seed and --recreate)
+│   ├── setup_alloydb_nl.py               # Idempotent AlloyDB AI NL2SQL setup (extension + config + reader role)
+│   ├── generate_network_events.py        # Deterministic 50 000-row generator for docs/seed-data/network_events.csv
+│   ├── generate_call_records.py          # Deterministic 5 000-row CDR generator for docs/seed-data/call_records.csv
+│   └── setup_byo.sh                      # Orchestrator: runs setup_bigquery.py + setup_alloydb.py + (optional) setup_alloydb_nl.py
 ├── docs/
 │   ├── SCHEMA.md                         # Column-by-column data contract for the 3 tables
 │   └── seed-data/                        # Canonical sample CSVs (network_events, call_records, incident_tickets)
@@ -425,7 +463,7 @@ gcloud run services add-iam-policy-binding telecom-ops-assistant \
 |---|---|
 | Service | `telecom-ops-assistant` |
 | Cloud Run region | `us-central1` |
-| Vertex AI region | `asia-southeast1` (set via `GOOGLE_CLOUD_LOCATION` env var) |
+| Vertex AI region | `global` (single endpoint; `RegionFailoverGemini` walks the **model ladder** `gemini-3.1-flash-lite-preview → +0.5s sleep → gemini-2.5-flash` on 429 / TimeoutError) |
 | URL | `https://telecom-ops-assistant-486319900424.us-central1.run.app` |
 | Service account | `lab2-cr-service@plated-complex-491512-n6.iam.gserviceaccount.com` |
 | Public access | `allUsers` → `roles/run.invoker` |
@@ -438,7 +476,7 @@ The custom Flask UI deploys from the parent directory so the build context can i
 |---|---|
 | Service | `netpulse-ui` |
 | Cloud Run region | `us-central1` |
-| Vertex AI region | `asia-southeast1` |
+| Vertex AI region | `global` (single endpoint; `RegionFailoverGemini` walks the **model ladder** `gemini-3.1-flash-lite-preview → +0.5s sleep → gemini-2.5-flash` on 429 / TimeoutError) |
 | URL | `https://netpulse-ui-486319900424.us-central1.run.app` |
 | VPC | `easy-alloydb-vpc` / `easy-alloydb-subnet` |
 | Public access | `allUsers` → `roles/run.invoker` |
@@ -475,6 +513,7 @@ The custom NetPulse UI also exposes the SSE event stream at `POST /api/query` if
 
 ```
 data: {"type": "agent_start", "agent": "classifier"}
+data: {"type": "region_attempt", "agent": "classifier", "region": "global", "outcome": "ok"}
 data: {"type": "tool_call", "agent": "classifier", "tool": "classify_issue", "args": {...}}
 data: {"type": "tool_response", "agent": "classifier", "tool": "classify_issue", "result": {...}}
 data: {"type": "text", "agent": "classifier", "text": "Category: network..."}
@@ -482,12 +521,14 @@ data: {"type": "text", "agent": "classifier", "text": "Category: network..."}
 data: {"type": "complete", "ticket_id": 32, "final_report": "INCIDENT REPORT..."}
 ```
 
+`region_attempt` events fire one per `RegionFailoverGemini` attempt. The `region` field carries the **model name** the attempt ran on (the field name is preserved from the prior region-failover design to minimize SSE diff). On a 429 or TimeoutError you'll see an extra event with `"outcome": "failover"` and the upstream error in `message`, immediately followed by another attempt — same primary if the schedule is mid-walk, fallback model (`gemini-2.5-flash`) on the third attempt.
+
 ## Lessons & Trade-offs
 
 A handful of non-obvious decisions worth surfacing:
 
-- **MCP Toolbox vs direct BigQuery MCP.** The endpoint `https://bigquery.googleapis.com/mcp` returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent. The MCP Toolbox for Databases (a small Cloud Run service that wraps a `tools.yaml` of parameterized SQL queries) is the proven workaround. We use 8 toolset entries: five per-region `query_events_<city>` tools plus `query_critical_outages`, `query_affected_customers_summary`, and `query_network_events`.
-- **Vertex AI region matters for APAC, and a single pinned region is fragile.** `us-central1` is the default Vertex AI region, but it's also the most contested Dynamic Shared Quota (DSQ) pool. During the APAC hackathon, a baseline query that worked at 3 a.m. would 429 at 9 a.m. local time as US developers came online. Switching to `asia-southeast1` eliminated 429s entirely across 32 sequential test queries — but a single trial-billing project on a single region has no headroom if that region ever spikes. The refinement-phase fix replaces the static pin with a `global` default plus a ranked failover ladder (`asia-southeast2` → `asia-southeast1` → `us-central1`); each `LlmAgent` walks the ladder independently, so failure becomes one extra hop instead of a hard 500. See `telecom_ops/vertex_failover.py`.
+- **MCP Toolbox vs direct BigQuery MCP.** The endpoint `https://bigquery.googleapis.com/mcp` returns 403 / connection-closed when called from a Cloud Run-hosted ADK agent. The MCP Toolbox for Databases (a small Cloud Run service that wraps a `tools.yaml` of parameterized SQL queries) is the proven workaround. We use 2 universal parameterized toolset entries: `query_network_events(region, severity, event_type, days_back, limit)` and `query_affected_customers_summary(region, days_back)`. Sentinel defaults (`"*"` for strings, `36500` for `days_back`, `50` for `limit`) skip a filter without nullable binds — toolbox v0.23 + the BigQuery Go client both reject null parameter binds at different validation steps. **Phase 10 collapsed this from 8 hardcoded per-city tools** so adding a new region is a CSV change, not a `tools.yaml` edit + toolbox redeploy.
+- **Vertex AI failover that actually relieves quota pressure.** The first iteration was a static `us-central1` pin (most-contested DSQ pool — 429s at peak APAC hours). Iteration 2 added a multi-continent region ladder (`global → us-central1 → europe-west4 → asia-northeast1`) on 429 / 10s timeout. **Phase 12 (2026-04-27) replaced the region ladder with a model ladder** because preview models like `gemini-3.1-flash-lite-preview` are gated to `global` only on this project — the region ladder always 404'd on the first failover hop, surfacing every 429 as a hard demo failure. The new shape: single `global` endpoint, 3-attempt schedule across **models** (`primary 10s → primary +0.5s sleep 20s → gemini-2.5-flash GA fallback 30s`). Each model has its own quota bucket, so the GA fallback is a real escape hatch. Production validation 2026-04-27 05:18:14: full ladder walked in 543ms, demo completed end-to-end. The lesson: failover is only as good as the **destination's availability for your model** — across regions when the model is multi-region, across models when the model is regionally gated. See `telecom_ops/vertex_failover.py` `ATTEMPT_SCHEDULE`.
 - **Async ADK Runner ↔ sync Flask.** `runner.run_async()` is async-only, but Flask is sync. The naive `asyncio.run()` wrapper buffers all events into a list before yielding the first byte, breaking the chat-card animation. The fix in `netpulse-ui/agent_runner.py` is a per-request worker thread running its own asyncio loop and pushing converted events onto a `queue.Queue` that the SSE generator drains in real time.
 - **Eager-init singletons.** The agent's `tools.py` instantiates the MCP Toolbox client and the AlloyDB engine at module import. The toolbox client is wrapped in `try/except` (so the agent boots even if the toolbox is cold). The AlloyDB engine uses `pool_pre_ping=True` + `pool_recycle=300` to survive connection-pool staleness when the dev box goes idle for 30+ minutes between demos.
 - **Defensive prompt substitution.** All cross-agent state references in `prompts.py` use ADK's `{key?}` optional syntax. If an upstream agent fails before populating its `output_key`, downstream agents still get a graceful empty string instead of crashing on a `KeyError` during instruction formatting.

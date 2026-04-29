@@ -85,6 +85,10 @@ def inject_dataset_names() -> dict[str, str]:
         "bq_network_table": BQ_NETWORK_TABLE,
         "al_call_table": AL_CALL_TABLE,
         "al_ticket_table": AL_TICKET_TABLE,
+        # Mirrors telecom_ops/agent.py:MODEL_FAST. Hardcoded here to avoid
+        # the heavy ADK import chain at Flask boot — keep in sync if the
+        # primary model changes.
+        "active_model": "gemini-3.1-flash-lite-preview",
     }
 
 
@@ -213,6 +217,12 @@ def tickets():
         active_tab="tickets",
         result=alloydb_incident_tickets(),
     )
+
+
+@app.route("/docs")
+def docs():
+    """Render the single-page documentation page."""
+    return render_template("docs.html", active_tab="docs")
 
 
 if __name__ == "__main__":

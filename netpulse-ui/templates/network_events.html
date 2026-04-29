@@ -1,48 +1,175 @@
-{% extends "base.html" %}
-{% block title %}Network Events{% endblock %}
-{% block content %}
-<div class="np-source-banner bq">
-  <span class="np-source-tag bq">BIGQUERY</span>
-  Reading live from <strong>BigQuery</strong> &middot;
-  <code>{{ gcp_project }}.{{ bq_dataset }}.{{ bq_network_table }}</code>
-  &middot; ingested by <code>network_investigator</code> agent via <code>MCP Toolbox</code>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Network events &mdash; NetPulse AI</title>
+<meta name="description" content="NetPulse AI data viewer &mdash; BigQuery." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap row">
+    {% include "_brand.html" %}
+
+    <div class="app-toolbar-center" role="status" aria-label="Connection status and model" style="display: flex; align-items: center; justify-content: center; gap: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3);">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>BigQuery</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>MCP&nbsp;toolbox</span>
+      <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
+      <span aria-label="Active model" style="color: var(--ink-2);">{{ active_model }}</span>
+    </div>
+
+    <div class="nav-cta">
+      <a href="{{ url_for('app_workspace') }}" class="btn btn-primary">
+        Try NetPulse AI
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="dv-hero" style="border-bottom: none; padding: 40px 0 28px;">
+  <div class="wrap">
+    <h1 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: clamp(36px, 5vw, 56px); line-height: 1.05; letter-spacing: -0.035em; color: var(--ink); margin: 0;">Network events</h1>
+    <div class="dv-meta-row" style="margin-top: 12px;">
+      <span class="dv-meta-pill"><b>table</b> {{ bq_dataset }}.{{ bq_network_table }}</span>
+      <span class="dv-meta-pill"><b>partition</b> DAY &middot; started_at</span>
+      <span class="dv-meta-pill"><b>cluster</b> region, severity</span>
+      <span class="dv-meta-pill"><b>rows</b> {{ result.total_count }}</span>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+
+  <div class="dv-source-banner" role="note" style="margin: 24px 0 32px;">
+    <span class="dv-source-banner-eyebrow">about this data</span>
+    <p>The Network Investigator agent reads from BigQuery through three MCP toolbox tools &mdash; <code>query_network_events</code> for filtered event lookups, <code>query_affected_customers_summary</code> for customer-impact rollups, and <code>weekly_outage_trend</code> for partition-pruned historical scans across the <code>(region, severity)</code> cluster keys.</p>
+  </div>
+
+  <form class="dv-filter" method="POST" action="" aria-label="Filter network events">
+    <span class="dv-cross-eyebrow" style="flex-basis:100%">filters</span>
+    <div class="dv-field">
+      <label for="region">Region</label>
+      <select id="region" name="region">
+        <option value="">All</option>
+        {% for r in regions %}<option value="{{ r }}" {% if selected.region == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="dv-field">
+      <label for="severity">Severity</label>
+      <select id="severity" name="severity">
+        <option value="">All</option>
+        {% for s in severities %}<option value="{{ s }}" {% if selected.severity == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="dv-field">
+      <label for="event_type">Event type</label>
+      <select id="event_type" name="event_type">
+        <option value="">All</option>
+        {% for t in event_types %}<option value="{{ t }}" {% if selected.event_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="dv-filter-actions">
+      <button type="submit" class="dv-btn">Apply</button>
+      <a href="{{ url_for('network_events') }}" class="dv-btn dv-btn-ghost" role="button">Reset</a>
+    </div>
+  </form>
+
+  {% set any_filter = selected.region or selected.severity or selected.event_type %}
+  <div class="dv-table-card" role="region" aria-label="Result rows">
+    <div class="dv-table-meta">
+      {% if result.error %}
+        <span>Query error</span>
+      {% elif result.row_count == 0 %}
+        <span>No rows{% if any_filter %} match the selected filters{% endif %}{% if not any_filter and result.total_count > 0 %} &middot; {{ result.total_count }} rows in table{% endif %}</span>
+      {% else %}
+        <span>Showing <b>{{ result.row_count }}</b> of <b>{{ result.total_count }}</b> rows{% if any_filter %} (filtered){% endif %}{% if result.total_count > result.row_count %} &middot; limit reached &mdash; refine filters to narrow{% endif %}</span>
+      {% endif %}
+      <span>last loaded &middot; just now</span>
+    </div>
+    {% if result.error %}
+      <div style="padding: 24px; color: #b94e3a;">{{ result.error }}</div>
+    {% elif result.row_count == 0 %}
+      <div style="padding: 24px; color: var(--ink-3);">No rows to display.</div>
+    {% else %}
+    <div class="dv-table-scroll">
+      <table class="dv-table">
+        <thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.rows %}
+          <tr>
+            {% for c in result.columns %}
+              {% if c == 'severity' and row[c] %}
+                <td><span class="dv-chip sev-{{ row[c] }}">{{ row[c] }}</span></td>
+              {% elif c == 'event_type' and row[c] %}
+                <td><span class="dv-chip evt-{{ row[c] }}">{{ row[c] }}</span></td>
+              {% else %}
+                <td>{{ row[c] }}</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <section class="dv-schema">
+    <h2 class="serif">What you&rsquo;re looking <em>at</em></h2>
+    <dl class="dv-schema-list">
+      <dt>event_id</dt>
+      <dd>Stable event identifier (PK). Matches the value carried forward in saved tickets&rsquo; <code>related_events</code> field.</dd>
+      <dt>event_type</dt>
+      <dd>One of <code>outage</code>, <code>maintenance</code>, <code>degradation</code>, <code>restoration</code>. Restorations close out a prior outage and inherit its <code>started_at</code> as their resolution time.</dd>
+      <dt>region</dt>
+      <dd>City-level metro identifier from a fixed 10-region whitelist. Cluster key &mdash; most queries filter here first.</dd>
+      <dt>severity</dt>
+      <dd><code>critical</code> &middot; <code>major</code> &middot; <code>minor</code>. Cluster key. Critical events always escalate to a NOC page even if no customer complaint arrives.</dd>
+      <dt>description</dt>
+      <dd>Free-text operator note. Read by the Network Investigator when summarising findings in the saved ticket.</dd>
+      <dt>started_at</dt>
+      <dd>UTC timestamp the event was first observed. Partition key &mdash; DAY-partitioned so multi-week scans prune cheaply.</dd>
+      <dt>resolved_at</dt>
+      <dd>UTC timestamp the event cleared. Equal to <code>started_at</code> for instantaneous events like restorations.</dd>
+      <dt>affected_customers</dt>
+      <dd>Best-effort impact estimate at the time of the event. Drives the customer-impact rollup card on the workspace.</dd>
+    </dl>
+  </section>
+
+  <nav class="dv-cross" aria-label="Other data viewers">
+    <span class="dv-cross-eyebrow">see also</span>
+    <a href="{{ url_for('call_records') }}">Call records &rarr;</a>
+    <a href="{{ url_for('tickets') }}">Incident tickets &rarr;</a>
+  </nav>
+
 </div>
-<form class="np-filter" method="POST">
-  <select name="region">
-    <option value="">All regions</option>
-    {% for r in regions %}<option value="{{ r }}" {% if selected.region == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
-  </select>
-  <select name="severity">
-    <option value="">All severities</option>
-    {% for s in severities %}<option value="{{ s }}" {% if selected.severity == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
-  </select>
-  <select name="event_type">
-    <option value="">All types</option>
-    {% for t in event_types %}<option value="{{ t }}" {% if selected.event_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
-  </select>
-  <button type="submit">Filter</button>
-</form>
-{% if result.error %}
-  <div class="np-error">{{ result.error }}</div>
-{% elif result.row_count == 0 %}
-  <div class="np-empty">No rows</div>
-{% else %}
-  <div class="np-rowcount">{{ result.row_count }} rows</div>
-  <table class="np-table">
-    <thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
-    <tbody>
-      {% for row in result.rows %}
-      <tr>
-        {% for c in result.columns %}
-          {% if c == 'severity' and row[c] %}
-            <td><span class="np-badge np-badge-sev-{{ row[c] }}">{{ row[c] }}</span></td>
-          {% else %}
-            <td>{{ row[c] }}</td>
-          {% endif %}
-        {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% endif %}
-{% endblock %}
+
+<footer class="foot" style="border-top: none;">
+  <div class="wrap">
+    <div class="foot-base">
+      <span>&copy; 2026 Adityo Nugroho &middot; NetPulse AI</span>
+      <div class="foot-social">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='site.js') }}"></script>
+</body>
+</html>

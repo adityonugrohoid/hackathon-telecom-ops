@@ -10,6 +10,12 @@ Pass --seed to also load `docs/seed-data/network_events.csv` after the
 schema is in place. Without --seed, only the dataset + table are created
 (idempotent: re-running is safe and changes nothing if both already exist).
 
+Pass --recreate to DROP the existing table before re-creating it. This is
+how partitioning + clustering get applied to data that was loaded into a
+pre-Phase-11 unpartitioned table — BigQuery does not let you change the
+partition spec in place. --recreate is destructive and requires --seed
+to be useful (otherwise the table is left empty).
+
 The seed CSV layout matches the contract in `docs/SCHEMA.md`.
 """
 
@@ -48,18 +54,39 @@ def ensure_dataset(client: bigquery.Client, dataset_id: str, location: str) -> N
 
 
 def ensure_table(
-    client: bigquery.Client, dataset_id: str, table_id: str
+    client: bigquery.Client, dataset_id: str, table_id: str, recreate: bool = False
 ) -> bigquery.Table:
-    """Create the network_events table if missing; return the live reference."""
+    """Create the network_events table if missing; return the live reference.
+
+    The table is DAY-partitioned on `started_at` and clustered by
+    `(region, severity)`. Partition pruning means time-bounded queries
+    (the common case for `weekly_outage_trend`) only scan the days they
+    need. Clustering colocates rows for the same region+severity, which
+    speeds up the per-region rollups even when the time range is wide.
+
+    Pass `recreate=True` to drop the table first — this is how the
+    partition spec gets applied to a pre-existing unpartitioned table.
+    """
     fq = f"{client.project}.{dataset_id}.{table_id}"
+    if recreate:
+        client.delete_table(fq, not_found_ok=True)
+        logger.info("Dropped table for recreate: %s", fq)
     try:
         table = client.get_table(fq)
         logger.info("Table already exists: %s (%d rows)", fq, table.num_rows or 0)
         return table
     except Exception:  # noqa: BLE001 - NotFound is the happy create path
         table = bigquery.Table(fq, schema=NETWORK_EVENTS_SCHEMA)
+        table.time_partitioning = bigquery.TimePartitioning(
+            type_=bigquery.TimePartitioningType.DAY,
+            field="started_at",
+        )
+        table.clustering_fields = ["region", "severity"]
         table = client.create_table(table)
-        logger.info("Created table: %s", fq)
+        logger.info(
+            "Created table: %s (DAY-partitioned on started_at, clustered by region/severity)",
+            fq,
+        )
         return table
 
 
@@ -98,6 +125,15 @@ def main() -> None:
         action="store_true",
         help="Load docs/seed-data/network_events.csv after creating the table",
     )
+    parser.add_argument(
+        "--recreate",
+        action="store_true",
+        help=(
+            "DROP the existing table before re-creating it. Required to apply "
+            "partition + cluster spec to a pre-Phase-11 unpartitioned table. "
+            "Destructive — discards all rows. Combine with --seed."
+        ),
+    )
     args = parser.parse_args()
 
     project = os.environ.get("GOOGLE_CLOUD_PROJECT")
@@ -110,7 +146,7 @@ def main() -> None:
 
     client = bigquery.Client(project=project)
     ensure_dataset(client, dataset_id, location)
-    ensure_table(client, dataset_id, table_id)
+    ensure_table(client, dataset_id, table_id, recreate=args.recreate)
     if args.seed:
         load_seed(client, dataset_id, table_id, SEED_CSV)
 
