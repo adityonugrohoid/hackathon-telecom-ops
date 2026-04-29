@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Call Records{% endblock %}
+{% block content %}
+<div class="np-source-banner alloydb">
+  <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+  Reading live from <strong>AlloyDB</strong> (PostgreSQL 17) &middot;
+  <code>{{ al_call_table }}</code> table
+  &middot; ingested by <code>cdr_analyzer</code> agent via <code>query_cdr</code>
+</div>
+<form class="np-filter" method="POST">
+  <select name="region">
+    <option value="">All regions</option>
+    {% for r in regions %}<option value="{{ r }}" {% if selected.region == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+  </select>
+  <select name="call_status">
+    <option value="">All statuses</option>
+    {% for s in statuses %}<option value="{{ s }}" {% if selected.call_status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <select name="call_type">
+    <option value="">All types</option>
+    {% for t in call_types %}<option value="{{ t }}" {% if selected.call_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+  </select>
+  <button type="submit">Filter</button>
+</form>
+{% if result.error %}
+  <div class="np-error">{{ result.error }}</div>
+{% elif result.row_count == 0 %}
+  <div class="np-empty">No rows</div>
+{% else %}
+  <div class="np-rowcount">{{ result.row_count }} rows</div>
+  <table class="np-table">
+    <thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in result.rows %}
+      <tr>{% for c in result.columns %}<td>{{ row[c] }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}

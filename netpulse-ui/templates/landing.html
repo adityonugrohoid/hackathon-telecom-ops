@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Telecom incident triage in seconds{% endblock %}
+
+{% block nav %}
+<nav class="np-tabs np-tabs-landing">
+  <a class="np-tab" href="#how-it-works">How it works</a>
+  <a class="np-tab" href="#try-it">Try it</a>
+  <a class="np-tab" href="#data-viewers">Data viewers</a>
+  <a class="np-tab" href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
+  <a class="np-tab np-tab-cta" href="{{ url_for('app_workspace') }}">Launch&nbsp;&rarr;</a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<section class="np-hero">
+  <p class="np-hero-eyebrow">APAC GenAI Academy 2026 &middot; Top 100 (#82)</p>
+  <h1 class="np-hero-title">Telecom incident triage <span class="np-hero-accent">in seconds.</span></h1>
+  <p class="np-hero-sub">
+    A multi-agent assistant that turns a customer complaint into a structured
+    NOC incident ticket. Built with Google ADK, Vertex AI Gemini 2.5 Flash,
+    BigQuery, and AlloyDB.
+  </p>
+  <div class="np-hero-cta">
+    <a class="np-btn np-btn-primary" href="{{ url_for('app_workspace') }}">Launch NetPulse AI &rarr;</a>
+    <a class="np-btn np-btn-ghost" href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">View on GitHub</a>
+  </div>
+  <ul class="np-tech-strip">
+    <li><span class="np-tech-dot"></span>4 ADK sub-agents orchestrated by a SequentialAgent root</li>
+    <li><span class="np-tech-dot"></span>BigQuery network events &middot; AlloyDB call records &middot; AlloyDB ticket sink</li>
+    <li><span class="np-tech-dot"></span>Vertex AI failover ladder: <code>global &rarr; asia-southeast2 &rarr; asia-southeast1 &rarr; us-central1</code></li>
+  </ul>
+</section>
+
+<section id="how-it-works" class="np-section">
+  <h2 class="np-section-title">How it works</h2>
+  <p class="np-section-sub">Four sequential agents, each with a single job. The output of one becomes the input of the next.</p>
+  <ol class="np-steps">
+    <li class="np-step-card">
+      <div class="np-step-num">1</div>
+      <h3 class="np-step-title">Classifier</h3>
+      <p class="np-step-body">Reads the complaint and returns <code>category</code> + <code>region</code>. Native Python tool, no external I/O.</p>
+      <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
+    </li>
+    <li class="np-step-card">
+      <div class="np-step-num">2</div>
+      <h3 class="np-step-title">Network Investigator</h3>
+      <p class="np-step-body">Queries BigQuery for active outages in the affected region via the MCP Toolbox.</p>
+      <span class="np-source-tag bq">BIGQUERY</span>
+      <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
+    </li>
+    <li class="np-step-card">
+      <div class="np-step-num">3</div>
+      <h3 class="np-step-title">CDR Analyzer</h3>
+      <p class="np-step-body">Inspects AlloyDB call records to confirm or rule out the customer's experience.</p>
+      <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+    </li>
+    <li class="np-step-card">
+      <div class="np-step-num">4</div>
+      <h3 class="np-step-title">Response Formatter</h3>
+      <p class="np-step-body">Synthesises the findings into a structured incident ticket and writes it to AlloyDB.</p>
+      <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+    </li>
+  </ol>
+</section>
+
+<section id="try-it" class="np-section np-section-alt">
+  <h2 class="np-section-title">Try one of these</h2>
+  <p class="np-section-sub">Click any complaint to launch the workspace pre-loaded and ready to triage.</p>
+  <div class="np-try-chips">
+    {% for q in examples %}
+      <a class="np-chip np-chip-launch" href="{{ url_for('app_workspace') }}?seed={{ q | urlencode }}&autorun=1">
+        <span class="np-chip-text">{{ q }}</span>
+        <span class="np-chip-cta">launch &rarr;</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="data-viewers" class="np-section">
+  <h2 class="np-section-title">What's inside</h2>
+  <p class="np-section-sub">Inspect the source data the agents consult and the tickets they generate.</p>
+  <div class="np-viewer-cards">
+    <a class="np-viewer-card" href="{{ url_for('network_events') }}">
+      <span class="np-source-tag bq">BIGQUERY</span>
+      <h3 class="np-viewer-title">Network Events</h3>
+      <p class="np-viewer-body">Live outage and degradation events across all regions, queried directly from BigQuery.</p>
+      <span class="np-viewer-cta">Explore events &rarr;</span>
+    </a>
+    <a class="np-viewer-card" href="{{ url_for('call_records') }}">
+      <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+      <h3 class="np-viewer-title">Call Records</h3>
+      <p class="np-viewer-body">Per-call CDR rows the agents query for evidence of dropped, failed, or unusual call patterns.</p>
+      <span class="np-viewer-cta">Browse calls &rarr;</span>
+    </a>
+    <a class="np-viewer-card" href="{{ url_for('tickets') }}">
+      <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+      <h3 class="np-viewer-title">Incident Tickets</h3>
+      <p class="np-viewer-body">Every ticket generated by the response_formatter agent, newest first.</p>
+      <span class="np-viewer-cta">View tickets &rarr;</span>
+    </a>
+  </div>
+</section>
+
+<footer class="np-footer">
+  <p>
+    APAC GenAI Academy 2026 &middot; Top 100 (#82) &middot; Built by Adityo Nugroho
+    with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>.
+  </p>
+  <p>
+    <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub repository</a>
+    &middot;
+    <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops#architecture" target="_blank" rel="noopener">Architecture diagram</a>
+  </p>
+</footer>
+{% endblock %}

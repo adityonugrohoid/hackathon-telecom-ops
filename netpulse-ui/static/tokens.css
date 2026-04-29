@@ -1,0 +1,198 @@
+/* ============================================================================
+   NetPulse AI — design token foundation
+   ----------------------------------------------------------------------------
+   Layer 1 (this file): tokens. Loaded BEFORE style.css.
+   Layer 2 (style.css): components consume tokens via var(--*).
+
+   Curated from heliodoron-ui-identity/tokens/heliodoron.css:
+   - Spacing, layout, radius, motion, typography sizing/weights/leading/
+     tracking, breakpoint conventions: lifted verbatim (open methodology).
+   - Font families: substituted with system stacks (no external font load).
+   - Palette + semantic mappings: authored fresh for NetPulse, calibrated
+     to match the current style.css values so the refactor is visually
+     identical.
+
+   Source heliodoron commit: 0923dfb (snapshot 2026-04-25).
+   See REFINEMENT-AUDIT.md §5.0a for full rationale.
+   ============================================================================ */
+
+:root {
+  /* ─── Spacing (4px base; fluid above space-5) ─── */
+  --space-1:  0.25rem;                                /* 4  */
+  --space-2:  0.5rem;                                 /* 8  */
+  --space-3:  0.75rem;                                /* 12 */
+  --space-4:  1rem;                                   /* 16 */
+  --space-5:  1.5rem;                                 /* 24 */
+  --space-6:  clamp(1.75rem, 2vw + 1rem,   2rem);     /* 28 → 32 */
+  --space-7:  clamp(2rem,    2.5vw + 1rem, 2.5rem);   /* 32 → 40 */
+  --space-8:  clamp(2.25rem, 3vw + 1rem,   3rem);     /* 36 → 48 */
+  --space-9:  clamp(2.5rem,  4vw + 1rem,   4rem);     /* 40 → 64 */
+  --space-10: clamp(3rem,    5vw + 1rem,   5rem);     /* 48 → 80 */
+  --space-11: clamp(3.5rem,  6vw + 1rem,   6rem);     /* 56 → 96 */
+
+  --section-sm:  clamp(2rem,  4vw + 1rem,  4rem);     /* 32 → 64  */
+  --section-md:  clamp(3rem,  6vw + 1rem,  6rem);     /* 48 → 96  */
+  --section-lg:  clamp(5rem, 10vw + 1rem, 10rem);     /* 80 → 160 */
+  --section-top: clamp(6rem, 12vw + 1rem, 12rem);     /* 96 → 192 */
+
+  /* ─── Layout ─── */
+  --container-max:    1400px;
+  --page-margins:     clamp(16px, 3vw, 32px);
+  --gutter:           24px;
+  --text-column-max:  640px;
+  --media-max-width:  880px;
+  --media-max-height: 560px;
+  --header-height:    64px;
+
+  /* ─── Radius ─── */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-pill: 1000px;
+
+  /* ─── Shadow (heliodoron "presence not depth"; alpha ceiling 15%) ─── */
+  --shadow-soft:   0 2px 2px rgba(0,0,0,0.01),
+                   0 4px 4px rgba(0,0,0,0.02),
+                   0 16px 24px rgba(0,0,0,0.04);
+  --shadow-medium: 0 4px 24px rgba(0,0,0,0.05);
+  --shadow-modal:  0 12px 24px rgba(0,0,0,0.15);
+
+  /* ─── Motion (Anthropic-derived quartic + expo easings) ─── */
+  --ease-in-quart:     cubic-bezier(0.895, 0.030, 0.685, 0.220);
+  --ease-out-quart:    cubic-bezier(0.165, 0.840, 0.440, 1.000);
+  --ease-in-out-quart: cubic-bezier(0.770, 0.000, 0.175, 1.000);
+  --ease-in-out-expo:  cubic-bezier(1.000, 0.000, 0.000, 1.000);
+  /* Durations are set per-component; typical UI 200–400ms. */
+
+  /* ─── Typography — sizes (fluid display, fixed body/detail) ─── */
+  --type-display-hero: clamp(3rem, 4vw + 1rem, 5rem);
+  --type-display-1:    clamp(2rem, 2vw + 1rem, 3rem);
+  --type-display-2:    clamp(1.75rem, 1vw + 1rem, 2rem);
+  --type-h1:           clamp(1.75rem, 1vw + 1rem, 2.25rem);
+  --type-h2:           clamp(1.5rem, 0.5vw + 1rem, 1.75rem);
+  --type-h3:           1.25rem;
+  --type-h4:           1.0625rem;
+  --type-body-lg:      1.25rem;
+  --type-body:         1.0625rem;
+  --type-body-sm:      0.9375rem;
+  --type-detail:       0.875rem;
+  --type-detail-sm:    0.75rem;
+  --type-mono:         0.9375rem;
+
+  /* ─── Typography — weights, leading, tracking ─── */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  --leading-tight:   1.0;
+  --leading-display: 1.1;
+  --leading-heading: 1.2;
+  --leading-body:    1.4;
+  --leading-dense:   1.55;
+
+  --tracking-tight: -0.015em;
+  --tracking-body:   0em;
+  --tracking-ui:    -0.0025em;
+
+  /* ─── Typography — families (system stacks; no external font load) ─── */
+  --font-sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+                Arial, sans-serif;
+  --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                "Liberation Mono", monospace;
+
+  /* ─── Breakpoints (Tailwind-default, for @media queries) ─── */
+  /*   sm 640px · md 768px · lg 1024px · xl 1280px · 2xl 1536px */
+}
+
+/* ============================================================================
+   NetPulse palette + semantic mappings
+   ----------------------------------------------------------------------------
+   Cool-neutral ramp keyed to Tailwind gray (anchors: #1f2937 ink, #6b7280 mid,
+   custom #f0f4fa cool-tinted page bg). Brand: Material blue (telecom signal).
+   Status: canonical six-step incident severity scale.
+   ============================================================================ */
+
+:root {
+  /* ─── Neutral ramp ─── */
+  --np-neutral-000: #ffffff;
+  --np-neutral-050: #f0f4fa;   /* page bg — cool tint */
+  --np-neutral-100: #f3f4f6;   /* sunken surface, code chip bg */
+  --np-neutral-200: #e5e7eb;   /* hairline border */
+  --np-neutral-300: #d1d5db;   /* strong border */
+  --np-neutral-500: #6b7280;   /* tertiary / muted text */
+  --np-neutral-650: #4b5563;   /* secondary text */
+  --np-neutral-950: #1f2937;   /* primary ink */
+
+  /* ─── Brand ─── */
+  --np-brand:             #1a73e8;   /* Material blue 600 — telecom signal */
+  --np-brand-interactive: #0d47a1;   /* Material blue 900 — hover/active */
+
+  /* ─── Accent (carries existing aliases for back-compat) ─── */
+  --np-accent: #00bfa5;              /* teal — success / "done" */
+  --np-error:  #c5221f;              /* validation / error */
+
+  /* ─── Status (incident severity ladder) ─── */
+  --np-status-critical: #dc2626;     /* red 600 */
+  --np-status-major:    #ea580c;     /* orange 600 */
+  --np-status-minor:    #ca8a04;     /* amber 600 */
+  --np-status-info:     #6b7280;     /* gray 500 */
+  --np-status-resolved: #059669;     /* emerald 600 */
+
+  /* ─── Per-category accent (for §5.3 badges) ─── */
+  --np-cat-network:  #1a73e8;        /* blue   */
+  --np-cat-billing:  #7c3aed;        /* violet */
+  --np-cat-hardware: #ea580c;        /* orange */
+  --np-cat-service:  #0d9488;        /* teal   */
+  --np-cat-general:  #6b7280;        /* gray   */
+
+  /* ─── NetPulse-specific shadows (calibrated to current style.css) ─── */
+  --np-shadow-header: 0 2px 8px rgba(0,0,0,0.15);
+  --np-shadow-card:   0 2px 8px rgba(0,0,0,0.06);
+
+  /* ─── Focus ring (WCAG AA) ─── */
+  --np-focus: #2563eb;               /* blue 600 — saturated focus tone */
+
+  /* ─── Backend palettes (consumed by source-tag pills, banners, tool calls).
+     Each backend gets bg+fg; banners derive border/accent from --c-*-fg via
+     color-mix() in style.css. Unchanged from previous style.css :root. ─── */
+  --c-adk-bg:           #e2e8f0;  --c-adk-fg:           #334155;  /* slate   */
+  --c-local-bg:         #e0e7ff;  --c-local-fg:         #3730a3;  /* indigo  */
+  --c-mcp-bg:           #d1fae5;  --c-mcp-fg:           #065f46;  /* emerald */
+  --c-alloydb-bg:       #fef3c7;  --c-alloydb-fg:       #92400e;  /* amber   */
+  --c-alloydb-write-bg: #fde2e2;  --c-alloydb-write-fg: #991b1b;  /* red     */
+
+  --c-mcp-accent:           #059669;
+  --c-alloydb-accent:       #d97706;
+  --c-alloydb-write-accent: #dc2626;
+
+  /* ─── Final report ("console" card) ─── */
+  --c-report-bg: #1e1e1e;
+  --c-report-fg: #d4d4d4;
+
+  /* ─── Semantic mappings (heliodoron names → NetPulse values) ─── */
+  --surface-page:    var(--np-neutral-050);
+  --surface-raised:  var(--np-neutral-000);
+  --surface-sunken:  var(--np-neutral-100);
+  --surface-inverse: var(--np-neutral-950);
+
+  --text-primary:    var(--np-neutral-950);
+  --text-secondary:  var(--np-neutral-650);
+  --text-tertiary:   var(--np-neutral-500);
+  --text-inverse:    var(--np-neutral-050);
+  --text-brand:      var(--np-brand-interactive);
+
+  --border-default:  color-mix(in oklab, var(--np-neutral-950) 10%, transparent);
+  --border-hover:    color-mix(in oklab, var(--np-neutral-950) 20%, transparent);
+  --border-strong:   var(--np-neutral-300);
+
+  /* ─── Back-compat aliases (existing style.css consumers) ─── */
+  --np-primary:      var(--np-brand);
+  --np-primary-dark: var(--np-brand-interactive);
+  --np-bg:           var(--np-neutral-050);
+  --np-card:         var(--np-neutral-000);
+  --np-text:         var(--np-neutral-950);
+  --np-muted:        var(--np-neutral-500);
+}

@@ -1,0 +1,4 @@
+google-adk==1.14.0
+toolbox-core
+sqlalchemy
+pg8000

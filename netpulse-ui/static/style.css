@@ -1,0 +1,1086 @@
+/* ============================================================================
+   NetPulse AI — component styles
+   ----------------------------------------------------------------------------
+   Tokens (spacing, radius, shadow, motion, typography, palette, semantic
+   mappings, backend palettes) live in tokens.css and load FIRST. This file
+   only consumes them via var(--*).
+
+   Refactor scope (Phase 2): dropped the :root block (moved to tokens.css),
+   swapped exact-match hardcoded values (4/8/12/16/24px spacing, matching
+   border-radii, system font stacks, and the two recurring card/header
+   shadows) to tokens. Off-grid values (10px, 14px, 18px, 22px, etc.) are
+   preserved verbatim so the existing UI renders pixel-identical.
+   ============================================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--np-bg);
+  color: var(--np-text);
+  min-height: 100vh;
+}
+
+/* Header */
+.np-header {
+  background: linear-gradient(135deg, var(--np-primary-dark) 0%, var(--np-primary) 100%);
+  color: #fff;
+  padding: 18px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  box-shadow: var(--np-shadow-header);
+}
+.np-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: inherit;
+  text-decoration: none;
+}
+.np-brand:hover { opacity: 0.92; }
+.np-logo {
+  height: 56px;
+  width: 56px;
+  border-radius: 10px;
+  background: #fff;
+  padding: var(--space-1);
+  object-fit: contain;
+}
+.np-tower { fill: none; stroke: #fff; }
+.np-title h1 { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.np-title p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+.np-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.np-tab {
+  display: inline-flex;
+  flex-direction: column;     /* tab label on top, pill below */
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  color: #fff;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.2;
+  opacity: 0.75;
+  transition: all 0.2s;
+}
+.np-tab:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.np-tab.active { opacity: 1; background: rgba(255,255,255,0.18); font-weight: 600; }
+/* Backend pills inside nav tabs sit slightly tighter than card-source pills */
+.np-tab .np-source-tag {
+  font-size: 9px;
+  padding: 2px 6px;
+  letter-spacing: 0.5px;
+}
+
+.np-main { max-width: 1200px; margin: var(--space-5) auto; padding: 0 var(--space-5); }
+
+/* Chat */
+.np-chat #np-form { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
+.np-chat #np-input {
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: var(--radius-sm);
+}
+.np-chat #np-input:focus { outline: none; border-color: var(--np-primary); }
+.np-chat button[type="submit"] {
+  padding: 14px 22px;
+  background: var(--np-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  cursor: pointer;
+}
+.np-chat button[type="submit"]:hover { background: var(--np-primary-dark); }
+
+/* §1.2 — busy + disabled states for the submit button + input.
+   While a request is in flight, the submit button shows a CSS-only spinner
+   (::before pseudo) and the textbox locks out further input. The disabled
+   tones use neutral tokens so the affordance reads "not now" without alarm. */
+.np-chat #np-input:disabled {
+  background: var(--np-neutral-100);
+  color: var(--np-neutral-650);
+  cursor: not-allowed;
+}
+.np-chat button[type="submit"]:disabled {
+  background: var(--np-neutral-300);
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.92;
+}
+.np-chat button.np-busy {
+  position: relative;
+  padding-left: 44px;
+  background: var(--np-primary-dark);
+}
+.np-chat button.np-busy::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: np-spin 0.8s linear infinite;
+}
+@keyframes np-spin { to { transform: rotate(360deg); } }
+
+/* §1.3 — visible inline hint shown next to the input when the user submits an
+   empty / whitespace-only query. The hint hides itself on the next keystroke. */
+.np-input-hint {
+  margin: calc(var(--space-3) * -1) 0 var(--space-3) 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--np-error) 12%, transparent);
+  color: var(--np-error);
+  border: 1px solid color-mix(in srgb, var(--np-error) 30%, transparent);
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+}
+.np-input-hint[hidden] { display: none; }
+
+.np-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.np-chip {
+  background: #fff;
+  border: 1px solid var(--np-primary);
+  color: var(--np-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.np-chip:hover { background: var(--np-primary); color: #fff; }
+
+/* Pipeline-as-timeline (§5.2) — vertical activity stream
+   ----------------------------------------------------------------------------
+   Each agent becomes one <li class="np-timeline-entry"> with a left rail
+   (timestamp + dot) and a right content panel that holds the existing
+   per-agent header, source pills, tool calls, and text. The vertical line
+   between entries is rendered by the rail's ::after pseudo-element. */
+.np-timeline {
+  list-style: none;
+  margin: 0 0 var(--space-5) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.np-timeline-entry {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+/* Left rail: timestamp on top, dot below, vertical line continuing down. */
+.np-timeline-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 12px;
+}
+.np-timeline-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.np-timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--np-neutral-200);
+  border: 2px solid var(--surface-page);
+  box-shadow: 0 0 0 2px var(--np-neutral-300);
+  z-index: 1;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.np-timeline-rail::after {
+  content: "";
+  position: absolute;
+  top: 36px;
+  bottom: -12px;
+  width: 2px;
+  background: var(--np-neutral-200);
+}
+.np-timeline-entry:last-child .np-timeline-rail::after { display: none; }
+.np-timeline-entry.running .np-timeline-dot {
+  background: var(--np-primary);
+  box-shadow:
+    0 0 0 2px var(--np-primary),
+    0 0 0 6px color-mix(in srgb, var(--np-primary) 25%, transparent);
+  animation: np-dot-pulse 1.4s infinite;
+}
+.np-timeline-entry.done .np-timeline-dot {
+  background: var(--np-accent);
+  box-shadow: 0 0 0 2px var(--np-accent);
+}
+.np-timeline-entry.error .np-timeline-dot {
+  background: var(--np-error);
+  box-shadow: 0 0 0 2px var(--np-error);
+  animation: none;
+}
+@keyframes np-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--np-primary), 0 0 0 6px color-mix(in srgb, var(--np-primary) 25%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--np-primary), 0 0 0 10px color-mix(in srgb, var(--np-primary) 8%, transparent); }
+}
+
+/* Right content panel — replaces the old fixed-height .np-card */
+.np-timeline-content {
+  background: var(--np-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--np-shadow-card);
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.np-timeline-entry.running .np-timeline-content {
+  border-left-color: var(--np-primary);
+}
+.np-timeline-entry.done .np-timeline-content {
+  border-left-color: var(--np-accent);
+}
+.np-timeline-entry.error .np-timeline-content {
+  border-left-color: var(--np-error);
+  box-shadow: var(--np-shadow-card),
+              0 0 0 1px color-mix(in srgb, var(--np-error) 25%, transparent);
+}
+.np-timeline-content > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  flex-shrink: 0;
+}
+.np-timeline-content h3 {
+  font-size: 15px;
+  color: var(--np-primary);
+  font-weight: 600;
+  flex: 1;
+}
+.np-timeline-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--np-primary) 12%, transparent);
+  color: var(--np-primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Carry-over chips at the bottom of each non-final entry */
+.np-timeline-handoff {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed color-mix(in srgb, var(--np-primary) 25%, transparent);
+  font-size: 10.5px;
+  color: var(--np-muted);
+}
+.np-handoff-title {
+  color: var(--np-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.np-timeline-handoff code {
+  background: color-mix(in srgb, var(--np-primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--np-primary) 25%, transparent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  color: var(--np-primary-dark);
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 640px) {
+  .np-timeline-entry { grid-template-columns: 56px 1fr; gap: var(--space-2); }
+}
+
+/* Always-visible data-source subtitle under each card title */
+.np-card-source {
+  font-size: 11px;
+  color: var(--np-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: var(--space-2);
+  margin-bottom: 6px;
+  border-bottom: 1px dashed #e5e7eb;
+  flex-shrink: 0;
+}
+.np-card-source code {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--np-text);
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+}
+
+/* Backend tag pills — shared by card source, nav, banner, and inline tool calls.
+   Per-variant colors live at :root in the --c-* tokens above. */
+.np-source-tag,
+.np-tool-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.np-source-tag.adk,           .np-tool-tag.adk           { background: var(--c-adk-bg);            color: var(--c-adk-fg); }
+.np-source-tag.local,         .np-tool-tag.local         { background: var(--c-local-bg);          color: var(--c-local-fg); }
+.np-source-tag.mcp,           .np-tool-tag.mcp           { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
+.np-source-tag.bq,            .np-tool-tag.bq            { background: var(--c-mcp-bg);            color: var(--c-mcp-fg); }
+.np-source-tag.alloydb,       .np-tool-tag.alloydb       { background: var(--c-alloydb-bg);        color: var(--c-alloydb-fg); }
+.np-source-tag.alloydb-write,
+.np-tool-tag.alloydb-write    { background: var(--c-alloydb-write-bg);  color: var(--c-alloydb-write-fg); }
+
+.np-tool-tag { margin-right: var(--space-1); }
+.np-status {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: #eef;
+  color: var(--np-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.np-timeline-entry.running .np-status {
+  background: var(--np-primary);
+  color: #fff;
+  animation: np-pulse 1.4s infinite;
+}
+.np-timeline-entry.done .np-status { background: var(--np-accent); color: #fff; }
+.np-timeline-entry.error .np-status {
+  background: var(--np-error);
+  color: #fff;
+  animation: none;
+}
+@keyframes np-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* §1.1 — agent-scoped tool-error message lives inside the timeline content
+   panel, just above the handoff footer. Tinted from --np-error so the badge,
+   border-left, dot, and message all read as one error story. */
+.np-error-msg {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--np-error) 10%, transparent);
+  color: var(--np-error);
+  border: 1px solid color-mix(in srgb, var(--np-error) 28%, transparent);
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Catastrophic top-level errors (no agent attached) keep using the .np-final
+   card but tinted toward error — distinguishes a hard failure from a normal
+   incident report. */
+.np-final.np-final-error {
+  background: color-mix(in srgb, var(--np-error) 25%, var(--c-report-bg));
+  border-left: 4px solid var(--np-error);
+}
+
+.np-tools {
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  max-height: 96px;        /* fixed area for tool calls */
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: var(--space-1) 6px;
+  background: #fafbfc;
+  border-radius: 6px;
+}
+.np-tools:empty { display: none; }
+.np-tools li { padding: 2px 0; color: var(--np-muted); word-break: break-all; }
+.np-tool-call { color: var(--np-primary); }
+.np-tool-resp { color: #555; }
+.np-text {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  flex: 1 1 auto;          /* take remaining space inside fixed-height card */
+  min-height: 0;           /* allow flex child to shrink so overflow can scroll */
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-top: var(--space-2);
+}
+.np-text:empty {
+  background: transparent;
+}
+
+/* Final report */
+.np-final {
+  background: var(--c-report-bg);
+  color: var(--c-report-fg);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+}
+.np-final-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.np-final h2 { color: #fff; font-size: 18px; }
+.np-final-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.np-ticket { color: var(--np-accent); font-size: 14px; font-weight: 600; }
+.np-ticket-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.np-ticket-badges:empty { display: none; }
+.np-final-text {
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* §5.4 — Recommended NOC actions panel (lives inside the dark .np-final).
+   Static category->actions[] map renders as inert pill chips; the visual
+   conveys "this is a workflow trigger" without wiring real ITSM hooks. */
+.np-actions-panel {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.np-actions-title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.78;
+  margin-bottom: var(--space-2);
+}
+.np-actions-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.np-action-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: var(--weight-medium);
+  cursor: default;
+  transition: background 0.15s, border-color 0.15s;
+}
+.np-action-chip:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+/* "Reading live from..." banner on each data viewer tab.
+   The base rule defines the alpha-derived background and border via
+   color-mix() against --np-primary; each modifier just swaps the source
+   token (--c-mcp-fg / --c-alloydb-fg / --c-alloydb-write-fg) and accent. */
+.np-source-banner {
+  --bn-bg-from: color-mix(in srgb, var(--np-primary) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--np-primary)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--np-primary) 30%, transparent);
+  --bn-accent:  var(--np-primary);
+  --bn-strong:  var(--np-primary-dark);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  background: linear-gradient(90deg, var(--bn-bg-from) 0%, var(--bn-bg-to) 100%);
+  border: 1px solid var(--bn-border);
+  border-left: 4px solid var(--bn-accent);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--np-text);
+  margin-bottom: var(--space-4);
+}
+.np-source-banner code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid var(--bn-border);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  color: var(--bn-strong);
+}
+.np-source-banner strong { color: var(--bn-strong); }
+
+/* BigQuery / MCP — derived from --c-mcp-fg */
+.np-source-banner.bq {
+  --bn-bg-from: color-mix(in srgb, var(--c-mcp-fg) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--c-mcp-fg)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--c-mcp-fg) 30%, transparent);
+  --bn-accent:  var(--c-mcp-accent);
+  --bn-strong:  var(--c-mcp-fg);
+}
+
+/* AlloyDB read — derived from --c-alloydb-fg */
+.np-source-banner.alloydb {
+  --bn-bg-from: color-mix(in srgb, var(--c-alloydb-fg) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--c-alloydb-fg)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--c-alloydb-fg) 30%, transparent);
+  --bn-accent:  var(--c-alloydb-accent);
+  --bn-strong:  var(--c-alloydb-fg);
+}
+
+/* AlloyDB write — derived from --c-alloydb-write-fg */
+.np-source-banner.alloydb-write {
+  --bn-bg-from: color-mix(in srgb, var(--c-alloydb-write-fg) 12%, transparent);
+  --bn-bg-to:   color-mix(in srgb, var(--c-alloydb-write-fg)  2%, transparent);
+  --bn-border:  color-mix(in srgb, var(--c-alloydb-write-fg) 30%, transparent);
+  --bn-accent:  var(--c-alloydb-write-accent);
+  --bn-strong:  var(--c-alloydb-write-fg);
+}
+
+/* Filters + tables */
+.np-filter {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.np-filter select,
+.np-filter button {
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #ccc;
+  background: #fff;
+}
+.np-filter button {
+  background: var(--np-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.np-filter button:hover { background: var(--np-primary-dark); }
+
+.np-rowcount {
+  color: var(--np-muted);
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+}
+.np-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--np-shadow-card);
+}
+.np-table th {
+  background: var(--np-primary);
+  color: #fff;
+  padding: 10px;
+  font-size: 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.np-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+}
+.np-table tr:hover td { background: #f8f9fa; }
+
+/* §5.3 — Category + Severity + Status badges
+   ----------------------------------------------------------------------------
+   .np-badge is the shared pill shell; modifiers tint it by mapping the
+   per-category (--np-cat-*) and per-severity (--np-status-*) tokens through
+   color-mix() into matching bg / fg / border triples. */
+.np-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--np-neutral-100);
+  color: var(--np-neutral-650);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* Category badges (saved-ticket category enum) */
+.np-badge-cat-network  { background: color-mix(in srgb, var(--np-cat-network)  12%, transparent); color: var(--np-cat-network);  border-color: color-mix(in srgb, var(--np-cat-network)  35%, transparent); }
+.np-badge-cat-billing  { background: color-mix(in srgb, var(--np-cat-billing)  12%, transparent); color: var(--np-cat-billing);  border-color: color-mix(in srgb, var(--np-cat-billing)  35%, transparent); }
+.np-badge-cat-hardware { background: color-mix(in srgb, var(--np-cat-hardware) 12%, transparent); color: var(--np-cat-hardware); border-color: color-mix(in srgb, var(--np-cat-hardware) 35%, transparent); }
+.np-badge-cat-service  { background: color-mix(in srgb, var(--np-cat-service)  12%, transparent); color: var(--np-cat-service);  border-color: color-mix(in srgb, var(--np-cat-service)  35%, transparent); }
+.np-badge-cat-general  { background: color-mix(in srgb, var(--np-cat-general)  12%, transparent); color: var(--np-cat-general);  border-color: color-mix(in srgb, var(--np-cat-general)  35%, transparent); }
+
+/* Severity badges — covers both audit names (critical/major/minor/info) and
+   the actual BQ network_events vocabulary (critical/high/medium/low). */
+.np-badge-sev-critical { background: color-mix(in srgb, var(--np-status-critical) 14%, transparent); color: var(--np-status-critical); border-color: color-mix(in srgb, var(--np-status-critical) 40%, transparent); }
+.np-badge-sev-high,
+.np-badge-sev-major    { background: color-mix(in srgb, var(--np-status-major)    14%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    40%, transparent); }
+.np-badge-sev-medium,
+.np-badge-sev-minor    { background: color-mix(in srgb, var(--np-status-minor)    14%, transparent); color: var(--np-status-minor);    border-color: color-mix(in srgb, var(--np-status-minor)    40%, transparent); }
+.np-badge-sev-low,
+.np-badge-sev-info     { background: color-mix(in srgb, var(--np-status-info)     14%, transparent); color: var(--np-status-info);     border-color: color-mix(in srgb, var(--np-status-info)     40%, transparent); }
+
+/* Workflow status badges (incident_tickets.status column) */
+.np-badge-status-new          { background: color-mix(in srgb, var(--np-primary)         12%, transparent); color: var(--np-primary-dark);   border-color: color-mix(in srgb, var(--np-primary)         35%, transparent); }
+.np-badge-status-acknowledged { background: color-mix(in srgb, var(--np-status-major)    12%, transparent); color: var(--np-status-major);    border-color: color-mix(in srgb, var(--np-status-major)    35%, transparent); }
+.np-badge-status-resolved     { background: color-mix(in srgb, var(--np-status-resolved) 12%, transparent); color: var(--np-status-resolved); border-color: color-mix(in srgb, var(--np-status-resolved) 35%, transparent); }
+
+/* Region badge — neutral tone, just for visual grouping in the ticket card */
+.np-badge-region {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+/* §5.5 — Customer-impact card
+   ----------------------------------------------------------------------------
+   Renders above the final ticket once network_investigator's tool_response
+   arrives. Aggregates affected_customers, severity counts, and onset elapsed
+   from the BQ rows. */
+.np-impact-card {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--np-status-critical) 8%, var(--surface-raised)) 0%,
+    var(--surface-raised) 60%);
+  border: 1px solid color-mix(in srgb, var(--np-status-critical) 25%, transparent);
+  border-left: 4px solid var(--np-status-critical);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.np-impact-primary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--type-body-sm);
+  color: var(--text-secondary);
+}
+.np-impact-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--np-status-critical);
+  color: #fff;
+  font-weight: var(--weight-bold);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.np-impact-affected,
+.np-impact-elapsed {
+  font-size: var(--type-h2);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+.np-impact-affected-label,
+.np-impact-elapsed-label {
+  color: var(--text-secondary);
+}
+.np-impact-sep {
+  color: var(--text-tertiary);
+  margin: 0 var(--space-2);
+  user-select: none;
+}
+.np-impact-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--type-detail);
+  color: var(--text-secondary);
+}
+.np-impact-events {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.np-impact-sevs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.np-error {
+  background: color-mix(in srgb, var(--np-error) 12%, transparent);
+  color: var(--np-error);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+}
+.np-empty {
+  color: var(--np-muted);
+  padding: var(--space-4);
+}
+
+/* ============================================================================
+   Landing page (§5.11)
+   ----------------------------------------------------------------------------
+   Hero, "How it works" 4-step grid, demo chips, data viewer cards, footer.
+   The base.html nav block is overridden by landing.html with anchor links;
+   .np-tabs-landing tones down the workspace tab styling for that variant.
+   ============================================================================ */
+
+.np-tabs-landing .np-tab {
+  font-weight: 500;
+  padding: 8px 14px;
+}
+.np-tab.np-tab-cta {
+  background: #fff;
+  color: var(--np-primary-dark);
+  font-weight: 700;
+  opacity: 1;
+  padding: 8px 18px;
+}
+.np-tab.np-tab-cta:hover { background: var(--np-neutral-050); }
+
+/* Hero ---------------------------------------------------------------------- */
+.np-hero {
+  text-align: center;
+  padding: var(--space-9) var(--space-4) var(--space-7);
+  max-width: 880px;
+  margin: 0 auto;
+}
+.np-hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--type-detail-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--np-primary-dark);
+  margin-bottom: var(--space-4);
+}
+.np-hero-title {
+  font-size: var(--type-display-hero);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+}
+.np-hero-accent {
+  background: linear-gradient(135deg, var(--np-primary) 0%, var(--np-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.np-hero-sub {
+  font-size: var(--type-body-lg);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto var(--space-7);
+}
+.np-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+}
+.np-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 14px 26px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  transition: transform 0.15s var(--ease-out-quart), box-shadow 0.15s var(--ease-out-quart);
+}
+.np-btn-primary {
+  background: var(--np-primary);
+  color: #fff;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--np-primary) 30%, transparent);
+}
+.np-btn-primary:hover {
+  background: var(--np-primary-dark);
+  transform: translateY(-1px);
+}
+.np-btn-ghost {
+  background: #fff;
+  color: var(--np-primary-dark);
+  border-color: color-mix(in srgb, var(--np-primary) 35%, transparent);
+}
+.np-btn-ghost:hover { background: var(--np-neutral-050); }
+
+.np-tech-strip {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--type-detail);
+  color: var(--text-secondary);
+  padding: 0;
+}
+.np-tech-strip li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.np-tech-strip code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--np-neutral-100);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+}
+.np-tech-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--np-primary);
+  flex-shrink: 0;
+}
+
+/* Sections ------------------------------------------------------------------ */
+.np-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+.np-section-alt {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--np-primary) 4%, transparent) 100%);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-7);
+}
+.np-section-title {
+  font-size: var(--type-h2);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+.np-section-sub {
+  font-size: var(--type-body);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+  max-width: 640px;
+}
+
+/* "How it works" 4-step grid ------------------------------------------------ */
+.np-steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  padding: 0;
+}
+.np-step-card {
+  position: relative;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s var(--ease-out-quart), box-shadow 0.2s var(--ease-out-quart);
+}
+.np-step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+.np-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--np-primary);
+  color: #fff;
+  font-weight: var(--weight-bold);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.np-step-title {
+  font-size: var(--type-h4);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.np-step-body {
+  font-size: var(--type-detail);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+  flex: 1;
+}
+.np-step-body code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--np-neutral-100);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+}
+.np-step-card .np-source-tag { align-self: flex-start; margin-right: var(--space-1); }
+
+/* Demo chips (launch into /app?seed=...) ----------------------------------- */
+.np-try-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+.np-chip-launch {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: var(--type-body-sm);
+  font-weight: var(--weight-medium);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s var(--ease-out-quart);
+}
+.np-chip-launch:hover {
+  border-color: var(--np-primary);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--np-primary) 18%, transparent);
+  transform: translateY(-1px);
+}
+.np-chip-cta {
+  font-size: var(--type-detail-sm);
+  font-weight: var(--weight-bold);
+  color: var(--np-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* Data viewer cards --------------------------------------------------------- */
+.np-viewer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.np-viewer-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s var(--ease-out-quart), box-shadow 0.2s var(--ease-out-quart);
+}
+.np-viewer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+.np-viewer-card .np-source-tag { align-self: flex-start; }
+.np-viewer-title {
+  font-size: var(--type-h4);
+  font-weight: var(--weight-semibold);
+  margin-top: var(--space-1);
+}
+.np-viewer-body {
+  font-size: var(--type-detail);
+  color: var(--text-secondary);
+  line-height: var(--leading-body);
+  flex: 1;
+}
+.np-viewer-cta {
+  font-size: var(--type-detail-sm);
+  font-weight: var(--weight-bold);
+  color: var(--np-primary-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Footer -------------------------------------------------------------------- */
+.np-footer {
+  max-width: 1200px;
+  margin: var(--space-7) auto 0;
+  padding: var(--space-6) var(--space-4);
+  border-top: 1px solid var(--border-default);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--type-detail);
+}
+.np-footer a {
+  color: var(--np-primary-dark);
+  text-decoration: none;
+}
+.np-footer a:hover { text-decoration: underline; }
+.np-footer p + p { margin-top: var(--space-2); }
+
+/* Mobile stacking ----------------------------------------------------------- */
+@media (max-width: 640px) {
+  .np-hero { padding: var(--space-7) var(--space-3) var(--space-5); }
+  .np-hero-cta { flex-direction: column; align-items: stretch; }
+  .np-btn { justify-content: center; }
+  .np-tabs-landing .np-tab:not(.np-tab-cta) { display: none; }
+}

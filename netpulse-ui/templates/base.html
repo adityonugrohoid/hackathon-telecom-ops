@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetPulse AI - {% block title %}TelecomOps Assistant{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="np-header">
+    <a class="np-brand" href="{{ url_for('landing') }}">
+      <img class="np-logo" src="{{ url_for('static', filename='netpulse-logo.png') }}" alt="NetPulse AI logo">
+      <svg class="np-tower" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+        <path d="M32 8 L20 56 L44 56 Z" fill="none" stroke="#fff" stroke-width="2"/>
+        <line x1="24" y1="32" x2="40" y2="32" stroke="#fff" stroke-width="2"/>
+        <path d="M32 8 m-10 -2 a10 10 0 0 1 20 0" fill="none" stroke="#fff" stroke-width="1.5"/>
+        <path d="M32 8 m-16 -6 a16 16 0 0 1 32 0" fill="none" stroke="#fff" stroke-width="1.5"/>
+      </svg>
+      <div class="np-title">
+        <h1>NetPulse AI</h1>
+        <p>TelecomOps Assistant</p>
+      </div>
+    </a>
+    {% block nav %}
+    <nav class="np-tabs">
+      <a class="np-tab {% if active_tab == 'chat' %}active{% endif %}" href="{{ url_for('app_workspace') }}">
+        Chat
+        <span class="np-source-tag adk">ADK&nbsp;SEQUENTIAL</span>
+      </a>
+      <a class="np-tab {% if active_tab == 'network' %}active{% endif %}" href="{{ url_for('network_events') }}">
+        Network Events
+        <span class="np-source-tag bq">BIGQUERY</span>
+      </a>
+      <a class="np-tab {% if active_tab == 'cdr' %}active{% endif %}" href="{{ url_for('call_records') }}">
+        Call Records
+        <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+      </a>
+      <a class="np-tab {% if active_tab == 'tickets' %}active{% endif %}" href="{{ url_for('tickets') }}">
+        Incident Tickets
+        <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+      </a>
+    </nav>
+    {% endblock %}
+  </header>
+  <main class="np-main">{% block content %}{% endblock %}</main>
+</body>
+</html>

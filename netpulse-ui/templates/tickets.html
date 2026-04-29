@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Incident Tickets{% endblock %}
+{% block content %}
+<div class="np-source-banner alloydb-write">
+  <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+  Reading live from <strong>AlloyDB</strong> (PostgreSQL 17) &middot;
+  <code>{{ al_ticket_table }}</code> table
+  &middot; written by <code>response_formatter</code> agent via <code>save_incident_ticket</code>
+</div>
+{% if result.error %}
+  <div class="np-error">{{ result.error }}</div>
+{% elif result.row_count == 0 %}
+  <div class="np-empty">No tickets yet</div>
+{% else %}
+  <div class="np-rowcount">{{ result.row_count }} tickets</div>
+  <table class="np-table">
+    <thead><tr>{% for c in result.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in result.rows %}
+      <tr>
+        {% for c in result.columns %}
+          {% if c == 'category' and row[c] %}
+            <td><span class="np-badge np-badge-cat-{{ row[c] }}">{{ row[c] }}</span></td>
+          {% elif c == 'status' and row[c] %}
+            <td><span class="np-badge np-badge-status-{{ row[c] }}">{{ row[c] }}</span></td>
+          {% else %}
+            <td>{{ row[c] }}</td>
+          {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}
