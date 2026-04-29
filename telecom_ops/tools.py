@@ -29,11 +29,15 @@ AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
 try:
     _toolbox = ToolboxSyncClient(TOOLBOX_URL)
     network_tools = _toolbox.load_toolset("telecom_network_toolset")
-    cdr_nl_tools = _toolbox.load_toolset("cdr_nl_toolset")
+    # cdr_toolset bundles 2 parameterized fast-path tools (query_cdr_summary,
+    # query_cdr_worst_towers) and 1 NL fallback (query_cdr_nl). The agent
+    # picks parameterized first; NL only when the prompt cannot be expressed
+    # by the structured tools. See prompts.CDR_ANALYZER_INSTRUCTION.
+    cdr_tools = _toolbox.load_toolset("cdr_toolset")
 except Exception as exc:  # noqa: BLE001 - keep adk web bootable on toolbox outage
     logger.warning("MCP Toolbox unreachable; tools disabled: %s", exc)
     network_tools = []
-    cdr_nl_tools = []
+    cdr_tools = []
 
 _engine = sqlalchemy.create_engine(
     DATABASE_URL,

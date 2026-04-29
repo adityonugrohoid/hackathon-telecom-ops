@@ -1,14 +1,15 @@
 # NetPulse AI — Static Mockup Rebuild
 
 A clean-room rebuild of the NetPulse AI surface, built from scratch on
-top of `landing-trial.html` (the canonical design reference promoted
-2026-04-27). The earlier `static-mockup/` folder has been deleted —
-this rebuild is the single source of truth.
+top of `_canonical-reference.html` (the original design anchor — single
+self-contained page that established the warm editorial direction).
+The earlier `static-mockup/` folder has been deleted — this rebuild is
+the single source of truth.
 
 **Status: LOCKED 2026-04-28.** Six pages — landing + docs + three data
 viewers + workspace (`app.html`). Next move is the full LIVE migration
 to `netpulse-ui/templates/`; see
-[`docs/MIGRATION-CANONICAL-DESIGN.md`](../docs/MIGRATION-CANONICAL-DESIGN.md)
+`docs/internal/MIGRATION-CANONICAL-DESIGN.md`
 for the porting plan. User triggers the migration explicitly.
 
 ## How to view
@@ -154,7 +155,7 @@ future "completed run" snapshot variant.
 - **Not yet ported to Flask.** The `netpulse-ui/templates/landing.html`
   + `chat.html` in production are unchanged from before the rebuild
   iteration began. The migration plan is captured in
-  [`docs/MIGRATION-CANONICAL-DESIGN.md`](../docs/MIGRATION-CANONICAL-DESIGN.md);
+  `docs/internal/MIGRATION-CANONICAL-DESIGN.md`;
   user triggers the LIVE migration explicitly.
 - **`#82` removal** rides on the prod migration — already edited in
   `netpulse-ui/templates/landing.html` but never deployed; will land
@@ -187,10 +188,9 @@ If you're picking this up in a fresh session:
    workspace. The old `static-mockup/` folder has been deleted; this
    rebuild is the single source of truth.
 2. **Next move: full LIVE migration to `netpulse-ui/templates/`.** Read
-   [`../docs/MIGRATION-CANONICAL-DESIGN.md`](../docs/MIGRATION-CANONICAL-DESIGN.md)
-   first — covers what ships, migration order, what must not break,
-   verification, and rollback. **Do not start without explicit user
-   signal.**
+   `docs/internal/MIGRATION-CANONICAL-DESIGN.md` (local-only) first —
+   covers what ships, migration order, what must not break, verification,
+   and rollback. **Do not start without explicit user signal.**
 3. **Smaller polish items** that can land independently of the
    migration:
    - Pick a final wordmark, remove the temp specimen strip from `index.html`.

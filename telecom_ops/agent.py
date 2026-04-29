@@ -7,7 +7,7 @@ from .prompts import (
     RESPONSE_FORMATTER_INSTRUCTION,
 )
 from .tools import (
-    cdr_nl_tools,
+    cdr_tools,
     classify_issue,
     network_tools,
     save_incident_ticket,
@@ -15,21 +15,26 @@ from .tools import (
 from .vertex_failover import RegionFailoverGemini
 
 MODEL_FAST = "gemini-3.1-flash-lite-preview"
-"""Speed-tier model for the three upstream agents (classifier, network_
-investigator, cdr_analyzer). Each runs a tool call + small reasoning step,
-which Flash-Lite handles cheaply and quickly. Preview status is acceptable
-because the failover ladder catches transient outages. Revert to
-`gemini-2.5-flash` (GA) if the preview endpoint becomes unstable."""
+"""Speed-tier model for all four agents (classifier, network_investigator,
+cdr_analyzer, response_formatter). Each runs a tool call + small reasoning
+step (or, for the formatter, a save_incident_ticket call + synthesis),
+which Flash-Lite handles cheaply and quickly. Reverted 2026-04-29 from
+the 2.5 GA lane (`gemini-2.5-flash-lite`) back to the 3.1 preview after a
+production trace showed the network_investigator stuck "running" with no
+final text event under 2.5-flash-lite — suspected to be a model behavior
+where the second LLM call after the BigQuery tool result emits only a
+function_call (or empty text) rather than the bulleted summary the prompt
+asks for. The failover ladder retains `gemini-2.5-flash` (GA standard) as
+the persistent-pressure fallback."""
 
 MODEL_SYNTHESIS = MODEL_FAST
-"""Synthesis model for response_formatter — currently pinned to MODEL_FAST.
-
-Phase 9 collapsed this onto MODEL_FAST after `gemini-3.1-pro-preview` proved
-to be `global`-only for `plated-complex-491512-n6` (us-central1 returned 404
-NOT_FOUND), which made the failover ladder a structural no-op for synthesis.
-Flash-Lite is multi-region addressable, so the ladder is now usable end-to-
-end for all 4 agents under the same 5s per-attempt timeout. Re-split this
-constant if production traces show synthesis quality is insufficient."""
+"""Synthesis tier collapsed onto MODEL_FAST. Phase 9 round 2 (2026-04-26)
+verified that Flash-Lite-preview produces clean incident-ticket synthesis
+on the response_formatter step, and keeping a single primary model means
+the failover ladder behaves identically across all four agents (no
+separate global-only region whitelist to maintain). Re-split this constant
+if production traces show synthesis quality drops and a higher-tier model
+is needed (e.g., `MODEL_SYNTHESIS = "gemini-2.5-pro"`)."""
 
 
 def _failover_model(owner_name: str, model_name: str) -> RegionFailoverGemini:
@@ -75,9 +80,12 @@ network_investigator = LlmAgent(
 cdr_analyzer = LlmAgent(
     model=_failover_model("cdr_analyzer", MODEL_FAST),
     name="cdr_analyzer",
-    description="Asks AlloyDB AI NL2SQL one question against call_records to find evidence supporting the complaint.",
+    description=(
+        "Queries call_records via parameterized SQL (fast path) or AlloyDB AI "
+        "NL2SQL (fallback) to find evidence supporting the complaint."
+    ),
     instruction=CDR_ANALYZER_INSTRUCTION,
-    tools=cdr_nl_tools,
+    tools=cdr_tools,
     output_key="cdr_findings",
 )
 

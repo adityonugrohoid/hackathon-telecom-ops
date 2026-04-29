@@ -83,7 +83,7 @@ echo "==> Step 1/$TOTAL_STEPS: BigQuery"
 echo
 
 echo "==> Step 2/$TOTAL_STEPS: AlloyDB tables"
-"$PYTHON" "$REPO_ROOT/setup_alloydb.py" $SEED_FLAG
+"$PYTHON" "$REPO_ROOT/scripts/setup_alloydb.py" $SEED_FLAG
 echo
 
 if [[ $NL_SETUP -eq 1 ]]; then

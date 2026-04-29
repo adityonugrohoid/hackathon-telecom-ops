@@ -59,7 +59,7 @@ SQLAlchemy + `pg8000`; the table lives in whatever PostgreSQL database the
 | `cell_tower_id` | TEXT | yes | E.g. `JKT-001` — used in the response formatter's NOC ticket |
 | `call_status` | TEXT | yes | One of: `completed`, `dropped`, `failed` |
 
-Loadable from `docs/seed-data/call_records.csv` via `setup_alloydb.py --seed`.
+Loadable from `docs/seed-data/call_records.csv` via `scripts/setup_alloydb.py --seed`.
 
 ## AlloyDB / PostgreSQL — `<AL_TICKET_TABLE>`
 
@@ -67,7 +67,7 @@ NetPulse-written incident tickets. The response formatter agent inserts one
 row per chat session via the `save_incident_ticket` tool. The data-viewer
 "Incident Tickets" tab reads the same table.
 
-This is the only table NetPulse provisions itself — `setup_alloydb.py`'s
+This is the only table NetPulse provisions itself — `scripts/setup_alloydb.py`'s
 `CREATE TABLE IF NOT EXISTS` is the canonical DDL.
 
 | Column | Type | Required | Notes |
@@ -83,7 +83,7 @@ This is the only table NetPulse provisions itself — `setup_alloydb.py`'s
 | `created_at` | TIMESTAMP | no | Default `NOW()` |
 
 Optionally seedable from `docs/seed-data/incident_tickets.csv` via
-`setup_alloydb.py --seed` for testing the data-viewer tab in a fresh project.
+`scripts/setup_alloydb.py --seed` for testing the data-viewer tab in a fresh project.
 
 ## Cross-table invariants
 
@@ -113,7 +113,7 @@ bash scripts/setup_byo.sh --seed
 ```
 
 It runs `scripts/setup_bigquery.py` (creates `<BQ_DATASET>.<BQ_NETWORK_TABLE>`
-and loads the network-events CSV) followed by `setup_alloydb.py --seed`
+and loads the network-events CSV) followed by `scripts/setup_alloydb.py --seed`
 (creates `<AL_CALL_TABLE>` + `<AL_TICKET_TABLE>` and optionally loads the
 call-records and incident-tickets CSVs).
 

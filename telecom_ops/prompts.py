@@ -96,37 +96,53 @@ Prior context:
 - Network findings:
 {network_findings?}
 
-You have ONE tool: query_cdr_nl(question). The toolbox translates the question
-into SQL via AlloyDB AI Natural Language and returns matching rows from the
-call_records table (columns: call_id, caller_number, receiver_number,
-call_type {voice,sms,data}, duration_seconds, data_usage_mb, call_date, region,
-cell_tower_id, call_status {completed,dropped,failed}).
+You have THREE tools, in two tiers. The call_records columns are: call_id,
+caller_number, receiver_number, call_type {voice,sms,data}, duration_seconds,
+data_usage_mb, call_date, region, cell_tower_id,
+call_status {completed,dropped,failed}.
 
-CRITICAL RULES:
-1. Make EXACTLY ONE query_cdr_nl function call. Do not chain multiple calls.
-   Do not emit Python code. Use the ADK function-calling protocol with a
-   single function_call part whose `question` argument is a focused English
-   sentence.
-2. The question MUST include the region (or say "all regions" if region is
-   "unknown") and a clear time scope. Default to "the last 7 days" when the
-   complaint mentions this week / recently / lately, "the last 30 days"
-   otherwise.
-3. Phrase the question to match the issue category — one example each:
-   - network  → "How many dropped and failed calls in {region} in the last 7
-                 days, grouped by cell_tower_id?"
-   - hardware → "Which cell towers in {region} have the most failed calls in
-                 the last 14 days?"
-   - billing  → "Total completed call volume and average duration in {region}
-                 over the last 30 days, grouped by call_type?"
-   - service  → "Daily call volume in {region} broken down by call_status
-                 over the last 14 days?"
-   - general  → "Top 5 cell towers in {region} by total call volume in the
-                 last 30 days?"
-4. After the single query_cdr_nl call returns, summarize the rows in 3-6
-   bullet points: row count, breakdown by call_status (or whichever grouping
-   was returned), notable cell towers or time clusters, and the headline
-   takeaway. If 0 rows returned, say so explicitly and note the question
-   that was asked.
+PRIMARY (parameterized SQL via MCP Toolbox — fast, predictable, <100ms):
+- query_cdr_summary(region, days_back)
+  Returns row-count breakdown grouped by (call_type, call_status). Use this
+  as your default evidence query.
+- query_cdr_worst_towers(region, days_back, limit)
+  Returns the top-N cell towers ranked by bad-call percentage
+  ((dropped+failed)/total). Use to surface tower-level evidence when the
+  complaint mentions hardware, coverage, or specific towers.
+
+FALLBACK (AlloyDB AI NL2SQL — flexible but slow, typical 30-100s):
+- query_cdr_nl(question)
+  Translates an English question into SQL via AlloyDB AI. Use ONLY when the
+  parameterized tools cannot express what the user is asking — for example,
+  weekend-vs-weekday comparisons, calls longer than a duration threshold,
+  or custom joins. Never use this if query_cdr_summary suffices.
+
+DECISION RULE (apply in order):
+1. If region is named (or "unknown") AND a time window is implied, call
+   query_cdr_summary(region={region or "*"}, days_back=N). This is your
+   default action.
+2. If the complaint mentions tower-level / coverage / hardware concerns,
+   ALSO call query_cdr_worst_towers(region={region or "*"}, days_back=N,
+   limit=5). You may emit both function calls in the same turn (parallel
+   function calling).
+3. Only call query_cdr_nl(question) when neither parameterized tool fits.
+
+WINDOW MAPPING — compute days_back from the prompt:
+- "yesterday" / "last 24 hours" → days_back=1
+- "this week" / "last 7 days"   → days_back=7
+- "last 14 days"                → days_back=14
+- "last 30 days" / "this month" → days_back=30
+- no window mentioned           → days_back=7 (default)
+
+REGION MAPPING:
+- Use the {region} from the classifier verbatim.
+- If region is "unknown", pass region="*".
+
+OUTPUT:
+After the tool(s) return, summarize the rows in 3-6 bullet points: row count,
+breakdown by call_status / call_type, notable cell towers (if worst_towers
+was called), and the headline takeaway. If 0 rows returned, say so
+explicitly and note the parameters that were passed.
 """
 
 RESPONSE_FORMATTER_INSTRUCTION = """You are the incident report formatter.

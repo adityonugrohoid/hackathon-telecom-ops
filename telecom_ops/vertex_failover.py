@@ -2,10 +2,12 @@
 
 All requests target the single `global` endpoint. On `RESOURCE_EXHAUSTED`
 429 or a per-attempt `asyncio.TimeoutError`, the wrapper walks
-`ATTEMPT_SCHEDULE` — a hybrid retry-then-swap ladder where the first two
-attempts retry the agent's primary model (the second after a brief sleep
-so Vertex's dynamic shared quota pool can replenish) and the third
-attempt swaps in a GA fallback model with an independent quota bucket.
+`ATTEMPT_SCHEDULE` — a hybrid retry-then-swap ladder where the first
+two attempts retry the agent's primary model (the second after a brief
+sleep so Vertex's dynamic shared quota pool can replenish), the third
+attempt swaps to a sibling preview-tier flash model with its own quota
+bucket, and the fourth attempt swaps to a universally-addressable GA
+fallback so the demo never hard-fails under sustained pressure.
 
 The original design walked across regions on quota errors. That ladder
 became structurally unusable once preview models like
@@ -47,12 +49,25 @@ falling over to those regions returned 404 NOT_FOUND on the preview model
 the upstream agents actually use, surfacing as a hard agent failure
 instead of a successful failover."""
 
+INTERMEDIATE_MODEL: str = "gemini-3-flash-preview"
+"""Sibling preview-tier flash model used as the second-to-last attempt.
+Bridges the primary preview pool (gemini-3.1-flash-lite-preview) and the
+GA fallback so a sustained 429 on the headline model gets a chance at
+another preview-tier model with its own independent quota bucket before
+swapping all the way down to GA. Biases the ladder toward "newer model
+preferred even under primary-pool load." Verified addressable on `global`
+for this project on 2026-04-29 via a generateContent probe; if a future
+probe returns 404, the wrapper would propagate that without retry (404
+is non-quota per `_is_quota_error`) and the agent would fail visibly —
+at that point swap this constant to a known-addressable preview model
+or remove the intermediate row from `ATTEMPT_SCHEDULE`."""
+
 FALLBACK_MODEL: str = "gemini-2.5-flash"
 """GA model used as the last-resort attempt. 2.5 Flash is multi-region,
 addressable everywhere, and carries its own quota bucket independent of
-the 3.1-preview pool — so a sustained 429 on the preview pool doesn't
-imply this fallback is throttled too. Quality is comparable for the
-NetPulse 4-agent telecom flow."""
+both the 3.1-preview and 3-flash-preview pools — so a sustained 429 on
+either preview pool doesn't imply this fallback is throttled too. Quality
+is comparable for the NetPulse 4-agent telecom flow."""
 
 
 class Attempt(NamedTuple):
@@ -77,9 +92,10 @@ class Attempt(NamedTuple):
 
 
 ATTEMPT_SCHEDULE: tuple[Attempt, ...] = (
-    Attempt(model=None,           timeout_s=10.0, pre_sleep_s=0.0),
-    Attempt(model=None,           timeout_s=20.0, pre_sleep_s=0.5),
-    Attempt(model=FALLBACK_MODEL, timeout_s=30.0, pre_sleep_s=0.0),
+    Attempt(model=None,               timeout_s=10.0, pre_sleep_s=0.0),
+    Attempt(model=None,               timeout_s=20.0, pre_sleep_s=0.5),
+    Attempt(model=INTERMEDIATE_MODEL, timeout_s=20.0, pre_sleep_s=0.0),
+    Attempt(model=FALLBACK_MODEL,     timeout_s=30.0, pre_sleep_s=0.0),
 )
 """Hybrid retry-then-swap schedule (all on `global`).
 
@@ -87,22 +103,27 @@ ATTEMPT_SCHEDULE: tuple[Attempt, ...] = (
 |---|--------------------|---------|-----------|
 | 1 | primary self.model | 10s     | 0s        |
 | 2 | primary self.model | 20s     | 0.5s      |
-| 3 | FALLBACK_MODEL     | 30s     | 0s        |
+| 3 | INTERMEDIATE_MODEL | 20s     | 0s        |
+| 4 | FALLBACK_MODEL     | 30s     | 0s        |
 
 Attempt 1 catches obvious silent hangs fast on the headline model.
 Attempt 2 retries the same preview model after 0.5s — most 429s on
 Vertex's shared global pool clear within a second, so the user gets
 the headline-model answer the vast majority of the time. Attempt 3
-swaps to the GA fallback (independent quota bucket, multi-region
-addressable) so the demo never hard-fails under sustained pressure.
+swaps to a sibling preview-tier flash model with its own independent
+quota bucket — biases the ladder toward keeping a newer-model answer
+under sustained primary-pool pressure before falling all the way back
+to GA. Attempt 4 swaps to the GA fallback (universally addressable,
+quota independent of both preview pools) so the demo never hard-fails
+under sustained pressure on every preview lane simultaneously.
 
 `model=None` means "leave `llm_request.model` as-is" — i.e., the
 agent's configured primary. The wrapper mutates `llm_request.model`
 in-place per attempt because ADK's parent `Gemini.generate_content_async`
 reads from there, not from `self.model`.
 
-Worst-case wall clock per agent: 10 + 0.5 + 20 + 30 = 60.5s, well
-under Cloud Run's 300s request timeout."""
+Worst-case wall clock per agent: 10 + 0.5 + 20 + 20 + 30 = 80.5s,
+well under Cloud Run's 300s request timeout."""
 
 _QUOTA_MARKERS: tuple[str, ...] = ("RESOURCE_EXHAUSTED", " 429", "QUOTA")
 
@@ -507,16 +528,19 @@ async def _self_test_timeout_retry_same_model() -> None:
 
 
 async def _self_test_persistent_429_swaps_to_fallback() -> None:
-    """Verify two primary 429s escalate to the fallback model on attempt 3.
+    """Verify primary 429s + intermediate 429 escalate to the GA fallback.
 
     Mocks `Gemini.generate_content_async` to raise 429 whenever the request
-    targets the primary model and yield a sentinel for the fallback. Asserts
-    the wrapper walked [primary, primary, fallback], yielded the sentinel,
-    and the observer fired three times (two failovers on primary, one ok on
-    fallback). This is the demo-reliability path: under sustained pressure
-    on the preview pool, the user still gets an answer from the GA fallback.
+    targets the primary OR the intermediate preview model, and yield a
+    sentinel for the GA fallback. Asserts the wrapper walked
+    [primary, primary, INTERMEDIATE_MODEL, FALLBACK_MODEL], yielded the
+    sentinel, and the observer fired four times (three failovers, one ok
+    on the fallback). This is the demo-reliability path: under sustained
+    pressure on BOTH preview pools, the user still gets an answer from
+    the GA fallback.
 
-    Runtime: ~0.5s (inter-attempt sleep on attempt 2; attempt 3 has none).
+    Runtime: ~0.5s (inter-attempt sleep on attempt 2 only; attempts 3 and
+    4 have none).
     """
     from types import SimpleNamespace
     from unittest.mock import patch
@@ -527,7 +551,7 @@ async def _self_test_persistent_429_swaps_to_fallback() -> None:
 
     async def mock_parent_call(self, llm_request, _stream=False):
         call_log.append(llm_request.model)
-        if llm_request.model == primary:
+        if llm_request.model in (primary, INTERMEDIATE_MODEL):
             raise genai_errors.ClientError(
                 429,
                 {
@@ -560,22 +584,24 @@ async def _self_test_persistent_429_swaps_to_fallback() -> None:
     finally:
         set_attempt_observer(None)
 
-    assert call_log == [primary, primary, FALLBACK_MODEL], (
-        f"expected primary x2 then fallback, got {call_log}"
+    assert call_log == [primary, primary, INTERMEDIATE_MODEL, FALLBACK_MODEL], (
+        f"expected primary x2 then intermediate then fallback, got {call_log}"
     )
     assert responses == ["FAKE_RESPONSE_FROM_FALLBACK"], (
         f"expected sentinel from fallback, got {responses}"
     )
-    assert len(observer_log) == 3, f"expected 3 observer calls, got {observer_log}"
+    assert len(observer_log) == 4, f"expected 4 observer calls, got {observer_log}"
     assert (
         observer_log[0][1] == primary and observer_log[0][2] == "failover"
         and observer_log[1][1] == primary and observer_log[1][2] == "failover"
-    ), f"expected two primary failovers, got {observer_log[:2]}"
-    assert observer_log[2] == ("test_agent_swap", FALLBACK_MODEL, "ok", None), (
-        f"expected ok on fallback, got {observer_log[2]}"
+        and observer_log[2][1] == INTERMEDIATE_MODEL
+        and observer_log[2][2] == "failover"
+    ), f"expected three failovers (primary x2 then intermediate), got {observer_log[:3]}"
+    assert observer_log[3] == ("test_agent_swap", FALLBACK_MODEL, "ok", None), (
+        f"expected ok on fallback, got {observer_log[3]}"
     )
     logger.info(
-        "OK: persistent 429 swapped to fallback, walked %s, fired observer %d times",
+        "OK: persistent 429 walked %s, fired observer %d times",
         call_log,
         len(observer_log),
     )

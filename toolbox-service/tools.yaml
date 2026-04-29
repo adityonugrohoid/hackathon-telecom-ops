@@ -1,0 +1,274 @@
+sources:
+  telecom-bq:
+    kind: bigquery
+    project: plated-complex-491512-n6
+
+  # AlloyDB AI NL2SQL source for the CDR analyzer.
+  # NEVER point this at the postgres superuser — the structural protection
+  # against destructive NL queries (DROP, DELETE, TRUNCATE) is that the
+  # account can ONLY SELECT. The netpulse_nl_reader role is created by
+  # scripts/setup_alloydb_nl.py with SELECT on call_records and EXECUTE
+  # on the alloydb_ai_nl.get_sql / execute_nl_query functions only.
+  alloydb-cdr:
+    kind: alloydb-postgres
+    project: plated-complex-491512-n6
+    region: us-central1
+    cluster: my-alloydb-cluster
+    instance: my-primary-inst
+    database: postgres
+    user: netpulse_nl_reader
+    password: ${DB_PASSWORD}
+
+tools:
+  query_network_events:
+    kind: bigquery-sql
+    source: telecom-bq
+    statement: |
+      SELECT *
+      FROM `plated-complex-491512-n6.telecom_network.network_events`
+      WHERE (@region = '*' OR region = @region)
+        AND (@severity = '*' OR severity = @severity)
+        AND (@event_type = '*' OR event_type = @event_type)
+        AND started_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),
+                                        INTERVAL @days_back DAY)
+      ORDER BY started_at DESC
+      LIMIT @limit
+    description: |
+      Returns telecom network events filtered by any combination of region, severity,
+      event_type, and a time window. Pass region (Jakarta/Surabaya/Bandung/Medan/Semarang/
+      Yogyakarta/Denpasar/Makassar/Palembang/Balikpapan or '*' for all); severity
+      (critical/major/minor or '*' for all); event_type (outage/maintenance/degradation/
+      restoration or '*' for all); days_back (integer N, 36500 for all-time); limit
+      (integer 1-200, default 50). Use '*' / 36500 sentinels to skip a filter — the SDK
+      passes the default automatically when you omit the argument. Rows are ordered
+      by started_at DESC.
+    parameters:
+      - name: region
+        type: string
+        required: true
+        default: "*"
+        description: "City name, or '*' to scan all regions."
+      - name: severity
+        type: string
+        required: true
+        default: "*"
+        description: "One of critical, major, minor, or '*' for all severities."
+      - name: event_type
+        type: string
+        required: true
+        default: "*"
+        description: "One of outage, maintenance, degradation, restoration, or '*' for all types."
+      - name: days_back
+        type: integer
+        required: true
+        default: 36500
+        description: "Limit to events started within the last N days. Use 36500 for all-time."
+      - name: limit
+        type: integer
+        required: true
+        default: 50
+        description: "Max rows to return (default 50, max 200)."
+
+  query_affected_customers_summary:
+    kind: bigquery-sql
+    source: telecom-bq
+    statement: |
+      SELECT region, event_type,
+             COUNT(*) AS event_count,
+             SUM(affected_customers) AS total_affected
+      FROM `plated-complex-491512-n6.telecom_network.network_events`
+      WHERE (@region = '*' OR region = @region)
+        AND started_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),
+                                        INTERVAL @days_back DAY)
+      GROUP BY region, event_type
+      ORDER BY total_affected DESC
+    description: |
+      Returns aggregated impact (event_count, total_affected) grouped by region and
+      event_type. Pass region or '*' for all; days_back (integer N) or 36500 for
+      all-time. Use the '*' / 36500 sentinels — the SDK passes them automatically
+      when you omit the argument.
+    parameters:
+      - name: region
+        type: string
+        required: true
+        default: "*"
+        description: "City name, or '*' to scan all regions."
+      - name: days_back
+        type: integer
+        required: true
+        default: 36500
+        description: "Limit to events started within the last N days. Use 36500 for all-time."
+
+  weekly_outage_trend:
+    kind: bigquery-sql
+    source: telecom-bq
+    statement: |
+      SELECT
+        TIMESTAMP_TRUNC(started_at, WEEK(MONDAY)) AS week_start,
+        region,
+        COUNT(*) AS event_count,
+        COUNTIF(severity = 'critical') AS critical_count,
+        COUNTIF(severity = 'major') AS major_count,
+        SUM(affected_customers) AS total_affected,
+        AVG(TIMESTAMP_DIFF(resolved_at, started_at, MINUTE)) AS avg_mttr_minutes
+      FROM `plated-complex-491512-n6.telecom_network.network_events`
+      WHERE event_type IN ('outage', 'degradation')
+        -- BQ TIMESTAMP_SUB only accepts DAY for TIMESTAMP type, so multiply
+        -- weeks_back into days. WEEK works on DATE arguments but not TIMESTAMP.
+        AND started_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(),
+                                        INTERVAL @weeks_back * 7 DAY)
+        AND (@region = '*' OR region = @region)
+      GROUP BY week_start, region
+      ORDER BY week_start DESC, total_affected DESC
+      LIMIT @limit
+    description: |
+      Weekly trend rollup for outages and degradations, grouped by (week_start, region).
+      Returns per-week event_count, critical_count, major_count, total customer impact,
+      and average MTTR (minutes between started_at and resolved_at). Use this when the
+      complaint references "this week" / "lately" / "trend", when raw events are too
+      noisy to summarize, or when the user asks about historical patterns. Pass region
+      or '*' for all regions; weeks_back: 4 (month), 12 (quarter), 26 (half-year);
+      limit (1-500, default 100). Benefits from the table's DAY partition on started_at
+      (only the requested window is scanned) plus the (region, severity) clustering.
+    parameters:
+      - name: region
+        type: string
+        required: true
+        default: "*"
+        description: "City name, or '*' to scan all regions."
+      - name: weeks_back
+        type: integer
+        required: true
+        default: 12
+        description: "Limit to events started within the last N weeks (default 12)."
+      - name: limit
+        type: integer
+        required: true
+        default: 100
+        description: "Max rows to return (default 100, max 500)."
+
+  # CDR FAST PATH — parameterized SQL tools.
+  # These bypass AlloyDB AI NL2SQL entirely. The agent extracts (region,
+  # days_back) from the prompt and the toolbox runs a fixed-shape SELECT
+  # against call_records via the netpulse_nl_reader role. The role's
+  # SELECT-only grant on public.call_records keeps the structural protection
+  # the NL path relied on: even a malformed call cannot mutate rows.
+  # Picked over query_cdr_nl whenever the prompt has a structured shape
+  # ("<status> calls in <region> <window>") because NL2SQL tail latency
+  # (Vertex us-central1 retries inside alloydb_ai_nl.execute_nl_query) can
+  # spike to 60-130s per call; this path executes in <100ms.
+  query_cdr_summary:
+    kind: postgres-sql
+    source: alloydb-cdr
+    statement: |
+      SELECT call_type, call_status, COUNT(*) AS call_count
+      FROM call_records
+      WHERE ($1 = '*' OR region = $1)
+        AND call_date >= NOW() - make_interval(days => $2)
+      GROUP BY call_type, call_status
+      ORDER BY call_count DESC
+    description: |
+      Returns CDR row-count breakdown grouped by (call_type, call_status) for
+      a region within the last N days. Pass region (Jakarta/Surabaya/Bandung/
+      Medan/Semarang/Yogyakarta/Denpasar/Makassar/Palembang/Balikpapan or '*'
+      for all regions); days_back (integer N). Use this as the default CDR
+      evidence query when the prompt has a clear region + time window.
+    parameters:
+      - name: region
+        type: string
+        required: true
+        default: "*"
+        description: "City name, or '*' to scan all regions."
+      - name: days_back
+        type: integer
+        required: true
+        default: 7
+        description: "Limit to calls within the last N days (default 7)."
+
+  query_cdr_worst_towers:
+    kind: postgres-sql
+    source: alloydb-cdr
+    statement: |
+      SELECT cell_tower_id,
+             COUNT(*) AS total_calls,
+             COUNT(*) FILTER (WHERE call_status = 'completed') AS completed,
+             COUNT(*) FILTER (WHERE call_status = 'dropped')   AS dropped,
+             COUNT(*) FILTER (WHERE call_status = 'failed')    AS failed,
+             ROUND(
+               100.0 * COUNT(*) FILTER (WHERE call_status IN ('dropped', 'failed'))
+                    / NULLIF(COUNT(*), 0),
+               1
+             ) AS bad_call_pct
+      FROM call_records
+      WHERE ($1 = '*' OR region = $1)
+        AND call_date >= NOW() - make_interval(days => $2)
+      GROUP BY cell_tower_id
+      ORDER BY bad_call_pct DESC, total_calls DESC
+      LIMIT $3
+    description: |
+      Returns the top-N cell towers in a region ranked by bad-call percentage
+      ((dropped+failed)/total) within the last N days. Pass region or '*';
+      days_back (integer N); limit (1-50, default 5). Use to surface the
+      worst tower(s) when the complaint references specific hardware,
+      coverage gaps, or wants tower-level evidence.
+    parameters:
+      - name: region
+        type: string
+        required: true
+        default: "*"
+        description: "City name, or '*' to scan all regions."
+      - name: days_back
+        type: integer
+        required: true
+        default: 7
+        description: "Limit to calls within the last N days (default 7)."
+      - name: limit
+        type: integer
+        required: true
+        default: 5
+        description: "Max towers to return (default 5, max 50)."
+
+  # CDR NL FALLBACK — AlloyDB AI NL2SQL.
+  # Why postgres-sql instead of `kind: alloydb-ai-nl`?
+  # Toolbox v0.23.0's alloydb-ai-nl adapter ALWAYS sends
+  # `param_names => ARRAY[]::TEXT[], param_values => ARRAY[]::TEXT[]` even when
+  # no nlConfigParameters are declared. AlloyDB AI's PSV check rejects empty
+  # text-arrays (it expects NULL when there are no PSV params), so the call
+  # bombs out with "Invalid PSV named parameters." (SQLSTATE P0001) for every
+  # question. Calling execute_nl_query/2 directly via postgres-sql lets the
+  # function-default NULLs land where they should — no PSV is bound, the call
+  # succeeds, and the AlloyDB AI NL2SQL pipeline produces the SQL + rows.
+  # Kept as a fallback for off-script free-form prompts that the parameterized
+  # tools above cannot express.
+  query_cdr_nl:
+    kind: postgres-sql
+    source: alloydb-cdr
+    statement: |
+      SELECT alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1) AS result
+    description: |
+      FALLBACK — answers ONE natural-language question via AlloyDB AI NL2SQL.
+      Slow and unpredictable (typical 30-100s due to Vertex us-central1 tail
+      latency on gemini-2.5-flash retries inside alloydb_ai_nl.execute_nl_query).
+      Use ONLY when query_cdr_summary and query_cdr_worst_towers cannot
+      express the question — e.g. comparisons across days-of-week, calls
+      longer than a duration threshold, custom joins. Examples:
+      "Compare weekend vs weekday dropped-call rates in Jakarta last month"
+      / "Failed voice calls longer than 60 seconds in Surabaya in the last 7 days?"
+    parameters:
+      - name: question
+        type: string
+        required: true
+        description: |
+          A focused English question about the call_records table. Mention the
+          region (or "all regions"), the call_status / call_type filter, and a
+          time scope ("last 7 days", "this week", "last 30 days").
+
+toolsets:
+  telecom_network_toolset:
+    - query_network_events
+    - query_affected_customers_summary
+    - weekly_outage_trend
+  cdr_toolset:
+    - query_cdr_summary
+    - query_cdr_worst_towers
+    - query_cdr_nl

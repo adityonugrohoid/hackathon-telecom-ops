@@ -53,7 +53,7 @@
 
   <div class="dv-source-banner" role="note" style="margin: 24px 0 32px;">
     <span class="dv-source-banner-eyebrow">about this data</span>
-    <p>The CDR Analyzer agent poses one English question to the MCP toolbox tool <code>query_cdr_nl</code>, which forwards it to <code>alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1)</code>. AlloyDB AI translates the question to SQL using a registered Gemini model, executes it, and returns rows under the read-only role <code>netpulse_nl_reader</code>.</p>
+    <p>The CDR Analyzer agent reaches <code>call_records</code> in two tiers via the MCP toolbox. The default fast path is parameterized SQL — <code>query_cdr_summary(region, days_back)</code> and <code>query_cdr_worst_towers(region, days_back, limit)</code> — both of which execute fixed-shape aggregations in under 2 seconds. For off-script free-form prompts the agent falls back to <code>query_cdr_nl</code>, which forwards an English question to <code>alloydb_ai_nl.execute_nl_query('netpulse_cdr_config', $1)</code>; AlloyDB AI translates the question to SQL using a registered Gemini model and executes it. Both paths run under the read-only role <code>netpulse_nl_reader</code>, so the structural protection (no <code>SELECT</code>-bypass on either path) is identical.</p>
   </div>
 
   <form class="dv-filter" method="POST" action="" aria-label="Filter call records">

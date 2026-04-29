@@ -19,7 +19,7 @@ flowchart TB
     subgraph DATA["Backends &middot; Google Cloud"]
         direction LR
         BQ[("BigQuery<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>network_events</span>")]
-        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>call_records &middot; NL2SQL</span>")]
+        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>call_records &middot; SQL + NL2SQL</span>")]
         ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>incident_tickets</span>")]
     end
 
@@ -28,7 +28,7 @@ flowchart TB
     User --> UI --> A1
     A2 --> MCP --> BQ
     A3 --> MCP
-    MCP -- "NL2SQL" --> ADB1
+    MCP -- "SQL / NL2SQL" --> ADB1
     A4 -- "INSERT" --> ADB2
     ORCH -. "LLM calls" .-> Vertex
 

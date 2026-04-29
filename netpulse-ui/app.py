@@ -93,10 +93,11 @@ def inject_dataset_names() -> dict[str, str]:
 
 
 EXAMPLE_COMPLAINTS: list[str] = [
-    "Major dropped calls in Surabaya",
-    "Slow internet in Jakarta during peak hours",
-    "Customer charged twice for international calls",
-    "Router keeps disconnecting in Bandung",
+    "Major dropped calls in Makassar over the last 7 days",
+    "Failed calls spiking in Yogyakarta this week",
+    "Critical outages disrupting Bandung in the last 7 days",
+    "Bandwidth degradation across Balikpapan this week",
+    "Voice call quality dropping in Jakarta over the last 14 days",
 ]
 
 

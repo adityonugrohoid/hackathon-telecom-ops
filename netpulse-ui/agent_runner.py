@@ -126,6 +126,39 @@ def _extract_tool_error(response: dict[str, Any]) -> str | None:
     return None
 
 
+def _infer_failing_agent(runner, seen_authors: set[str]) -> str:
+    """Best-effort attribution of which agent crashed when an exception
+    bubbled out of `runner.run_async` before any event from the failing
+    agent reached the drain loop.
+
+    For SequentialAgent runs, the failing agent is the first sub-agent in
+    pipeline order whose author hasn't yet appeared in `seen_authors` —
+    i.e. the agent the SequentialAgent was about to run when the
+    exception fired. When every sub-agent has already produced at least
+    one event, the failure is mid-flight on the last one in the pipeline.
+
+    Args:
+        runner: The ADK Runner whose `agent.sub_agents` defines the
+            pipeline order.
+        seen_authors: Set of agent names that have already produced at
+            least one event in the current run.
+
+    Returns:
+        The inferred failing agent name. Empty string when the runner
+        isn't a SequentialAgent or `sub_agents` is otherwise unreadable —
+        in that case the chat UI falls back to the global error card
+        with no agent attribution.
+    """
+    sub_agents = getattr(runner.agent, "sub_agents", None) or []
+    for sub in sub_agents:
+        name = getattr(sub, "name", "")
+        if name and name not in seen_authors:
+            return name
+    if sub_agents:
+        return getattr(sub_agents[-1], "name", "")
+    return ""
+
+
 def _convert_event(event) -> list[AgentEvent]:
     """Translate one ADK Event into 0..N UI events."""
     out: list[AgentEvent] = []
@@ -255,7 +288,13 @@ def _agent_worker(query: str, q: queue.Queue, runner) -> None:
         asyncio.run(_drain())
     except Exception as exc:  # noqa: BLE001
         logger.exception("Agent run failed")
-        q.put(AgentEvent(type="error", message=str(exc)).to_dict())
+        q.put(
+            AgentEvent(
+                type="error",
+                agent=_infer_failing_agent(runner, seen_authors),
+                message=str(exc),
+            ).to_dict()
+        )
     finally:
         set_attempt_observer(None)
         q.put(_SENTINEL)
