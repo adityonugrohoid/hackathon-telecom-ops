@@ -3815,3 +3815,473 @@
   @media (max-width: 480px) {
     .nav-cta .btn { font-size: 12px; padding: 7px 12px; }
   }
+
+  /* ============================================================
+     CHAT WORKSPACE CONVERGENCE
+     Wrapper-only port of static-mockup-rebuild/app.html into
+     netpulse-ui/templates/chat.html. Outer chrome is the new .app-*
+     namespace; the SSE-populated inner markup keeps its .np-* classes
+     so agent_runner -> chat.html's existing JS continues to target
+     the same selectors. The rules below converge the two namespaces:
+     state cascade flows from .np-timeline-entry.{running,done,error}
+     into the new .app-step-status / .app-step-dot, and the inner
+     .np-tools / .np-text / .np-final / .np-impact-card visuals are
+     restyled in place for the cream-paper aesthetic.
+     ============================================================ */
+
+  /* style.css declares .np-timeline-entry as a 96px/1fr CSS grid expecting
+     a .np-timeline-rail + .np-timeline-content child pair. The wrapper port
+     drops both children in favor of an absolutely-positioned .app-step-dot
+     plus a single .app-step-card; the grid layout would otherwise push the
+     card into a narrow column. Reset it to a plain block. */
+  .app-step.np-timeline-entry {
+    display: block;
+    grid-template-columns: none;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .app-step .np-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(20,20,19,.06);
+    color: var(--ink-3);
+    border: 1px solid var(--hairline);
+    animation: none;
+  }
+  .app-step.np-timeline-entry.running .np-status {
+    background: rgba(204,120,92,.14);
+    color: var(--accent-deep);
+    border-color: rgba(204,120,92,.4);
+  }
+  .app-step.np-timeline-entry.done .np-status {
+    background: rgba(74,140,94,.14);
+    color: #4a8c5e;
+    border-color: rgba(74,140,94,.4);
+  }
+  .app-step.np-timeline-entry.error .np-status {
+    background: rgba(176,48,38,.14);
+    color: #b03026;
+    border-color: rgba(176,48,38,.4);
+  }
+
+  .app-step.np-timeline-entry.running .app-step-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper);
+  }
+  .app-step.np-timeline-entry.done .app-step-dot {
+    background: #4a8c5e;
+    border-color: #4a8c5e;
+    color: var(--paper);
+  }
+  .app-step.np-timeline-entry.error .app-step-dot {
+    background: #b03026;
+    border-color: #b03026;
+    color: var(--paper);
+  }
+
+  .app-step .np-region-trace {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    background: rgba(20,20,19,.04);
+    color: var(--ink-3);
+    border: 1px solid var(--hairline);
+    margin-left: 6px;
+  }
+  .app-step .np-region-trace[hidden] { display: none; }
+  .app-step .np-region-trace-failover {
+    background: rgba(204,120,92,.10);
+    color: var(--accent-deep);
+    border-color: rgba(204,120,92,.32);
+  }
+  .app-step .np-region-trace-sep { color: var(--accent); margin: 0 2px; }
+  .app-step .np-region-trace-prefix { color: var(--ink-3); }
+
+  .app-step-source .np-source-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: rgba(74,140,94,.10);
+    color: #4a8c5e;
+    border: 1px solid rgba(74,140,94,.28);
+  }
+  .app-step-source .np-source-tag.adk,
+  .app-step-source .np-source-tag.alloydb-write {
+    background: rgba(204,120,92,.10);
+    color: var(--accent-deep);
+    border-color: rgba(204,120,92,.32);
+  }
+  .app-step-source code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-2);
+    background: transparent;
+    padding: 0;
+  }
+
+  .app-step-terminal-body .np-tools {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    max-height: none;
+    overflow: visible;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .app-step-terminal-body .np-tools:empty { display: none; }
+  .app-step-terminal-body .np-tools li {
+    padding: 3px 0;
+    color: var(--ink-2);
+    word-break: break-word;
+    border: 0;
+    background: transparent;
+  }
+  .app-step-terminal-body .np-tool-call { color: var(--accent-deep); }
+  .app-step-terminal-body .np-tool-resp { color: var(--ink-3); }
+  .app-step-terminal-body .np-tool-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-right: 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: rgba(74,140,94,.10);
+    color: #4a8c5e;
+    border: 1px solid rgba(74,140,94,.28);
+    vertical-align: 1px;
+  }
+  .app-step-terminal-body .np-tool-tag.adk,
+  .app-step-terminal-body .np-tool-tag.alloydb-write {
+    background: rgba(204,120,92,.10);
+    color: var(--accent-deep);
+    border-color: rgba(204,120,92,.32);
+  }
+  .app-step-terminal-body .np-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin: 12px 0 0;
+    padding: 0 0 0 12px;
+    background: transparent;
+    border-left: 2px solid rgba(204,120,92,.35);
+    color: var(--ink-2);
+    overflow: visible;
+    min-height: 0;
+  }
+  .app-step-terminal-body .np-text:empty { display: none; }
+
+  .app-step-terminal-body .np-error-msg {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(176,48,38,.08);
+    color: #b03026;
+    border: 1px solid rgba(176,48,38,.28);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Hide the "/ Customer impact" eyebrow when the card it labels is empty.
+     Lives in chat.html because the eyebrow is a sibling of the .np-impact-card
+     and gets no JS attention; the :has() selector ties their visibility. */
+  .np-impact-eyebrow {
+    display: block;
+    margin-top: 32px;
+    margin-bottom: 10px;
+  }
+  body:has(.np-impact-card[hidden]) .np-impact-eyebrow { display: none; }
+
+  .app-impact-card.np-impact-card {
+    background: var(--paper-2);
+    border: 1px solid var(--hairline);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: center;
+    box-shadow: none;
+    margin-bottom: 8px;
+  }
+  .app-impact-card.np-impact-card[hidden] { display: none; }
+  .app-impact-card.np-impact-card .np-impact-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(204,120,92,.14);
+    color: var(--accent-deep);
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+    border: 1px solid rgba(204,120,92,.32);
+  }
+  .app-impact-card.np-impact-card .np-impact-headline {
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .app-impact-card.np-impact-card .np-impact-affected {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .app-impact-card.np-impact-card .np-impact-affected-label {
+    font-family: 'Inter', sans-serif;
+    color: var(--ink-3);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .app-impact-card.np-impact-card .np-impact-meta {
+    font-family: 'Inter', sans-serif;
+    color: var(--ink-3);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .app-impact-card.np-impact-card .np-impact-meta strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .app-impact-card .np-impact-sevs .np-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .app-impact-card .np-impact-sevs .np-badge-sev-critical,
+  .app-impact-card .np-impact-sevs .np-badge-sev-major,
+  .app-impact-card .np-impact-sevs .np-badge-sev-high {
+    background: rgba(176,48,38,.10);
+    color: #b03026;
+    border: 1px solid rgba(176,48,38,.28);
+  }
+  .app-impact-card .np-impact-sevs .np-badge-sev-minor,
+  .app-impact-card .np-impact-sevs .np-badge-sev-medium {
+    background: rgba(204,120,92,.10);
+    color: var(--accent-deep);
+    border: 1px solid rgba(204,120,92,.32);
+  }
+  .app-impact-card .np-impact-sevs .np-badge-sev-low,
+  .app-impact-card .np-impact-sevs .np-badge-sev-info {
+    background: rgba(74,140,94,.10);
+    color: #4a8c5e;
+    border: 1px solid rgba(74,140,94,.28);
+  }
+
+  /* The ticket form is DARK by design — site.css line 3707 overrides
+     .app-ticket-form to ink/paper colors to match the rebuild mockup. The
+     overrides below restyle the .np-final inner markup (final-head, ticket
+     pill, final-text pre, action chips, badges) so they read on a dark
+     surface. */
+  .app-ticket-form.np-final {
+    color: var(--paper);
+    margin-top: 24px;
+  }
+  .app-ticket-form.np-final[hidden] { display: none; }
+  .app-ticket-form.np-final::before { display: none; }
+  .app-ticket-form.np-final .np-final-head {
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 4px;
+    justify-content: flex-start;
+  }
+  .app-ticket-form.np-final h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    color: var(--paper);
+    margin: 0;
+  }
+  .app-ticket-form.np-final .app-ticket-form-eyebrow {
+    color: rgba(244,240,230,.5);
+  }
+  .app-ticket-form.np-final .np-final-meta {
+    margin-left: auto;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  /* The .np-ticket slot is the runtime ticket id ("Ticket #75"). The mockup
+     renders this as the Fraunces title, so promote it from the old small
+     mono badge to the title slot. */
+  .app-ticket-form.np-final .np-ticket {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--accent);
+    text-transform: none;
+  }
+  .app-ticket-form.np-final .np-ticket:empty { display: none; }
+  .app-ticket-form.np-final .np-final-meta {
+    align-items: center;
+    flex-direction: row;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .app-ticket-form.np-final .np-final-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: rgba(244,240,230,.85);
+    background: transparent;
+    margin: 14px 0 0;
+    padding: 14px 0 0;
+    border-top: 1px solid rgba(244,240,230,.12);
+  }
+  /* The .np-final-error variant: keep the dark ink base so the rest of the
+     readability rules stay correct, layer a translucent red on top, and
+     stripe the left border in error red. */
+  .app-ticket-form.np-final.np-final-error {
+    background:
+      linear-gradient(rgba(176,48,38,.22), rgba(176,48,38,.22)),
+      var(--ink);
+    border-color: rgba(176,48,38,.5);
+    border-left: 4px solid #b03026;
+    padding-left: 20px;
+  }
+  .app-ticket-form.np-final.np-final-error .app-ticket-form-eyebrow {
+    color: rgba(245,169,156,.7);
+  }
+  .app-ticket-form.np-final.np-final-error .np-final-text {
+    color: #f5a99c;
+    border-top-color: rgba(245,169,156,.18);
+  }
+
+  .app-ticket-form.np-final .np-actions-panel {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(244,240,230,.12);
+  }
+  .app-ticket-form.np-final .np-actions-title {
+    color: rgba(244,240,230,.55);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 10px;
+    opacity: 1;
+  }
+  .app-ticket-form.np-final .np-actions-chips { gap: 8px; }
+  .app-ticket-form.np-final .np-action-chip {
+    background: rgba(244,240,230,.06);
+    border: 1px solid rgba(244,240,230,.18);
+    color: rgba(244,240,230,.85);
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    border-radius: 999px;
+    padding: 7px 14px;
+  }
+  .app-ticket-form.np-final .np-action-chip:first-child {
+    background: rgba(204,120,92,.20);
+    border-color: rgba(204,120,92,.45);
+    color: #f3a98e;
+  }
+  .app-ticket-form.np-final .np-action-chip:hover {
+    background: rgba(244,240,230,.12);
+    border-color: rgba(244,240,230,.32);
+  }
+
+  .app-ticket-form .np-ticket-badges .np-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: rgba(244,240,230,.08);
+    color: rgba(244,240,230,.85);
+    border: 1px solid rgba(244,240,230,.18);
+  }
+  .app-ticket-form .np-ticket-badges .np-badge-cat-network,
+  .app-ticket-form .np-ticket-badges .np-badge-cat-billing,
+  .app-ticket-form .np-ticket-badges .np-badge-cat-hardware,
+  .app-ticket-form .np-ticket-badges .np-badge-cat-service,
+  .app-ticket-form .np-ticket-badges .np-badge-cat-general {
+    background: rgba(204,120,92,.20);
+    color: #f3a98e;
+    border-color: rgba(204,120,92,.45);
+  }
+  .app-ticket-form .np-ticket-badges .np-badge-region {
+    background: rgba(74,140,94,.20);
+    color: #7fc998;
+    border-color: rgba(74,140,94,.45);
+  }
+  .app-ticket-form .np-ticket-badges .np-badge-sev-critical,
+  .app-ticket-form .np-ticket-badges .np-badge-sev-major,
+  .app-ticket-form .np-ticket-badges .np-badge-sev-high {
+    background: rgba(176,48,38,.22);
+    color: #f5a99c;
+    border-color: rgba(176,48,38,.5);
+  }
+  .app-ticket-form .np-ticket-badges .np-badge-sev-minor,
+  .app-ticket-form .np-ticket-badges .np-badge-sev-medium {
+    background: rgba(204,120,92,.20);
+    color: #f3a98e;
+    border-color: rgba(204,120,92,.45);
+  }
+
+  .np-input-hint {
+    margin-top: 12px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+  }
+
+  .app-prompt-submit.np-busy {
+    cursor: progress;
+    opacity: 0.85;
+  }
+  .app-prompt-submit.np-busy::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 8px;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: app-ticket-spin .9s linear infinite;
+    vertical-align: -1px;
+  }
+
+  /* The new dot is the rail anchor; no old timeline-rail to hide
+     because the markup omits it entirely. Same for app-step-time —
+     we render no per-step timestamp in the wrapper port. */

@@ -1,126 +1,221 @@
-{% extends "base.html" %}
-{% block title %}Workspace{% endblock %}
-{% block content %}
-<section class="np-chat">
-  <form id="np-form" onsubmit="event.preventDefault(); npSubmit();">
-    <input id="np-input" type="text" placeholder="Describe a telecom incident..." autofocus>
-    <button id="np-submit" type="submit">Investigate</button>
-  </form>
-  <div id="np-input-hint" class="np-input-hint" role="alert" aria-live="polite" hidden></div>
-  <div class="np-examples">
-    {% for q in examples %}
-      <button class="np-chip" type="button" onclick="npFill(this)">{{ q }}</button>
-    {% endfor %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workspace &mdash; NetPulse AI</title>
+<meta name="description" content="NetPulse AI workspace &mdash; describe a telecom incident, watch four agents investigate end to end." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap row">
+    {% include "_brand.html" %}
+
+    <div class="app-toolbar-center" role="status" aria-label="Connection status and model" style="display: flex; align-items: center; justify-content: center; gap: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3);">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>BigQuery</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>AlloyDB</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>MCP&nbsp;toolbox</span>
+      <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
+      <span aria-label="Active model" style="color: var(--ink-2);">{{ active_model }}</span>
+    </div>
+
+    <div class="nav-cta">
+      <a href="{{ url_for('landing') }}" class="btn btn-primary">
+        New run
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="app-greeting" style="margin-top: 28px; margin-bottom: 6px;">
+    <h1 style="font-family: 'Fraunces', serif; font-weight: 400; font-size: 30px; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink); margin: 0;">What did the customer report?</h1>
   </div>
 
-  <ol class="np-timeline">
-    <li class="np-timeline-entry" data-agent="classifier">
-      <div class="np-timeline-rail">
-        <time class="np-timeline-time">--:--:--</time>
-        <span class="np-timeline-dot"></span>
+  <section class="app-prompt-section" aria-label="Submit a customer complaint" style="max-width: none; margin-top: 16px;">
+    <div class="app-prompt" role="form" aria-label="Customer complaint input" style="display: flex; flex-direction: column; gap: 14px; min-height: 220px; padding: 22px 24px 18px;">
+      <textarea id="np-input" class="app-prompt-input" rows="4" aria-label="Describe a telecom incident" placeholder="Describe a telecom incident&hellip;" autofocus style="width: 100%; flex: 1 1 auto; min-height: 110px; line-height: 1.55; resize: vertical; outline: none;"></textarea>
+      <div class="app-prompt-foot">
+        <button id="np-submit" class="app-prompt-submit app-prompt-submit-coral" type="button" onclick="npSubmit()">
+          Investigate
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7h8M7 3l4 4-4 4"/></svg>
+        </button>
       </div>
-      <div class="np-timeline-content">
-        <header>
-          <span class="np-timeline-step">1</span>
-          <h3>Classifier</h3>
+    </div>
+
+    <div id="np-input-hint" class="np-input-hint" role="alert" aria-live="polite" hidden></div>
+
+    <div class="app-chips" aria-label="Sample complaints">
+      {% for q in examples %}
+        <button class="app-chip" type="button" onclick="npFill(this)">{{ q }}</button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="app-run-head">
+    <h2 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 18px; letter-spacing: -0.01em; margin: 0;">Agent run</h2>
+    <span class="meta">4-agent pipeline</span>
+  </div>
+
+  <ol class="app-timeline" aria-label="Agent run timeline">
+
+    <li class="app-step np-timeline-entry" data-agent="classifier">
+      <span class="app-step-dot">1</span>
+      <div class="app-step-card">
+        <div class="app-step-head">
+          <div class="app-step-label">
+            <span class="app-step-num">01</span>
+            <span class="app-step-name">Classifier</span>
+          </div>
           <span class="np-status">waiting</span>
           <span class="np-region-trace" hidden></span>
-        </header>
-        <div class="np-card-source">
+        </div>
+        <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
         </div>
-        <ul class="np-tools"></ul>
-        <pre class="np-text"></pre>
-        <footer class="np-timeline-handoff">
-          <span class="np-handoff-title">passes to next</span>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">classifier</span>
+            <span class="meta">{{ active_model }}</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <ul class="np-tools"></ul>
+            <pre class="np-text"></pre>
+          </div>
+        </div>
+        <div class="app-step-handoff">
+          <span class="app-step-handoff-label">passes to next</span>
           <code>category</code><code>region</code>
-        </footer>
+        </div>
       </div>
     </li>
 
-    <li class="np-timeline-entry" data-agent="network_investigator">
-      <div class="np-timeline-rail">
-        <time class="np-timeline-time">--:--:--</time>
-        <span class="np-timeline-dot"></span>
-      </div>
-      <div class="np-timeline-content">
-        <header>
-          <span class="np-timeline-step">2</span>
-          <h3>Network Investigator</h3>
+    <li class="app-step np-timeline-entry" data-agent="network_investigator">
+      <span class="app-step-dot">2</span>
+      <div class="app-step-card">
+        <div class="app-step-head">
+          <div class="app-step-label">
+            <span class="app-step-num">02</span>
+            <span class="app-step-name">Network Investigator</span>
+          </div>
           <span class="np-status">waiting</span>
           <span class="np-region-trace" hidden></span>
-        </header>
-        <div class="np-card-source">
+        </div>
+        <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
           <span class="np-source-tag bq">BIGQUERY</span>
           <code>{{ gcp_project }}.{{ bq_dataset }}.{{ bq_network_table }}</code>
         </div>
-        <ul class="np-tools"></ul>
-        <pre class="np-text"></pre>
-        <footer class="np-timeline-handoff">
-          <span class="np-handoff-title">passes to next</span>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">network_investigator</span>
+            <span class="meta">{{ active_model }}</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <ul class="np-tools"></ul>
+            <pre class="np-text"></pre>
+          </div>
+        </div>
+        <div class="app-step-handoff">
+          <span class="app-step-handoff-label">passes to next</span>
           <code>category</code><code>region</code><code>network_findings</code>
-        </footer>
+        </div>
       </div>
     </li>
 
-    <li class="np-timeline-entry" data-agent="cdr_analyzer">
-      <div class="np-timeline-rail">
-        <time class="np-timeline-time">--:--:--</time>
-        <span class="np-timeline-dot"></span>
-      </div>
-      <div class="np-timeline-content">
-        <header>
-          <span class="np-timeline-step">3</span>
-          <h3>CDR Analyzer</h3>
+    <li class="app-step np-timeline-entry" data-agent="cdr_analyzer">
+      <span class="app-step-dot">3</span>
+      <div class="app-step-card">
+        <div class="app-step-head">
+          <div class="app-step-label">
+            <span class="app-step-num">03</span>
+            <span class="app-step-name">CDR Analyzer</span>
+          </div>
           <span class="np-status">waiting</span>
           <span class="np-region-trace" hidden></span>
-        </header>
-        <div class="np-card-source">
+        </div>
+        <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
-          <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+          <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
+          <span class="np-source-tag alloydb">ALLOYDB&nbsp;NL2SQL</span>
           <code>SELECT</code> from <code>{{ al_call_table }}</code>
         </div>
-        <ul class="np-tools"></ul>
-        <pre class="np-text"></pre>
-        <footer class="np-timeline-handoff">
-          <span class="np-handoff-title">passes to next</span>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">cdr_analyzer</span>
+            <span class="meta">{{ active_model }}</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <ul class="np-tools"></ul>
+            <pre class="np-text"></pre>
+          </div>
+        </div>
+        <div class="app-step-handoff">
+          <span class="app-step-handoff-label">passes to next</span>
           <code>classification</code><code>category</code><code>region</code><code>network_findings</code><code>cdr_findings</code>
-        </footer>
+        </div>
       </div>
     </li>
 
-    <li class="np-timeline-entry" data-agent="response_formatter">
-      <div class="np-timeline-rail">
-        <time class="np-timeline-time">--:--:--</time>
-        <span class="np-timeline-dot"></span>
-      </div>
-      <div class="np-timeline-content">
-        <header>
-          <span class="np-timeline-step">4</span>
-          <h3>Response Formatter</h3>
+    <li class="app-step np-timeline-entry" data-agent="response_formatter">
+      <span class="app-step-dot">4</span>
+      <div class="app-step-card">
+        <div class="app-step-head">
+          <div class="app-step-label">
+            <span class="app-step-num">04</span>
+            <span class="app-step-name">Response Formatter</span>
+          </div>
           <span class="np-status">waiting</span>
           <span class="np-region-trace" hidden></span>
-        </header>
-        <div class="np-card-source">
+        </div>
+        <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
+          <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
           <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
           <code>INSERT</code> into <code>{{ al_ticket_table }}</code>
         </div>
-        <ul class="np-tools"></ul>
-        <pre class="np-text"></pre>
+        <div class="app-step-terminal">
+          <div class="app-step-terminal-bar">
+            <span class="app-step-terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="label">response_formatter</span>
+            <span class="meta">{{ active_model }}</span>
+          </div>
+          <div class="app-step-terminal-body">
+            <ul class="np-tools"></ul>
+            <pre class="np-text"></pre>
+          </div>
+        </div>
       </div>
     </li>
+
   </ol>
 
-  <aside class="np-impact-card" hidden>
-    <span class="np-impact-icon" aria-hidden="true">!</span>
-    <div class="np-impact-body">
-      <div class="np-impact-headline">
-        <span class="np-impact-affected">--</span>
-        <span class="np-impact-affected-label">customers affected</span>
+  <span class="eyebrow np-impact-eyebrow">/ Customer impact</span>
+  <aside class="np-impact-card app-impact-card" aria-label="Customer impact rollup" hidden>
+    <span class="np-impact-icon app-impact-icon" aria-hidden="true">!</span>
+    <div class="np-impact-body app-impact-card-body">
+      <div class="np-impact-headline app-impact-headline">
+        <span class="np-impact-affected app-impact-headline-num">--</span>
+        <span class="np-impact-affected-label app-impact-headline-label">customers affected</span>
       </div>
       <div class="np-impact-meta">
         <span class="np-impact-events-wrap" hidden><strong class="np-impact-events">--</strong> events</span>
@@ -130,11 +225,11 @@
     </div>
   </aside>
 
-  <article class="np-final" hidden>
-    <header class="np-final-head">
-      <h2>Incident Report</h2>
+  <article class="np-final app-ticket-form" aria-label="Incident report" hidden>
+    <header class="np-final-head app-ticket-form-head">
+      <span class="app-ticket-form-eyebrow">/ Incident Report</span>
       <div class="np-final-meta">
-        <div class="np-ticket"></div>
+        <div class="np-ticket app-ticket-form-title"></div>
         <div class="np-ticket-badges"></div>
       </div>
     </header>
@@ -144,11 +239,29 @@
       <div class="np-actions-chips"></div>
     </div>
   </article>
-</section>
 
+</main>
+
+<footer class="foot" style="border-top: none;">
+  <div class="wrap">
+    <div class="foot-base">
+      <span>&copy; 2026 Adityo Nugroho &middot; NetPulse AI</span>
+      <div class="foot-social">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='site.js') }}"></script>
 <script>
 function npFill(btn) {
   document.getElementById('np-input').value = btn.textContent;
+  document.getElementById('np-input').focus();
 }
 
 function npClearList(ul) {
@@ -162,6 +275,7 @@ function npToolBackend(toolName) {
   if (!toolName) return {label: '', cls: ''};
   if (toolName === 'classify_issue') return {label: 'NATIVE PYTHON TOOL', cls: 'local'};
   if (toolName === 'query_cdr') return {label: 'ALLOYDB READ', cls: 'alloydb'};
+  if (toolName === 'query_cdr_nl') return {label: 'ALLOYDB NL2SQL', cls: 'alloydb'};
   if (toolName === 'save_incident_ticket') return {label: 'ALLOYDB WRITE', cls: 'alloydb-write'};
   if (toolName.indexOf('query_') === 0) return {label: 'MCP TOOLBOX', cls: 'mcp'};
   return {label: '', cls: ''};
@@ -408,7 +522,6 @@ function npReset() {
   document.querySelectorAll('.np-timeline-entry').forEach(function (entry) {
     entry.classList.remove('running', 'done', 'error');
     entry.querySelector('.np-status').textContent = 'waiting';
-    entry.querySelector('.np-timeline-time').textContent = '--:--:--';
     npClearList(entry.querySelector('.np-tools'));
     entry.querySelector('.np-text').textContent = '';
     var msg = entry.querySelector('.np-error-msg');
@@ -442,7 +555,7 @@ function npSetBusy(on) {
   var input = document.getElementById('np-input');
   var btn = document.getElementById('np-submit');
   if (on) {
-    if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+    if (!btn.dataset.label) btn.dataset.label = btn.textContent.trim();
     input.disabled = true;
     btn.disabled = true;
     btn.classList.add('np-busy');
@@ -519,6 +632,18 @@ function npOnLoad() {
   // Landing page chips link here with ?seed=...&autorun=1 for one-click demo.
   var input = document.getElementById('np-input');
   input.addEventListener('input', npClearInputHint);
+
+  // Textarea Enter behavior: Cmd/Ctrl+Enter submits, plain Enter inserts a
+  // newline. Matches the convention of ChatGPT / Claude composer inputs and
+  // matches what users expect from a multi-line textarea over a single-line
+  // <input type="text">.
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      npSubmit();
+    }
+  });
+
   var params = new URLSearchParams(window.location.search);
   var seed = params.get('seed');
   if (!seed) return;
@@ -607,17 +732,15 @@ function npRenderAgentError(ev) {
   entry.classList.remove('running', 'done');
   entry.classList.add('error');
   entry.querySelector('.np-status').textContent = 'error';
-  var content = entry.querySelector('.np-timeline-content');
+  // Attach the inline error message to the agent's terminal body so it shows up
+  // in line with the tool list / prose, regardless of where the handoff footer
+  // sits in the new wrapper layout.
+  var body = entry.querySelector('.app-step-terminal-body') || entry.querySelector('.np-timeline-content') || entry;
   var host = entry.querySelector('.np-error-msg');
   if (!host) {
     host = document.createElement('div');
     host.className = 'np-error-msg';
-    var handoff = content.querySelector('.np-timeline-handoff');
-    if (handoff) {
-      content.insertBefore(host, handoff);
-    } else {
-      content.appendChild(host);
-    }
+    body.appendChild(host);
   }
   var prefix = ev.tool ? ('[' + ev.tool + '] ') : '';
   host.textContent = prefix + (ev.message || 'Unknown error');
@@ -658,7 +781,6 @@ function npHandle(ev) {
   if (ev.type === 'agent_start') {
     entry.classList.add('running');
     entry.querySelector('.np-status').textContent = 'running';
-    entry.querySelector('.np-timeline-time').textContent = npNowHHMMSS();
   } else if (ev.type === 'tool_call') {
     npAppendToolLine(entry.querySelector('.np-tools'), 'call', ev);
     if (ev.tool === 'classify_issue' && ev.args) {
@@ -685,4 +807,5 @@ function npHandle(ev) {
   }
 }
 </script>
-{% endblock %}
+</body>
+</html>
