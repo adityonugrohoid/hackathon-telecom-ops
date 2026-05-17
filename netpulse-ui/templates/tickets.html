@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Incident tickets &mdash; NetPulse AI</title>
-<meta name="description" content="NetPulse AI data viewer &mdash; AlloyDB &middot; Write." />
+<title>Incident tickets - NetPulse AI</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='netpulse-logo-only.svg') }}">
+<meta name="description" content="NetPulse AI data viewer &mdash; SQLite incident_tickets." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -20,7 +21,7 @@
     {% include "_brand.html" %}
 
     <div class="app-toolbar-center" role="status" aria-label="Connection status and model" style="display: flex; align-items: center; justify-content: center; gap: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3);">
-      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>AlloyDB</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>SQLite</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>agent&nbsp;writes</span>
       <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
       <span aria-label="Active model" style="color: var(--ink-2);">{{ active_model }}</span>
@@ -41,7 +42,7 @@
   <div class="wrap">
     <h1 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: clamp(36px, 5vw, 56px); line-height: 1.05; letter-spacing: -0.035em; color: var(--ink); margin: 0;">Incident tickets</h1>
     <div class="dv-meta-row" style="margin-top: 12px;">
-      <span class="dv-meta-pill"><b>table</b> public.{{ al_ticket_table }}</span>
+      <span class="dv-meta-pill"><b>sqlite</b> {{ sqlite_db_path }} &middot; {{ ticket_table }}</span>
       <span class="dv-meta-pill"><b>access</b> agent &middot; INSERT</span>
       <span class="dv-meta-pill"><b>ordering</b> ticket_id desc</span>
       <span class="dv-meta-pill"><b>rows</b> {{ result.total_count }}</span>
@@ -53,7 +54,7 @@
 
   <div class="dv-source-banner" role="note" style="margin: 24px 0 32px;">
     <span class="dv-source-banner-eyebrow">about this data</span>
-    <p>The Response Formatter agent calls a single native ADK tool, <code>save_incident_ticket</code>, which assembles the prior agents&rsquo; session state into one <code>INSERT INTO incident_tickets &hellip; RETURNING ticket_id</code> against AlloyDB. Tickets are append-only; the workspace card the operator sees is rendered from the same row you&rsquo;re looking at here.</p>
+    <p>The Response Formatter agent calls a single native ADK tool, <code>save_incident_ticket</code>, which assembles the prior agents&rsquo; session state into one <code>INSERT INTO incident_tickets</code> against the bundled SQLite store. AUTOINCREMENT picks up from the seed&rsquo;s MAX(ticket_id)+1; the workspace card the operator sees is rendered from the same row you&rsquo;re looking at here.</p>
   </div>
 
   <div class="dv-table-card" role="region" aria-label="Result rows">
@@ -107,9 +108,9 @@
       <dt>description</dt>
       <dd>Verbatim customer complaint. Persisted exactly as received.</dd>
       <dt>related_events</dt>
-      <dd>Comma-separated <code>event_id</code> values surfaced by the Network Investigator. Joins back into BigQuery for forensic context.</dd>
+      <dd>Comma-separated <code>event_id</code> values surfaced by the Network Investigator. Joins back into the <code>network_events</code> table for forensic context.</dd>
       <dt>cdr_findings</dt>
-      <dd>Free-text rollup of what the CDR Analyzer found in AlloyDB &mdash; counts of failed / dropped calls in the window of interest.</dd>
+      <dd>Free-text rollup of what the CDR Analyzer found in <code>call_records</code> &mdash; counts of failed / dropped calls in the window of interest.</dd>
       <dt>recommendation</dt>
       <dd>Final NOC-facing action plan synthesised by the Response Formatter. Drives the workspace action-chip strip.</dd>
       <dt>status</dt>

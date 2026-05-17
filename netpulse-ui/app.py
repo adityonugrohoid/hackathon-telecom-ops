@@ -21,19 +21,18 @@ from flask import (
 
 from agent_runner import run_agent
 from data_queries import (
-    AL_CALL_TABLE,
-    AL_TICKET_TABLE,
     ALLOWED_CALL_STATUSES,
     ALLOWED_CALL_TYPES,
     ALLOWED_EVENT_TYPES,
     ALLOWED_REGIONS,
     ALLOWED_SEVERITIES,
-    BQ_DATASET,
-    BQ_NETWORK_TABLE,
-    GCP_PROJECT,
-    alloydb_call_records,
-    alloydb_incident_tickets,
-    bq_network_events,
+    CALL_RECORDS_TABLE,
+    NETWORK_EVENTS_TABLE,
+    SQLITE_PATH,
+    TICKET_TABLE,
+    read_call_records,
+    read_incident_tickets,
+    read_network_events,
 )
 
 logging.basicConfig(
@@ -73,18 +72,17 @@ app = Flask(__name__)
 
 @app.context_processor
 def inject_dataset_names() -> dict[str, str]:
-    """Expose env-driven project + dataset + table names to every template.
+    """Expose the SQLite file path + table names to every template.
 
-    Lets data-source banners and lineage labels render the current target
-    instead of hardcoded `plated-complex-491512-n6.telecom_network.*` strings,
-    so a fork pointing at a different GCP project shows the right path.
+    Lets data-source banners and lineage labels render the current SQLite
+    layout (`data/netpulse.sqlite` + per-table names) instead of the
+    BigQuery / AlloyDB lineage that preceded the substrate change.
     """
     return {
-        "gcp_project": GCP_PROJECT,
-        "bq_dataset": BQ_DATASET,
-        "bq_network_table": BQ_NETWORK_TABLE,
-        "al_call_table": AL_CALL_TABLE,
-        "al_ticket_table": AL_TICKET_TABLE,
+        "sqlite_db_path": str(SQLITE_PATH),
+        "network_events_table": NETWORK_EVENTS_TABLE,
+        "call_records_table": CALL_RECORDS_TABLE,
+        "ticket_table": TICKET_TABLE,
         # Mirrors telecom_ops/agent.py:MODEL_FAST. Hardcoded here to avoid
         # the heavy ADK import chain at Flask boot — keep in sync if the
         # primary model changes.
@@ -164,7 +162,7 @@ def network_events():
     event_type = (
         request.form.get("event_type") or request.args.get("event_type") or ""
     )
-    result = bq_network_events(
+    result = read_network_events(
         region or None, severity or None, event_type or None
     )
     return render_template(
@@ -192,7 +190,7 @@ def call_records():
     call_type = (
         request.form.get("call_type") or request.args.get("call_type") or ""
     )
-    result = alloydb_call_records(
+    result = read_call_records(
         region or None, call_status or None, call_type or None
     )
     return render_template(
@@ -216,7 +214,7 @@ def tickets():
     return render_template(
         "tickets.html",
         active_tab="tickets",
-        result=alloydb_incident_tickets(),
+        result=read_incident_tickets(),
     )
 
 

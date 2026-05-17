@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NetPulse AI - {% block title %}TelecomOps Assistant{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='netpulse-logo-only.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -30,15 +31,15 @@
       </a>
       <a class="np-tab {% if active_tab == 'network' %}active{% endif %}" href="{{ url_for('network_events') }}">
         Network Events
-        <span class="np-source-tag bq">BIGQUERY</span>
+        <span class="np-source-tag sqlite">SQLITE&nbsp;READ</span>
       </a>
       <a class="np-tab {% if active_tab == 'cdr' %}active{% endif %}" href="{{ url_for('call_records') }}">
         Call Records
-        <span class="np-source-tag alloydb">ALLOYDB&nbsp;READ</span>
+        <span class="np-source-tag sqlite">SQLITE&nbsp;READ</span>
       </a>
       <a class="np-tab {% if active_tab == 'tickets' %}active{% endif %}" href="{{ url_for('tickets') }}">
         Incident Tickets
-        <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+        <span class="np-source-tag sqlite-write">SQLITE&nbsp;WRITE</span>
       </a>
     </nav>
     {% endblock %}

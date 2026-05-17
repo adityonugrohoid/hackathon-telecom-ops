@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Workspace &mdash; NetPulse AI</title>
+<title>Workspace - NetPulse AI</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='netpulse-logo-only.svg') }}">
 <meta name="description" content="NetPulse AI workspace &mdash; describe a telecom incident, watch four agents investigate end to end." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,9 +23,9 @@
     {% include "_brand.html" %}
 
     <div class="app-toolbar-center" role="status" aria-label="Connection status and model" style="display: flex; align-items: center; justify-content: center; gap: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3);">
-      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>BigQuery</span>
-      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>AlloyDB</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>SQLite</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>MCP&nbsp;toolbox</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>Vertex&nbsp;Gemini</span>
       <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
       <span aria-label="Active model" style="color: var(--ink-2);">{{ active_model }}</span>
     </div>
@@ -122,7 +123,7 @@
         <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
-          <span class="np-source-tag bq">BIGQUERY</span>
+          <span class="np-source-tag sqlite">SQLITE</span>
         </div>
         <div class="app-step-terminal">
           <div class="app-step-terminal-bar">
@@ -158,7 +159,7 @@
         <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag mcp">MCP&nbsp;TOOLBOX</span>
-          <span class="np-source-tag alloydb">ALLOYDB&nbsp;SQL/NL</span>
+          <span class="np-source-tag sqlite">SQLITE&nbsp;SQL</span>
         </div>
         <div class="app-step-terminal">
           <div class="app-step-terminal-bar">
@@ -194,7 +195,7 @@
         <div class="app-step-source">
           <span class="np-source-tag adk">ADK&nbsp;AGENT</span>
           <span class="np-source-tag local">NATIVE&nbsp;PYTHON&nbsp;TOOL</span>
-          <span class="np-source-tag alloydb-write">ALLOYDB&nbsp;WRITE</span>
+          <span class="np-source-tag sqlite-write">SQLITE&nbsp;WRITE</span>
         </div>
         <div class="app-step-terminal">
           <div class="app-step-terminal-bar">
@@ -277,11 +278,9 @@ function npClearList(ul) {
 function npToolBackend(toolName) {
   if (!toolName) return {label: '', cls: ''};
   if (toolName === 'classify_issue') return {label: 'NATIVE PYTHON TOOL', cls: 'local'};
-  if (toolName === 'query_cdr') return {label: 'ALLOYDB READ', cls: 'alloydb'};
-  if (toolName === 'query_cdr_summary') return {label: 'ALLOYDB SQL', cls: 'alloydb'};
-  if (toolName === 'query_cdr_worst_towers') return {label: 'ALLOYDB SQL', cls: 'alloydb'};
-  if (toolName === 'query_cdr_nl') return {label: 'ALLOYDB NL2SQL', cls: 'alloydb'};
-  if (toolName === 'save_incident_ticket') return {label: 'ALLOYDB WRITE', cls: 'alloydb-write'};
+  if (toolName === 'query_cdr_summary') return {label: 'SQLITE SQL', cls: 'sqlite'};
+  if (toolName === 'query_cdr_worst_towers') return {label: 'SQLITE SQL', cls: 'sqlite'};
+  if (toolName === 'save_incident_ticket') return {label: 'SQLITE WRITE', cls: 'sqlite-write'};
   if (toolName.indexOf('query_') === 0) return {label: 'MCP TOOLBOX', cls: 'mcp'};
   return {label: '', cls: ''};
 }

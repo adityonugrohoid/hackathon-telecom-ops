@@ -34,9 +34,19 @@ docs/internal/
 # Iteration screenshots from the build process — not user-facing assets
 docs/screenshots/
 
-# Submission deck (large binary, kept locally — not in git)
+# Submission deck artifacts (large binaries + paste-prep notes, kept locally — not in git)
 *.pptx
 *.pptx.*
+docs/Prototype Submission Deck*.pdf
+docs/deck-rewrite.txt
+
+# SQLite-bundled reconstitution: the materialized DB file is regenerated
+# from docs/seed-data/*.csv via scripts/build_sqlite.py; not committed.
+data/
+
+# Cached genai-toolbox binary for local development (downloaded by
+# scripts/run_toolbox_local.sh; ~30 MB, regenerable from upstream).
+.toolbox/
 
 # OS / IDE
 .DS_Store

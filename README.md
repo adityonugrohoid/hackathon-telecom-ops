@@ -9,7 +9,7 @@
 
 **A multi-agent AI assistant that turns a telecom customer's natural-language complaint into a structured incident ticket — in 25–30 seconds, end-to-end.**
 
-[**Try it live →**](https://netpulse-ui-486319900424.us-central1.run.app)
+_Live deployment under reconstitution on a fresh GCP project — see [Run it locally](#run-it-locally) for the standalone path._
 
 [Features](#features) · [Architecture](#architecture) · [Tech stack](#tech-stack) · [Run it locally](#run-it-locally) · [Deploy](#deploy)
 
@@ -30,9 +30,9 @@ ticketing system — and manually correlate the results. NetPulse AI does all
 of that in a single natural-language step:
 
 1. **Classifies** the complaint into a category (network / billing / hardware / service / general) and a region.
-2. **Investigates** live network events from BigQuery via MCP Toolbox.
-3. **Analyzes** matching call detail records from AlloyDB via natural-language SQL.
-4. **Synthesizes** an incident ticket with a NOC recommendation, persisted to AlloyDB and surfaced to the operator.
+2. **Investigates** live network events from the bundled SQLite store via MCP Toolbox.
+3. **Analyzes** matching call detail records via two parameterized SQL tools served by the same MCP Toolbox.
+4. **Synthesizes** an incident ticket with a NOC recommendation, persisted to SQLite and surfaced to the operator.
 
 The whole workflow runs as a Google ADK `SequentialAgent` orchestrating four
 `LlmAgent` sub-agents, each backed by Gemini on Vertex AI. End-to-end latency
@@ -46,25 +46,19 @@ round-trips.
   (or one toolset), and one `output_key` written into `session.state`.
   Downstream agents read upstream state via defensive `{key?}` substitution
   so a partial chain still produces a graceful report.
-- **Two-tier CDR analyzer: parameterized SQL primary, NL2SQL fallback.**
-  The CDR analyzer's default path is two fixed-shape parameterized tools
-  (`query_cdr_summary`, `query_cdr_worst_towers`) that the agent calls
-  with extracted `(region, days_back)` args — typical execution <2s.
-  `query_cdr_nl` stays available as a fallback for off-script prompts
-  (e.g. "weekend vs weekday dropped-call rates"), routing through
-  AlloyDB AI's `alloydb_ai_nl.execute_nl_query`. The agent picks the
-  path; the toolbox is shape-agnostic. Boxing NL2SQL as fallback bounds
-  the demo to ~10–15s while keeping the capability available — observed
-  NL2SQL tail latency was 30–130s due to Vertex us-central1 retries
-  inside the AlloyDB AI translator. **Read-only is structural for both
-  paths** — the toolbox connects as a `netpulse_nl_reader` Postgres role
-  with `SELECT` on `call_records` only, so a misbehaving model can't
-  drop a table on either path.
-- **Partition-pruning analytical rollup on BigQuery.** `network_events` is
-  DAY-partitioned on `started_at` and clustered by `(region, severity)`
-  across 50 000 events / 10 cities / 6 months of seed data. The
-  `weekly_outage_trend` tool uses partition pruning so a 12-week scan
-  reads ~25 KB instead of the full table.
+- **Two parameterized SQL tools cover the CDR analyzer's prompt surface.**
+  `query_cdr_summary(region, days_back)` returns the call_type × call_status
+  breakdown; `query_cdr_worst_towers(region, days_back, limit)` ranks
+  cell towers by (dropped + failed) / total. Both run as fixed-shape
+  aggregations against the SQLite `call_records` table in under 50 ms.
+  The agent's prompt encodes a window-mapping table ("last 7 days" →
+  `days_back=7`) so dispatch is deterministic.
+- **Indexed lookups on the bundled SQLite store.** `network_events` is
+  indexed on `(region, severity, started_at)` across 50 000 events / 10
+  cities / 6 months of seed data; `call_records` is indexed on
+  `(region, call_date)`. Time-windowed scans complete in under 50 ms
+  end-to-end. Seed data slides with `datetime.now()` so the demo never
+  goes stale.
 - **Vertex AI failover that's visible in the UI.** Every LLM call routes
   through `RegionFailoverGemini`, which targets the single `global` Vertex
   endpoint and walks a 4-attempt **model ladder** on `RESOURCE_EXHAUSTED`
@@ -83,20 +77,21 @@ round-trips.
   expands on click. Live timer + status pill + model-failover chip stay
   visible without expanding.
 - **Persistent structured output.** Every run inserts an auditable row in
-  AlloyDB `incident_tickets` with category, region, related events, CDR
-  findings, and a NOC recommendation. Queryable, joinable, archivable —
-  not a transient chat response. The workspace surfaces the saved ticket
-  back to the operator with a category-keyed chip panel of recommended
-  NOC actions.
+  the SQLite `incident_tickets` table with category, region, related events,
+  CDR findings, and a NOC recommendation. AUTOINCREMENT picks up from the
+  seed's MAX(ticket_id)+1 so agent-written rows don't collide with seeds.
+  The workspace surfaces the saved ticket back to the operator with a
+  category-keyed chip panel of recommended NOC actions.
 - **Two frontends, one engine.** A custom NetPulse UI (Flask + SSE) for
   the branded demo, plus the built-in ADK Dev UI (`/events` + `/trace`
   tabs) for free observability. Both call the same
   `Runner + InMemorySessionService + root_agent`.
 - **Boot-resilient by design.** MCP Toolbox client wrapped in `try/except`
-  so the agent boots even when the toolbox is cold. AlloyDB engine uses
-  `pool_pre_ping=True` + `pool_recycle=300` to survive AlloyDB's idle TCP
-  reaper. Agent runner is lazy-loaded so frontend tabs that don't need
-  the agent stay functional even if the toolbox is unreachable.
+  so the agent boots even when the toolbox is cold. SQLite reads from the
+  data viewer tabs degrade to a friendly error if the file is missing,
+  rather than crashing the Flask process. Agent runner is lazy-loaded so
+  frontend tabs that don't need the agent stay functional even if the
+  toolbox is unreachable.
 - **Validated end-to-end.** 70+ incident tickets created across 5
   Indonesian regions and 3 issue categories during pre-submission and
   refinement-phase testing. Zero unrecovered demo failures — every
@@ -113,13 +108,13 @@ What's load-bearing in this picture:
 - **`SequentialAgent` over four `LlmAgent`s, not one big agent with four
   tools.** Each sub-agent owns one responsibility, one tool, and one
   `output_key`. Carry-over flows through `session.state`.
-- **MCP Toolbox is the BigQuery bridge — not the direct BigQuery MCP
-  endpoint.** The direct endpoint returns 403 / connection-closed when
-  called from a Cloud Run-hosted ADK agent; Toolbox-as-intermediary is
-  the proven workaround. Three parameterized tools cover the BigQuery
-  network side; on AlloyDB the same toolbox serves both query modes —
-  two parameterized SQL tools for the structured fast path and one
-  NL2SQL fallback for free-form prompts.
+- **MCP Toolbox is the substrate-agnostic data gateway.** Five
+  parameterized SQL tools (three network, two CDR) declared in
+  `toolbox-service/tools.yaml` run against `kind: sqlite` today; flipping
+  the source to `kind: alloydb-postgres` / `kind: bigquery` is a YAML edit
+  with no agent-code changes. The toolbox-as-intermediary pattern also
+  works around Cloud Run's reachability quirks with the BigQuery MCP
+  endpoint (403 / connection-closed when called direct).
 - **Vertex AI uses a model ladder at a single endpoint, not a region
   ladder.** Preview models are gated to specific regions per project, so
   the prior region ladder always 404'd on the first failover hop. Each
@@ -140,9 +135,8 @@ For the full design rationale, see [`docs/LESSONS.md`](docs/LESSONS.md).
 | Agent framework | Google ADK 1.14 (`SequentialAgent` + `LlmAgent`) |
 | LLM | Gemini 3.1 Flash-Lite preview (primary) + Gemini 2.5 Flash (GA fallback) on Vertex AI |
 | Tool gateway | MCP Toolbox for Databases (Cloud Run) |
-| Analytical store | BigQuery — partitioned + clustered `network_events` |
-| Operational store + NL2SQL | AlloyDB for PostgreSQL 17 + `alloydb_ai_nl` extension |
-| Driver | SQLAlchemy 2 + pg8000 (pure-Python wire driver) |
+| Data store | SQLite bundled in the container (`data/netpulse.sqlite`) — 3 tables, 5 indexes |
+| Driver | stdlib `sqlite3` (write path); MCP Toolbox `kind: sqlite-sql` (read path) |
 | Custom UI | Flask 3 + Server-Sent Events |
 | Hosting | Cloud Run (both services) |
 | Auth | Application Default Credentials |
@@ -155,20 +149,24 @@ cd hackathon-telecom-ops
 
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r telecom_ops/requirements.txt -r netpulse-ui/requirements.txt
+pip install -r netpulse-ui/requirements.txt
 
-# Configure (see docs/CONFIG.md for the full env-var matrix)
-export GOOGLE_CLOUD_PROJECT=your-project
-export GOOGLE_CLOUD_LOCATION=global
-export GOOGLE_GENAI_USE_VERTEXAI=TRUE
-export DATABASE_URL='postgresql+pg8000://postgres:<pwd>@<alloydb-host>:5432/postgres'
-export TOOLBOX_URL='https://network-toolbox-486319900424.us-central1.run.app'
+# Build the bundled SQLite store from the seed CSVs (idempotent; <2s)
+python scripts/build_sqlite.py
 
-# Stand up the data layer (idempotent; --seed loads CSVs from docs/seed-data/)
-bash scripts/setup_byo.sh --seed
+# Authenticate against a GCP project with Vertex AI enabled
+gcloud auth application-default login
 
-# Run the Flask UI
-cd netpulse-ui && python app.py
+# Terminal A — MCP Toolbox over the SQLite store (downloads the v0.23.0 binary on first run)
+scripts/run_toolbox_local.sh
+
+# Terminal B — Flask UI
+cd netpulse-ui
+TOOLBOX_URL=http://127.0.0.1:5000 \
+GOOGLE_CLOUD_PROJECT=<your-project> \
+GOOGLE_CLOUD_LOCATION=global \
+GOOGLE_GENAI_USE_VERTEXAI=TRUE \
+  python app.py
 ```
 
 Open `http://localhost:8080`. The workspace is at `/app`; three read-only
@@ -179,9 +177,8 @@ root and select `telecom_ops`.
 
 **Bring your own data:** match the contract in
 [`docs/SCHEMA.md`](docs/SCHEMA.md), drop your CSVs into
-`docs/seed-data/`, and re-run `bash scripts/setup_byo.sh --seed --nl-setup`
-(the `--nl-setup` flag also installs the AlloyDB AI NL2SQL stack — schema
-context generation blocks 3–5 min).
+`docs/seed-data/`, and re-run `python scripts/build_sqlite.py --recreate`
+to wipe and rebuild.
 
 ## Deploy
 
@@ -190,28 +187,25 @@ the build context can include both `netpulse-ui/` and `telecom_ops/` (the
 parent-level `Dockerfile` copies both packages).
 
 ```bash
-# NetPulse UI (Flask + SSE)
+# MCP Toolbox (serves the 5 SQL tools over the bundled SQLite file)
+gcloud run deploy network-toolbox \
+  --source toolbox-service \
+  --region us-central1 \
+  --allow-unauthenticated
+
+# NetPulse UI (Flask + SSE) — the Dockerfile bakes data/netpulse.sqlite into the image
 gcloud run deploy netpulse-ui \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=<project>,GOOGLE_CLOUD_LOCATION=global,DATABASE_URL=<url>,TOOLBOX_URL=<url>" \
-  --vpc-connector=<connector> --vpc-egress=private-ranges-only
-
-# ADK Dev UI (events + trace tabs)
-uvx --from google-adk==1.14.0 adk deploy cloud_run \
-  --project=<project> --region=us-central1 \
-  --service_name=telecom-ops-assistant \
-  --with_ui telecom_ops -- \
-  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=<project>,GOOGLE_CLOUD_LOCATION=global,TOOLBOX_URL=<url>"
+  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=<project>,GOOGLE_CLOUD_LOCATION=global,TOOLBOX_URL=<network-toolbox-url>"
 ```
 
-| Service | URL |
-|---|---|
-| NetPulse UI (primary) | https://netpulse-ui-486319900424.us-central1.run.app |
-| ADK Dev UI (fallback, observability) | https://telecom-ops-assistant-486319900424.us-central1.run.app |
-
-Full env-var reference: [`docs/CONFIG.md`](docs/CONFIG.md).
+The SQLite file is built at image-build time (the Dockerfile runs
+`python scripts/build_sqlite.py`) and read by both Cloud Run services from
+their own image-baked copy. Tickets written by the agent persist for the
+container instance's lifetime — Cloud Run scale-to-zero loses them across
+cold starts, which is acceptable for the demo, not for production.
 
 ## Repo layout
 
@@ -240,6 +234,5 @@ Released under the MIT License — see [`LICENSE`](LICENSE).
 ## Acknowledgments
 
 - [Google Agent Development Kit](https://google.github.io/adk-docs/) — the orchestration framework that made the four-agent chain expressible in ~50 lines of Python
-- [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/) — the bridge that makes BigQuery callable from ADK agents on Cloud Run
+- [MCP Toolbox for Databases](https://googleapis.github.io/genai-toolbox/) — the bridge that serves five parameterized SQL tools over SQLite (`kind: sqlite-sql`) from a single Go binary
 - [Vertex AI Gemini](https://cloud.google.com/vertex-ai)
-- [AlloyDB for PostgreSQL](https://cloud.google.com/alloydb) — wire-compatible Postgres with managed scaling + the `alloydb_ai_nl` NL2SQL extension

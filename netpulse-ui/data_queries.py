@@ -1,36 +1,27 @@
 """Read-only data access for the NetPulse AI viewer tabs.
 
-Owns its own SQLAlchemy engine (separate from telecom_ops.tools._engine) and its
-own BigQuery client. Filter values are validated against whitelists so the only
-strings ever interpolated into SQL are tokens we control.
+All three viewer tabs read from the bundled SQLite file at SQLITE_PATH.
+Filter values are validated against whitelists so the only strings ever
+interpolated into SQL are tokens we control; bound parameters carry the
+user-supplied filter values.
 """
 
 import logging
 import os
+import sqlite3
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
-
-import sqlalchemy
-from google.cloud import bigquery
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL must be set, e.g. "
-        "postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres"
-    )
-GCP_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
-if not GCP_PROJECT:
-    raise RuntimeError(
-        "GOOGLE_CLOUD_PROJECT must be set; pick a GCP project that owns the "
-        "BigQuery dataset NetPulse reads from."
-    )
-BQ_DATASET = os.environ.get("BQ_DATASET", "telecom_network")
-BQ_NETWORK_TABLE = os.environ.get("BQ_NETWORK_TABLE", "network_events")
-AL_CALL_TABLE = os.environ.get("AL_CALL_TABLE", "call_records")
-AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SQLITE_PATH = Path(
+    os.environ.get("SQLITE_PATH", REPO_ROOT / "data" / "netpulse.sqlite")
+).resolve()
+NETWORK_EVENTS_TABLE = os.environ.get("NETWORK_EVENTS_TABLE", "network_events")
+CALL_RECORDS_TABLE = os.environ.get("CALL_RECORDS_TABLE", "call_records")
+TICKET_TABLE = os.environ.get("TICKET_TABLE", "incident_tickets")
 
 ALLOWED_REGIONS = {
     "Jakarta", "Surabaya", "Bandung", "Medan", "Semarang",
@@ -40,9 +31,6 @@ ALLOWED_SEVERITIES = {"critical", "major", "minor"}
 ALLOWED_EVENT_TYPES = {"outage", "maintenance", "degradation", "restoration"}
 ALLOWED_CALL_STATUSES = {"completed", "dropped", "failed"}
 ALLOWED_CALL_TYPES = {"voice", "sms", "data"}
-
-_engine: sqlalchemy.Engine | None = None
-_bq_client: bigquery.Client | None = None
 
 
 @dataclass
@@ -69,91 +57,84 @@ class QueryResult:
     error: str | None = None
 
 
-def _engine_or_none() -> sqlalchemy.Engine | None:
-    """Lazily build the AlloyDB SQLAlchemy engine. Returns None on failure."""
-    global _engine
-    if _engine is None:
-        try:
-            _engine = sqlalchemy.create_engine(
-                DATABASE_URL,
-                pool_pre_ping=True,
-                pool_recycle=300,  # retire conns >5min old; AlloyDB drops idle TCP
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("AlloyDB engine init failed: %s", exc)
-            _engine = None
-    return _engine
+def _connect() -> sqlite3.Connection | None:
+    """Open a SQLite connection or return None if the DB file is missing.
 
-
-def _bq_or_none() -> bigquery.Client | None:
-    """Lazily build the BigQuery client. Returns None on failure."""
-    global _bq_client
-    if _bq_client is None:
-        try:
-            _bq_client = bigquery.Client(project=GCP_PROJECT)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("BigQuery client init failed: %s", exc)
-            _bq_client = None
-    return _bq_client
+    A missing file is treated as a soft failure so the data-viewer tabs
+    render a friendly error instead of crashing the Flask process — the
+    rest of the app (chat / agent runs) still works as long as the
+    toolbox-side data path is healthy.
+    """
+    if not SQLITE_PATH.is_file():
+        logger.warning("SQLite file missing at %s", SQLITE_PATH)
+        return None
+    try:
+        conn = sqlite3.connect(str(SQLITE_PATH))
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as exc:
+        logger.warning("SQLite connect failed: %s", exc)
+        return None
 
 
 def _stringify(v: Any) -> Any:
-    """Coerce datetime / Decimal / None into JSON/template-safe values."""
+    """Coerce None / non-printable values into template-safe strings."""
     if v is None:
         return ""
-    if hasattr(v, "isoformat"):
-        return v.isoformat(sep=" ")
     return v
 
 
-def bq_network_events(
+def read_network_events(
     region: str | None = None,
     severity: str | None = None,
     event_type: str | None = None,
     limit: int = 200,
 ) -> QueryResult:
-    """Reads filtered network events from BigQuery.
+    """Reads filtered network events from the bundled SQLite file.
 
     Args:
         region: Optional region filter; ignored if not in ALLOWED_REGIONS.
         severity: Optional severity filter; ignored if not in ALLOWED_SEVERITIES.
         event_type: Optional event_type filter; ignored if not in ALLOWED_EVENT_TYPES.
-        limit: Max rows to return (cast through int() before interpolation).
+        limit: Max rows to return.
 
     Returns:
-        QueryResult with columns from the BQ schema and rows as dicts.
+        QueryResult with columns from the table schema and rows as dicts.
     """
-    client = _bq_or_none()
-    if client is None:
-        return QueryResult(error="BigQuery client unavailable - check ADC")
+    conn = _connect()
+    if conn is None:
+        return QueryResult(error=f"SQLite database not found at {SQLITE_PATH}")
 
-    where = ["1=1"]
-    params: list[bigquery.ScalarQueryParameter] = []
+    where_parts = ["1=1"]
+    params: list[str] = []
     if region in ALLOWED_REGIONS:
-        where.append("region = @region")
-        params.append(bigquery.ScalarQueryParameter("region", "STRING", region))
+        where_parts.append("region = ?")
+        params.append(region)
     if severity in ALLOWED_SEVERITIES:
-        where.append("severity = @severity")
-        params.append(bigquery.ScalarQueryParameter("severity", "STRING", severity))
+        where_parts.append("severity = ?")
+        params.append(severity)
     if event_type in ALLOWED_EVENT_TYPES:
-        where.append("event_type = @event_type")
-        params.append(bigquery.ScalarQueryParameter("event_type", "STRING", event_type))
+        where_parts.append("event_type = ?")
+        params.append(event_type)
 
-    where_clause = " AND ".join(where)
-    table_ref = f"`{GCP_PROJECT}.{BQ_DATASET}.{BQ_NETWORK_TABLE}`"
-    count_sql = f"SELECT COUNT(*) AS n FROM {table_ref} WHERE {where_clause}"
+    where_clause = " AND ".join(where_parts)
+    cols = [
+        "event_id", "event_type", "region", "severity",
+        "description", "started_at", "resolved_at", "affected_customers",
+    ]
+    count_sql = f"SELECT COUNT(*) FROM {NETWORK_EVENTS_TABLE} WHERE {where_clause}"
     select_sql = (
-        f"SELECT * FROM {table_ref} "
+        f"SELECT {', '.join(cols)} FROM {NETWORK_EVENTS_TABLE} "
         f"WHERE {where_clause} "
         f"ORDER BY started_at DESC LIMIT {int(limit)}"
     )
-    job_config = bigquery.QueryJobConfig(query_parameters=params)
 
     try:
-        total = next(iter(client.query(count_sql, job_config=job_config).result())).n
-        result = client.query(select_sql, job_config=job_config).result()
-        cols = [field.name for field in result.schema]
-        rows = [{c: _stringify(row[c]) for c in cols} for row in result]
+        total = conn.execute(count_sql, params).fetchone()[0]
+        rows = [
+            {c: _stringify(row[c]) for c in cols}
+            for row in conn.execute(select_sql, params)
+        ]
         return QueryResult(
             columns=cols,
             rows=rows,
@@ -161,20 +142,20 @@ def bq_network_events(
             total_count=int(total),
             limit=int(limit),
         )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("bq_network_events failed")
-        return QueryResult(error=f"BigQuery error: {exc}")
+    except sqlite3.Error as exc:
+        logger.exception("network_events query failed")
+        return QueryResult(error=f"SQLite error: {exc}")
+    finally:
+        conn.close()
 
 
-def alloydb_call_records(
+def read_call_records(
     region: str | None = None,
     call_status: str | None = None,
     call_type: str | None = None,
     limit: int = 200,
 ) -> QueryResult:
-    """Reads filtered call_records from AlloyDB.
-
-    Same whitelist pattern as bq_network_events.
+    """Reads filtered call_records from the bundled SQLite file.
 
     Args:
         region: Optional region filter.
@@ -185,47 +166,41 @@ def alloydb_call_records(
     Returns:
         QueryResult with the 10 columns of call_records.
     """
-    eng = _engine_or_none()
-    if eng is None:
-        return QueryResult(error="AlloyDB engine unavailable")
+    conn = _connect()
+    if conn is None:
+        return QueryResult(error=f"SQLite database not found at {SQLITE_PATH}")
 
     cols = [
-        "call_id",
-        "caller_number",
-        "receiver_number",
-        "call_type",
-        "duration_seconds",
-        "data_usage_mb",
-        "call_date",
-        "region",
-        "cell_tower_id",
-        "call_status",
+        "call_id", "caller_number", "receiver_number", "call_type",
+        "duration_seconds", "data_usage_mb", "call_date",
+        "region", "cell_tower_id", "call_status",
     ]
-    where = "WHERE 1=1"
-    params: dict[str, str] = {}
+    where_parts = ["1=1"]
+    params: list[str] = []
     if region in ALLOWED_REGIONS:
-        where += " AND region = :region"
-        params["region"] = region
+        where_parts.append("region = ?")
+        params.append(region)
     if call_status in ALLOWED_CALL_STATUSES:
-        where += " AND call_status = :call_status"
-        params["call_status"] = call_status
+        where_parts.append("call_status = ?")
+        params.append(call_status)
     if call_type in ALLOWED_CALL_TYPES:
-        where += " AND call_type = :call_type"
-        params["call_type"] = call_type
+        where_parts.append("call_type = ?")
+        params.append(call_type)
+    where_clause = " AND ".join(where_parts)
 
-    count_sql = f"SELECT COUNT(*) FROM {AL_CALL_TABLE} {where}"
+    count_sql = f"SELECT COUNT(*) FROM {CALL_RECORDS_TABLE} WHERE {where_clause}"
     select_sql = (
-        f"SELECT {', '.join(cols)} FROM {AL_CALL_TABLE} {where} "
+        f"SELECT {', '.join(cols)} FROM {CALL_RECORDS_TABLE} "
+        f"WHERE {where_clause} "
         f"ORDER BY call_date DESC LIMIT {int(limit)}"
     )
 
     try:
-        with eng.connect() as conn:
-            total = conn.execute(sqlalchemy.text(count_sql), params).scalar_one()
-            result = conn.execute(sqlalchemy.text(select_sql), params)
-            rows = [
-                {c: _stringify(getattr(row, c)) for c in cols} for row in result
-            ]
+        total = conn.execute(count_sql, params).fetchone()[0]
+        rows = [
+            {c: _stringify(row[c]) for c in cols}
+            for row in conn.execute(select_sql, params)
+        ]
         return QueryResult(
             columns=cols,
             rows=rows,
@@ -233,41 +208,36 @@ def alloydb_call_records(
             total_count=int(total),
             limit=int(limit),
         )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("alloydb_call_records failed")
-        return QueryResult(error=f"AlloyDB error: {exc}")
+    except sqlite3.Error as exc:
+        logger.exception("call_records query failed")
+        return QueryResult(error=f"SQLite error: {exc}")
+    finally:
+        conn.close()
 
 
-def alloydb_incident_tickets(limit: int = 100) -> QueryResult:
+def read_incident_tickets(limit: int = 100) -> QueryResult:
     """Reads recent rows from incident_tickets ordered by ticket_id desc."""
-    eng = _engine_or_none()
-    if eng is None:
-        return QueryResult(error="AlloyDB engine unavailable")
+    conn = _connect()
+    if conn is None:
+        return QueryResult(error=f"SQLite database not found at {SQLITE_PATH}")
 
     cols = [
-        "ticket_id",
-        "category",
-        "region",
-        "description",
-        "related_events",
-        "cdr_findings",
-        "recommendation",
-        "status",
-        "created_at",
+        "ticket_id", "category", "region", "description",
+        "related_events", "cdr_findings", "recommendation",
+        "status", "created_at",
     ]
-    count_sql = f"SELECT COUNT(*) FROM {AL_TICKET_TABLE}"
+    count_sql = f"SELECT COUNT(*) FROM {TICKET_TABLE}"
     select_sql = (
-        f"SELECT {', '.join(cols)} FROM {AL_TICKET_TABLE} "
+        f"SELECT {', '.join(cols)} FROM {TICKET_TABLE} "
         f"ORDER BY ticket_id DESC LIMIT {int(limit)}"
     )
 
     try:
-        with eng.connect() as conn:
-            total = conn.execute(sqlalchemy.text(count_sql)).scalar_one()
-            result = conn.execute(sqlalchemy.text(select_sql))
-            rows = [
-                {c: _stringify(getattr(row, c)) for c in cols} for row in result
-            ]
+        total = conn.execute(count_sql).fetchone()[0]
+        rows = [
+            {c: _stringify(row[c]) for c in cols}
+            for row in conn.execute(select_sql)
+        ]
         return QueryResult(
             columns=cols,
             rows=rows,
@@ -275,6 +245,8 @@ def alloydb_incident_tickets(limit: int = 100) -> QueryResult:
             total_count=int(total),
             limit=int(limit),
         )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("alloydb_incident_tickets failed")
-        return QueryResult(error=f"AlloyDB error: {exc}")
+    except sqlite3.Error as exc:
+        logger.exception("incident_tickets query failed")
+        return QueryResult(error=f"SQLite error: {exc}")
+    finally:
+        conn.close()

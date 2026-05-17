@@ -38,8 +38,12 @@ OUTPUT_CSV = PROJECT_ROOT / "docs" / "seed-data" / "call_records.csv"
 
 SEED = 20260426
 TARGET_ROW_COUNT = 5_000
-WINDOW_START = datetime(2025, 11, 1, 0, 0, 0)
-WINDOW_END = datetime(2026, 4, 30, 23, 59, 59)
+# Window anchored at runtime "today" so re-generated CSVs always cover the
+# most recent 6 months. Stable seed -> deterministic distribution within
+# the window, but the absolute timestamps shift forward as the demo ages.
+_TODAY = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+WINDOW_END = _TODAY.replace(hour=23, minute=59, second=59)
+WINDOW_START = WINDOW_END - timedelta(days=180)
 WINDOW_SECONDS = int((WINDOW_END - WINDOW_START).total_seconds())
 
 REGIONS: list[str] = [

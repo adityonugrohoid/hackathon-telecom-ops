@@ -1,78 +1,77 @@
 # NetPulse data contract
 
-NetPulse is dataset-driven. Point environment variables at any dataset matching
-this contract and the agents work against your data — no code changes required.
+NetPulse is dataset-driven. Drop your CSVs into `docs/seed-data/`, run
+`python scripts/build_sqlite.py --recreate`, and the agents work against
+your data — no code changes required.
 
-The contract surface is **three tables across two stores**: one BigQuery table
-of network events (read by the network investigator agent), one AlloyDB table
-of call-detail records (read by the CDR analyzer agent), and one AlloyDB table
-of incident tickets (written by the response formatter agent).
+The contract surface is **three tables inside a single bundled SQLite file**
+(`data/netpulse.sqlite`): one of network events (read by the network
+investigator agent), one of call-detail records (read by the CDR analyzer
+agent), and one of incident tickets (written by the response formatter
+agent).
 
 ## Environment variables that point at this contract
 
 | Variable | Default | What it controls |
 |---|---|---|
-| `GOOGLE_CLOUD_PROJECT` | *(required)* | GCP project that owns the BigQuery dataset |
-| `BQ_DATASET` | `telecom_network` | BigQuery dataset name |
-| `BQ_NETWORK_TABLE` | `network_events` | BigQuery table name (within the dataset) |
-| `AL_CALL_TABLE` | `call_records` | AlloyDB / PostgreSQL table the CDR analyzer reads |
-| `AL_TICKET_TABLE` | `incident_tickets` | AlloyDB / PostgreSQL table the response formatter writes |
+| `SQLITE_PATH` | `<repo>/data/netpulse.sqlite` | Absolute path to the bundled SQLite file |
+| `NETWORK_EVENTS_TABLE` | `network_events` | Table the network investigator reads |
+| `CALL_RECORDS_TABLE` | `call_records` | Table the CDR analyzer reads |
+| `TICKET_TABLE` | `incident_tickets` | Table the response formatter writes |
 
 The agents and the read-only data-viewer tabs both consume the same env-driven
 names, so a single set of overrides retargets the entire stack.
 
-## BigQuery — `<GOOGLE_CLOUD_PROJECT>.<BQ_DATASET>.<BQ_NETWORK_TABLE>`
+## `network_events`
 
 Network events the investigator agent searches for context (recent outages,
 maintenance windows, regional impact). Read by `network_investigator` via the
-MCP Toolbox `telecom_network_toolset` tools.
+MCP Toolbox `telecom_network_toolset` tools. Indexed on
+`(region, severity, started_at)` plus a secondary index on `started_at` for
+time-window scans.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| `event_id` | STRING | yes | Stable identifier, e.g. `EVT001` |
-| `event_type` | STRING | yes | One of: `outage`, `degradation`, `restoration`, `maintenance` |
-| `region` | STRING | yes | One of the values shared with `call_records.region` (the hackathon dataset uses `Jakarta`, `Surabaya`, `Bandung`, `Medan`, `Semarang`) |
-| `severity` | STRING | yes | One of: `critical`, `major`, `minor` |
-| `description` | STRING | yes | One-sentence event summary, e.g. `Major fiber cut affecting central Jakarta` |
-| `started_at` | TIMESTAMP | yes | When the event began (UTC). Drives `ORDER BY started_at DESC` queries |
-| `resolved_at` | TIMESTAMP | no | NULL while ongoing |
+| `event_id` | TEXT PRIMARY KEY | yes | Stable identifier, e.g. `EVT01821` |
+| `event_type` | TEXT | yes | One of: `outage`, `degradation`, `restoration`, `maintenance` |
+| `region` | TEXT | yes | One of the values shared with `call_records.region` (the hackathon dataset uses 10 Indonesian metros) |
+| `severity` | TEXT | yes | One of: `critical`, `major`, `minor` |
+| `description` | TEXT | yes | One-sentence event summary, e.g. `Major fiber cut affecting central Jakarta` |
+| `started_at` | TEXT (ISO 8601) | yes | When the event began. Drives `ORDER BY started_at DESC` queries |
+| `resolved_at` | TEXT (ISO 8601) | no | NULL while ongoing |
 | `affected_customers` | INTEGER | yes | Headcount, e.g. `45000`. Summed by the customer-impact card in the workspace UI |
 
-Loadable from `docs/seed-data/network_events.csv` via `scripts/setup_bigquery.py`.
+Loaded from `docs/seed-data/network_events.csv` via `scripts/build_sqlite.py`.
 
-## AlloyDB / PostgreSQL — `<AL_CALL_TABLE>`
+## `call_records`
 
-Call-detail records the CDR analyzer agent reads. Connection is via
-SQLAlchemy + `pg8000`; the table lives in whatever PostgreSQL database the
-`DATABASE_URL` env var points at.
+Call-detail records the CDR analyzer agent reads. Indexed on
+`(region, call_date)` plus a secondary index on `call_status`.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| `call_id` | SERIAL PRIMARY KEY | yes | Auto-assigned |
+| `call_id` | INTEGER PRIMARY KEY | yes | Stable from the CSV |
 | `caller_number` | TEXT | yes | E.164-ish, e.g. `08121234001` |
 | `receiver_number` | TEXT | yes | Same convention |
 | `call_type` | TEXT | yes | One of: `voice`, `sms`, `data` |
-| `duration_seconds` | INT | yes | `0` for failed/dropped calls |
-| `data_usage_mb` | NUMERIC | yes | `0` for voice/sms calls |
-| `call_date` | TIMESTAMP | yes | When the call started (UTC) |
+| `duration_seconds` | INTEGER | yes | `0` for failed/dropped calls |
+| `data_usage_mb` | REAL | yes | `0` for voice/sms calls |
+| `call_date` | TEXT (ISO 8601) | yes | When the call started |
 | `region` | TEXT | yes | Must use the same vocabulary as `network_events.region` so the agents can correlate |
 | `cell_tower_id` | TEXT | yes | E.g. `JKT-001` — used in the response formatter's NOC ticket |
 | `call_status` | TEXT | yes | One of: `completed`, `dropped`, `failed` |
 
-Loadable from `docs/seed-data/call_records.csv` via `scripts/setup_alloydb.py --seed`.
+Loaded from `docs/seed-data/call_records.csv` via `scripts/build_sqlite.py`.
 
-## AlloyDB / PostgreSQL — `<AL_TICKET_TABLE>`
+## `incident_tickets`
 
 NetPulse-written incident tickets. The response formatter agent inserts one
-row per chat session via the `save_incident_ticket` tool. The data-viewer
-"Incident Tickets" tab reads the same table.
-
-This is the only table NetPulse provisions itself — `scripts/setup_alloydb.py`'s
-`CREATE TABLE IF NOT EXISTS` is the canonical DDL.
+row per chat session via the `save_incident_ticket` tool (stdlib `sqlite3`,
+not the toolbox). The data-viewer "Incident Tickets" tab reads the same table.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| `ticket_id` | SERIAL PRIMARY KEY | yes | Returned to the chat UI for display |
+| `ticket_id` | INTEGER PRIMARY KEY AUTOINCREMENT | yes | Picks up from seed MAX(ticket_id)+1; returned to the chat UI for display |
 | `category` | TEXT | yes | One of: `billing`, `network`, `hardware`, `service`, `general` (enforced by `VALID_CATEGORIES` in `telecom_ops/tools.py`) |
 | `region` | TEXT | yes | Same vocabulary as `network_events.region` / `call_records.region` |
 | `description` | TEXT | yes | One-sentence summary of the customer complaint |
@@ -80,10 +79,10 @@ This is the only table NetPulse provisions itself — `scripts/setup_alloydb.py`
 | `cdr_findings` | TEXT | yes | Concise list of CDR findings (or `none`) |
 | `recommendation` | TEXT | yes | Suggested next action for the NOC |
 | `status` | TEXT | no | Default `open`. Workflow column the data-viewer renders as a badge |
-| `created_at` | TIMESTAMP | no | Default `NOW()` |
+| `created_at` | TEXT | no | Default `datetime('now')` |
 
 Optionally seedable from `docs/seed-data/incident_tickets.csv` via
-`scripts/setup_alloydb.py --seed` for testing the data-viewer tab in a fresh project.
+`scripts/build_sqlite.py` for testing the data-viewer tab in a fresh checkout.
 
 ## Cross-table invariants
 
@@ -104,17 +103,13 @@ Two invariants matter for the agents to produce coherent output:
 
 ## Bring your own data
 
-`scripts/setup_byo.sh` orchestrates a one-shot bootstrap:
+`scripts/build_sqlite.py` is the single bootstrap:
 
 ```bash
-export GOOGLE_CLOUD_PROJECT=your-project
-export DATABASE_URL=postgresql+pg8000://postgres:<pwd>@<host>:5432/postgres
-bash scripts/setup_byo.sh --seed
+# Drop your CSVs into docs/seed-data/ matching the column shapes above
+python scripts/build_sqlite.py --recreate
 ```
 
-It runs `scripts/setup_bigquery.py` (creates `<BQ_DATASET>.<BQ_NETWORK_TABLE>`
-and loads the network-events CSV) followed by `scripts/setup_alloydb.py --seed`
-(creates `<AL_CALL_TABLE>` + `<AL_TICKET_TABLE>` and optionally loads the
-call-records and incident-tickets CSVs).
-
-Override any `BQ_*` / `AL_*` env var before invoking to retarget the names.
+The script wipes any existing `data/netpulse.sqlite`, creates the three tables
+plus all five indexes, and bulk-inserts your rows. Idempotent — re-running
+without `--recreate` is a no-op when the file already exists.
