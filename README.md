@@ -5,11 +5,13 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Google ADK 1.14](https://img.shields.io/badge/Google%20ADK-1.14.0-4285F4.svg)](https://google.github.io/adk-docs/)
 [![Vertex AI Gemini 3.1](https://img.shields.io/badge/Vertex%20AI-Gemini%203.1%20Flash--Lite-34A853.svg)](https://cloud.google.com/vertex-ai)
-[![Cloud Run](https://img.shields.io/badge/Cloud%20Run-deployed-blue.svg)](https://cloud.google.com/run)
+[![Cloud Run](https://img.shields.io/badge/Cloud%20Run-live-34A853.svg)](https://netpulse-ui-670100779564.asia-southeast2.run.app/)
 
 **A multi-agent AI assistant that turns a telecom customer's natural-language complaint into a structured incident ticket — in 25–30 seconds, end-to-end.**
 
-_Live deployment under reconstitution on a fresh GCP project — see [Run it locally](#run-it-locally) for the standalone path._
+### → [**Try it live**](https://netpulse-ui-670100779564.asia-southeast2.run.app/) ←
+
+_Two Cloud Run services backed by a single bundled SQLite file (no managed DB). The original hackathon architecture on BigQuery + AlloyDB is one [`tools.yaml`](toolbox-service/tools.yaml) `sources:` swap away — see [Architecture](#architecture)._
 
 [Features](#features) · [Architecture](#architecture) · [Tech stack](#tech-stack) · [Run it locally](#run-it-locally) · [Deploy](#deploy)
 
@@ -112,9 +114,9 @@ What's load-bearing in this picture:
   parameterized SQL tools (three network, two CDR) declared in
   `toolbox-service/tools.yaml` run against `kind: sqlite` today; flipping
   the source to `kind: alloydb-postgres` / `kind: bigquery` is a YAML edit
-  with no agent-code changes. The toolbox-as-intermediary pattern also
-  works around Cloud Run's reachability quirks with the BigQuery MCP
-  endpoint (403 / connection-closed when called direct).
+  with no agent-code changes. The original hackathon submission ran on
+  the BigQuery + AlloyDB variants; the SQLite mode is a zero-idle-cost
+  reconstitution of the same design with the agent layer untouched.
 - **Vertex AI uses a model ladder at a single endpoint, not a region
   ladder.** Preview models are gated to specific regions per project, so
   the prior region ladder always 404'd on the first failover hop. Each
@@ -182,30 +184,40 @@ to wipe and rebuild.
 
 ## Deploy
 
-Both services run on Cloud Run. The Flask UI deploys from the repo root so
-the build context can include both `netpulse-ui/` and `telecom_ops/` (the
-parent-level `Dockerfile` copies both packages).
+Both services run on Cloud Run. SQLite is baked into each image at build
+time, so cold starts have data immediately and the runtime never reaches
+outside the container except to Vertex AI.
 
 ```bash
-# MCP Toolbox (serves the 5 SQL tools over the bundled SQLite file)
-gcloud run deploy network-toolbox \
-  --source toolbox-service \
-  --region us-central1 \
-  --allow-unauthenticated
+# 1. Toolbox — scripts/deploy_toolbox.sh rebuilds SQLite from CSVs, stages
+#    it into the build context, deploys, and cleans up via trap. The script
+#    resolves PROJECT_ID from $PROJECT_ID or the active gcloud config.
+scripts/deploy_toolbox.sh asia-southeast2
+# Capture the printed Service URL — needed for step 2 as TOOLBOX_URL.
 
-# NetPulse UI (Flask + SSE) — the Dockerfile bakes data/netpulse.sqlite into the image
+# 2. UI — the root Dockerfile re-bakes data/netpulse.sqlite during
+#    `pip install` so the Flask container has its own copy for the
+#    data-viewer tabs and the save_incident_ticket write path.
 gcloud run deploy netpulse-ui \
   --source . \
-  --region us-central1 \
+  --project <your-project> \
+  --region asia-southeast2 \
   --allow-unauthenticated \
-  --set-env-vars="GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=<project>,GOOGLE_CLOUD_LOCATION=global,TOOLBOX_URL=<network-toolbox-url>"
+  --max-instances=10 \
+  --cpu-boost \
+  --set-env-vars=GOOGLE_CLOUD_PROJECT=<your-project>,GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=TRUE,TOOLBOX_URL=<toolbox-url-from-step-1>
 ```
 
-The SQLite file is built at image-build time (the Dockerfile runs
-`python scripts/build_sqlite.py`) and read by both Cloud Run services from
-their own image-baked copy. Tickets written by the agent persist for the
-container instance's lifetime — Cloud Run scale-to-zero loses them across
-cold starts, which is acceptable for the demo, not for production.
+Scale-to-zero is intentional — no `--min-instances`, no `--no-cpu-throttling`.
+The only paid runtime line item is Vertex Gemini per query (~$0.001/run on
+Flash-Lite); Cloud Run + Artifact Registry sit inside the free tier for
+demo cadence. Cold starts are 2–3 s; warm with a `curl` 30 s before a live
+demo if first-question latency matters.
+
+Tickets written by the agent persist for the container instance's lifetime —
+Cloud Run scale-to-zero loses them across cold starts, which is acceptable
+for the demo, not for production. The fix is a one-line `tools.yaml`
+substrate swap to a durable backend; see [Architecture](#architecture).
 
 ## Repo layout
 
@@ -213,11 +225,13 @@ cold starts, which is acceptable for the demo, not for production.
 hackathon-telecom-ops/
 ├── telecom_ops/             # ADK agent package (4 LlmAgents + SequentialAgent)
 ├── netpulse-ui/             # Flask UI + SSE chat + 3 data viewer tabs
-├── scripts/                 # Idempotent setup + deterministic seed generators
-├── docs/                    # SCHEMA.md, CONFIG.md, LESSONS.md, architecture.png, seed-data/
-│   └── internal/            # Build journals + design spec + SSE wiring (notes, not user-facing)
+├── toolbox-service/         # MCP Toolbox image — Go binary + tools.yaml + baked SQLite
+├── scripts/                 # build_sqlite.py + deploy_toolbox.sh + run_toolbox_local.sh + seed generators
+├── docs/                    # SCHEMA.md, CONFIG.md, LESSONS.md, architecture.png/.mmd
+│   └── seed-data/           # Canonical CSVs (network_events, call_records, incident_tickets)
+├── data/                    # Generated SQLite file (gitignored; rebuilt by scripts/build_sqlite.py)
 ├── static-mockup-rebuild/   # Locked design sandbox (6 HTML pages, shared CSS)
-├── Dockerfile               # Cloud Run image (parent-level so both packages get copied)
+├── Dockerfile               # Cloud Run image for netpulse-ui (parent-level so both packages get copied)
 ├── CLAUDE.md                # Project context for AI assistants
 └── README.md
 ```
