@@ -1,9 +1,16 @@
-"""Native ADK tools and module-level singletons for the telecom_ops agent."""
+"""Native ADK tools and module-level singletons for the telecom_ops agent.
+
+The ticket write path uses stdlib ``sqlite3`` with one connection per write
+against the bundled SQLite store. SQLite's single-writer model is fine here
+— ``save_incident_ticket`` is the only writer, and the agent chain is
+serialized end-to-end, so contention never materializes.
+"""
 
 import logging
 import os
+import sqlite3
+from pathlib import Path
 
-import sqlalchemy
 from google.adk.tools.tool_context import ToolContext
 from toolbox_core import ToolboxSyncClient
 
@@ -14,36 +21,24 @@ logger = logging.getLogger(__name__)
 TOOLBOX_URL = os.environ.get("TOOLBOX_URL")
 if not TOOLBOX_URL:
     raise RuntimeError(
-        "TOOLBOX_URL must be set, e.g. "
-        "https://network-toolbox-<project-number>.<region>.run.app"
-    )
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL must be set, e.g. "
-        "postgresql+pg8000://postgres:<password>@<alloydb-host>:5432/postgres"
+        "TOOLBOX_URL must be set, e.g. http://127.0.0.1:5000 for local dev "
+        "or the Cloud Run URL of the toolbox service in production."
     )
 
-AL_TICKET_TABLE = os.environ.get("AL_TICKET_TABLE", "incident_tickets")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SQLITE_PATH = Path(
+    os.environ.get("SQLITE_PATH", REPO_ROOT / "data" / "netpulse.sqlite")
+).resolve()
+TICKET_TABLE = os.environ.get("TICKET_TABLE", "incident_tickets")
 
 try:
     _toolbox = ToolboxSyncClient(TOOLBOX_URL)
     network_tools = _toolbox.load_toolset("telecom_network_toolset")
-    # cdr_toolset bundles 2 parameterized fast-path tools (query_cdr_summary,
-    # query_cdr_worst_towers) and 1 NL fallback (query_cdr_nl). The agent
-    # picks parameterized first; NL only when the prompt cannot be expressed
-    # by the structured tools. See prompts.CDR_ANALYZER_INSTRUCTION.
     cdr_tools = _toolbox.load_toolset("cdr_toolset")
 except Exception as exc:  # noqa: BLE001 - keep adk web bootable on toolbox outage
     logger.warning("MCP Toolbox unreachable; tools disabled: %s", exc)
     network_tools = []
     cdr_tools = []
-
-_engine = sqlalchemy.create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_recycle=300,  # retire conns >5min old; AlloyDB drops idle TCP
-)
 
 VALID_CATEGORIES: frozenset[str] = frozenset(
     {"billing", "network", "hardware", "service", "general"}
@@ -102,6 +97,10 @@ def save_incident_ticket(
 ) -> dict:
     """Inserts a new row into incident_tickets and returns the assigned ticket_id.
 
+    Writes to the bundled SQLite file at SQLITE_PATH. The AUTOINCREMENT
+    primary key picks up from MAX(seed ticket_id)+1 so agent-written tickets
+    don't collide with the seed rows.
+
     Args:
         tool_context: ADK tool context.
         category: Issue category (billing, network, hardware, service, general).
@@ -123,25 +122,27 @@ def save_incident_ticket(
         logger.warning("[save_incident_ticket] %s", msg)
         return {"status": "error", "message": msg}
 
-    sql = sqlalchemy.text(
-        f"INSERT INTO {AL_TICKET_TABLE} "
+    sql = (
+        f"INSERT INTO {TICKET_TABLE} "
         "(category, region, description, related_events, cdr_findings, recommendation) "
-        "VALUES (:category, :region, :description, :related_events, :cdr_findings, :recommendation) "
-        "RETURNING ticket_id"
+        "VALUES (?, ?, ?, ?, ?, ?)"
     )
-    with _engine.begin() as conn:
-        ticket_id = conn.execute(
+    conn = sqlite3.connect(str(SQLITE_PATH))
+    try:
+        cursor = conn.execute(
             sql,
-            {
-                "category": category,
-                "region": region,
-                "description": description,
-                "related_events": related_events,
-                "cdr_findings": cdr_findings,
-                "recommendation": recommendation,
-            },
-        ).scalar_one()
+            (category, region, description, related_events, cdr_findings, recommendation),
+        )
+        ticket_id = cursor.lastrowid
+        conn.commit()
+    finally:
+        conn.close()
 
-    tool_context.state["ticket_id"] = int(ticket_id)
+    if ticket_id is None:
+        msg = "SQLite did not return a rowid after INSERT — schema mismatch?"
+        logger.error("[save_incident_ticket] %s", msg)
+        return {"status": "error", "message": msg}
+
+    tool_context.state["ticket_id"] = ticket_id
     logger.info("[save_incident_ticket] ticket_id=%s", ticket_id)
-    return {"status": "success", "ticket_id": int(ticket_id)}
+    return {"status": "success", "ticket_id": ticket_id}

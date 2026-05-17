@@ -4,10 +4,21 @@ venv/
 __pycache__/
 *.pyc
 .scratch/
-docs/
 devrel-demos/
 *.md
 .gitignore
-setup_alloydb.py
 netpulse-ui/__pycache__/
 telecom_ops/__pycache__/
+
+# Docs: keep docs/seed-data/ (build_sqlite.py reads CSVs from there at image
+# build time) but skip everything else under docs/ — they're documentation,
+# not runtime artifacts.
+docs/internal/
+docs/screenshots/
+docs/architecture.mmd
+docs/architecture.png
+docs/*.mp4
+
+# Locked design surface, not in the live demo path.
+static-mockup-rebuild/
+static-mockup-rebuild.zip

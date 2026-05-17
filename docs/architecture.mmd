@@ -14,22 +14,21 @@ flowchart TB
         A3 -- "+ cdr_findings" --> A4
     end
 
-    MCP["MCP Toolbox<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>Cloud Run</span>"]
+    MCP["MCP Toolbox<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>Cloud Run &middot; kind: sqlite-sql</span>"]
 
-    subgraph DATA["Backends &middot; Google Cloud"]
+    subgraph DATA["Bundled SQLite &middot; data/netpulse.sqlite"]
         direction LR
-        BQ[("BigQuery<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>network_events</span>")]
-        ADB1[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>call_records &middot; SQL + NL2SQL</span>")]
-        ADB2[("AlloyDB<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>incident_tickets</span>")]
+        SQ1[("network_events<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>50k rows &middot; 3 read tools</span>")]
+        SQ2[("call_records<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>5k rows &middot; 2 read tools</span>")]
+        SQ3[("incident_tickets<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>stdlib sqlite3 INSERT</span>")]
     end
 
     Vertex["Vertex AI Gemini<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>3.1 Flash-Lite + 2.5 Flash failover</span>"]
 
     User --> UI --> A1
-    A2 --> MCP --> BQ
-    A3 --> MCP
-    MCP -- "SQL / NL2SQL" --> ADB1
-    A4 -- "INSERT" --> ADB2
+    A2 --> MCP --> SQ1
+    A3 --> MCP --> SQ2
+    A4 -- "INSERT" --> SQ3
     ORCH -. "LLM calls" .-> Vertex
 
     %% NetPulse palette: cream paper, deep ink, clay coral accent, pandan green
@@ -37,16 +36,16 @@ flowchart TB
     classDef fe          fill:#ECE4D1,stroke:#CC785C,color:#141413,font-weight:600,stroke-width:1.5px
     classDef adk         fill:#F4F0E6,stroke:#DDD3BB,color:#141413,font-weight:500
     classDef mcp         fill:#ECE4D1,stroke:#4a8c5e,color:#2f5d3d,font-weight:600,stroke-width:1.5px
-    classDef alloydb     fill:#F4F0E6,stroke:#CC785C,color:#141413,font-weight:600
-    classDef alloydbWrite fill:#CC785C,stroke:#A85B40,color:#FAF7EE,font-weight:600
+    classDef sqlite      fill:#F4F0E6,stroke:#CC785C,color:#141413,font-weight:600
+    classDef sqliteWrite fill:#CC785C,stroke:#A85B40,color:#FAF7EE,font-weight:600
     classDef vertex      fill:#141413,stroke:#141413,color:#F4F0E6,font-weight:600
 
     class User user
     class UI fe
     class A1,A2,A3,A4 adk
     class MCP mcp
-    class BQ,ADB1 alloydb
-    class ADB2 alloydbWrite
+    class SQ1,SQ2 sqlite
+    class SQ3 sqliteWrite
     class Vertex vertex
 
     style ORCH fill:#FAF7EE,stroke:#CC785C,stroke-width:2px,stroke-dasharray:6 4,color:#141413

@@ -34,7 +34,7 @@ The classifier produced:
 - Category: {category?}
 - Region: {region?}
 
-Use the available network tools (BigQuery via MCP Toolbox) to find any outages,
+Use the available network tools (MCP Toolbox over the bundled SQLite store) to find any outages,
 maintenance events, degradations, or restorations relevant to the region above.
 
 You have TWO tools, both parameterized. **You MUST pass ALL parameters on
@@ -88,7 +88,7 @@ If more than 8 events are returned, emit ALL of them but rank by severity
 Never truncate the list or replace it with a summary count.
 """
 
-CDR_ANALYZER_INSTRUCTION = """You are a Call Detail Records (CDR) analyst for AlloyDB.
+CDR_ANALYZER_INSTRUCTION = """You are a Call Detail Records (CDR) analyst.
 
 Prior context:
 - Category: {category?}
@@ -96,12 +96,13 @@ Prior context:
 - Network findings:
 {network_findings?}
 
-You have THREE tools, in two tiers. The call_records columns are: call_id,
-caller_number, receiver_number, call_type {voice,sms,data}, duration_seconds,
+You have TWO parameterized tools served by MCP Toolbox over the bundled
+SQLite store. The call_records columns are: call_id, caller_number,
+receiver_number, call_type {voice,sms,data}, duration_seconds,
 data_usage_mb, call_date, region, cell_tower_id,
 call_status {completed,dropped,failed}.
 
-PRIMARY (parameterized SQL via MCP Toolbox — fast, predictable, <100ms):
+TOOLS:
 - query_cdr_summary(region, days_back)
   Returns row-count breakdown grouped by (call_type, call_status). Use this
   as your default evidence query.
@@ -109,13 +110,6 @@ PRIMARY (parameterized SQL via MCP Toolbox — fast, predictable, <100ms):
   Returns the top-N cell towers ranked by bad-call percentage
   ((dropped+failed)/total). Use to surface tower-level evidence when the
   complaint mentions hardware, coverage, or specific towers.
-
-FALLBACK (AlloyDB AI NL2SQL — flexible but slow, typical 30-100s):
-- query_cdr_nl(question)
-  Translates an English question into SQL via AlloyDB AI. Use ONLY when the
-  parameterized tools cannot express what the user is asking — for example,
-  weekend-vs-weekday comparisons, calls longer than a duration threshold,
-  or custom joins. Never use this if query_cdr_summary suffices.
 
 DECISION RULE (apply in order):
 1. If region is named (or "unknown") AND a time window is implied, call
@@ -125,7 +119,6 @@ DECISION RULE (apply in order):
    ALSO call query_cdr_worst_towers(region={region or "*"}, days_back=N,
    limit=5). You may emit both function calls in the same turn (parallel
    function calling).
-3. Only call query_cdr_nl(question) when neither parameterized tool fits.
 
 WINDOW MAPPING — compute days_back from the prompt:
 - "yesterday" / "last 24 hours" → days_back=1

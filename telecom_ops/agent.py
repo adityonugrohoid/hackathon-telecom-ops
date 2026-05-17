@@ -22,7 +22,7 @@ which Flash-Lite handles cheaply and quickly. Reverted 2026-04-29 from
 the 2.5 GA lane (`gemini-2.5-flash-lite`) back to the 3.1 preview after a
 production trace showed the network_investigator stuck "running" with no
 final text event under 2.5-flash-lite — suspected to be a model behavior
-where the second LLM call after the BigQuery tool result emits only a
+where the second LLM call after the toolbox SQL result emits only a
 function_call (or empty text) rather than the bulleted summary the prompt
 asks for. The failover ladder retains `gemini-2.5-flash` (GA standard) as
 the persistent-pressure fallback."""
@@ -71,7 +71,7 @@ classifier = LlmAgent(
 network_investigator = LlmAgent(
     model=_failover_model("network_investigator", MODEL_FAST),
     name="network_investigator",
-    description="Queries the BigQuery network events database for outages relevant to the region.",
+    description="Queries the network_events SQLite table for outages relevant to the region.",
     instruction=NETWORK_INVESTIGATOR_INSTRUCTION,
     tools=network_tools,
     output_key="network_findings",
@@ -81,8 +81,8 @@ cdr_analyzer = LlmAgent(
     model=_failover_model("cdr_analyzer", MODEL_FAST),
     name="cdr_analyzer",
     description=(
-        "Queries call_records via parameterized SQL (fast path) or AlloyDB AI "
-        "NL2SQL (fallback) to find evidence supporting the complaint."
+        "Queries call_records via parameterized SQL through MCP Toolbox to "
+        "find evidence supporting the complaint."
     ),
     instruction=CDR_ANALYZER_INSTRUCTION,
     tools=cdr_tools,
@@ -92,7 +92,7 @@ cdr_analyzer = LlmAgent(
 response_formatter = LlmAgent(
     model=_failover_model("response_formatter", MODEL_SYNTHESIS),
     name="response_formatter",
-    description="Synthesizes findings into a final incident report and persists it to AlloyDB.",
+    description="Synthesizes findings into a final incident report and persists it to the SQLite incident_tickets table.",
     instruction=RESPONSE_FORMATTER_INSTRUCTION,
     tools=[save_incident_ticket],
     output_key="final_report",

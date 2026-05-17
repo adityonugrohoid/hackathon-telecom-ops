@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Network events &mdash; NetPulse AI</title>
-<meta name="description" content="NetPulse AI data viewer &mdash; BigQuery." />
+<title>Network events - NetPulse AI</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='netpulse-logo-only.svg') }}">
+<meta name="description" content="NetPulse AI data viewer &mdash; SQLite network_events." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -20,7 +21,7 @@
     {% include "_brand.html" %}
 
     <div class="app-toolbar-center" role="status" aria-label="Connection status and model" style="display: flex; align-items: center; justify-content: center; gap: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3);">
-      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>BigQuery</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>SQLite</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>MCP&nbsp;toolbox</span>
       <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
       <span aria-label="Active model" style="color: var(--ink-2);">{{ active_model }}</span>
@@ -41,10 +42,10 @@
   <div class="wrap">
     <h1 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: clamp(36px, 5vw, 56px); line-height: 1.05; letter-spacing: -0.035em; color: var(--ink); margin: 0;">Network events</h1>
     <div class="dv-meta-row" style="margin-top: 12px;">
-      <span class="dv-meta-pill"><b>table</b> {{ bq_dataset }}.{{ bq_network_table }}</span>
-      <span class="dv-meta-pill"><b>partition</b> DAY &middot; started_at</span>
-      <span class="dv-meta-pill"><b>cluster</b> region, severity</span>
+      <span class="dv-meta-pill"><b>sqlite</b> {{ sqlite_db_path }} &middot; {{ network_events_table }}</span>
+      <span class="dv-meta-pill"><b>index</b> region, severity, started_at</span>
       <span class="dv-meta-pill"><b>rows</b> {{ result.total_count }}</span>
+      {% if result.visible_min %}<span class="dv-meta-pill"><b>showing</b> {{ result.visible_min[:10] }} &rarr; {{ result.visible_max[:10] }}</span>{% endif %}
     </div>
   </div>
 </section>
@@ -53,7 +54,7 @@
 
   <div class="dv-source-banner" role="note" style="margin: 24px 0 32px;">
     <span class="dv-source-banner-eyebrow">about this data</span>
-    <p>The Network Investigator agent reads from BigQuery through three MCP toolbox tools &mdash; <code>query_network_events</code> for filtered event lookups, <code>query_affected_customers_summary</code> for customer-impact rollups, and <code>weekly_outage_trend</code> for partition-pruned historical scans across the <code>(region, severity)</code> cluster keys.</p>
+    <p>The Network Investigator agent reads from the bundled SQLite store through three MCP toolbox tools &mdash; <code>query_network_events</code> for filtered event lookups, <code>query_affected_customers_summary</code> for customer-impact rollups, and <code>weekly_outage_trend</code> for historical scans bucketed by ISO week. The <code>(region, severity, started_at)</code> index keeps time-windowed reads under 50&thinsp;ms.</p>
   </div>
 
   <form class="dv-filter" method="POST" action="" aria-label="Filter network events">
@@ -79,13 +80,21 @@
         {% for t in event_types %}<option value="{{ t }}" {% if selected.event_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
       </select>
     </div>
+    <div class="dv-field">
+      <label for="started_after">From</label>
+      <input type="date" id="started_after" name="started_after" value="{{ selected.started_after }}">
+    </div>
+    <div class="dv-field">
+      <label for="started_before">To</label>
+      <input type="date" id="started_before" name="started_before" value="{{ selected.started_before }}">
+    </div>
     <div class="dv-filter-actions">
       <button type="submit" class="dv-btn">Apply</button>
       <a href="{{ url_for('network_events') }}" class="dv-btn dv-btn-ghost" role="button">Reset</a>
     </div>
   </form>
 
-  {% set any_filter = selected.region or selected.severity or selected.event_type %}
+  {% set any_filter = selected.region or selected.severity or selected.event_type or selected.started_after or selected.started_before %}
   <div class="dv-table-card" role="region" aria-label="Result rows">
     <div class="dv-table-meta">
       {% if result.error %}

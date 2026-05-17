@@ -3993,7 +3993,8 @@
     border: 1px solid rgba(74,140,94,.28);
   }
   .app-step-source .np-source-tag.adk,
-  .app-step-source .np-source-tag.alloydb-write {
+  .app-step-source .np-source-tag.alloydb-write,
+  .app-step-source .np-source-tag.sqlite-write {
     background: rgba(204,120,92,.10);
     color: var(--accent-deep);
     border-color: rgba(204,120,92,.32);
@@ -4405,7 +4406,8 @@
      overrides for `.adk` and `.alloydb-write` are reverted so every
      backend reads with the same visual weight. */
   .app-step-source .np-source-tag.adk,
-  .app-step-source .np-source-tag.alloydb-write {
+  .app-step-source .np-source-tag.alloydb-write,
+  .app-step-source .np-source-tag.sqlite-write {
     background: rgba(74,140,94,.10);
     color: #4a8c5e;
     border-color: rgba(74,140,94,.28);

@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NetPulse AI &mdash; Telecom incident ticketing in seconds</title>
+<title>NetPulse AI - Telecom incident ticketing in seconds</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='netpulse-logo-only.svg') }}">
 <meta name="description" content="A multi-agent assistant that turns a customer complaint into a structured NOC incident ticket. Built on Google ADK and Vertex AI Gemini." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,12 +52,13 @@
         <em>in seconds.</em>
       </h2>
       <p>
-        Multi-agent assistant on Google ADK + Vertex AI Gemini. BigQuery
-        scans partitioned outage history. AlloyDB handles CDR lookups
-        via NL2SQL and persists the ticket.
+        Multi-agent assistant on Google ADK + Vertex AI Gemini. MCP
+        Toolbox serves five parameterized SQL tools over a bundled
+        SQLite store; the response formatter persists every ticket
+        back to the same file.
       </p>
       <p class="meta">
-        4 ADK sub-agents &middot; SequentialAgent root &middot; MCP Toolbox &middot; BigQuery &middot; AlloyDB
+        4 ADK sub-agents &middot; SequentialAgent root &middot; MCP Toolbox &middot; SQLite
       </p>
       <div class="ctas">
         <a href="{{ url_for('app_workspace') }}" class="btn btn-paper">
@@ -95,13 +97,13 @@
           <div class="np-mini-cell">
             <span class="num">02</span>
             <span class="name">Net Inv.</span>
-            <span class="hint">reads BigQuery</span>
+            <span class="hint">reads SQLite</span>
           </div>
           <span class="np-mini-arrow"></span>
           <div class="np-mini-cell">
             <span class="num">03</span>
             <span class="name">CDR Anlz.</span>
-            <span class="hint">queries AlloyDB</span>
+            <span class="hint">queries SQLite</span>
           </div>
           <span class="np-mini-arrow"></span>
           <div class="np-mini-cell">
@@ -113,9 +115,9 @@
 
         <div class="np-mini-srcs">
           <span>native tool</span>
-          <span>BigQuery</span>
-          <span>AlloyDB&nbsp;&middot;&nbsp;NL</span>
-          <span>AlloyDB&nbsp;&middot;&nbsp;W</span>
+          <span>SQLite&nbsp;&middot;&nbsp;R</span>
+          <span>SQLite&nbsp;&middot;&nbsp;R</span>
+          <span>SQLite&nbsp;&middot;&nbsp;W</span>
         </div>
 
         <div class="np-mini-pin np-mini-pin-out">
@@ -190,10 +192,10 @@
       <div class="np-flow-card" role="listitem">
         <span class="np-flow-card-num">02</span>
         <span class="np-flow-card-title">Network Investigator</span>
-        <span class="np-flow-card-role">Pulls related outages from BigQuery.</span>
+        <span class="np-flow-card-role">Pulls related outages from the bundled SQLite store.</span>
         <div class="np-flow-card-stack">
           <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">BigQuery &middot; MCP</span>
+          <span class="np-flow-tag">SQLite &middot; MCP</span>
         </div>
         <div class="np-flow-card-output">
           <span class="np-flow-card-output-label">&rarr; emits</span>
@@ -206,10 +208,10 @@
       <div class="np-flow-card" role="listitem">
         <span class="np-flow-card-num">03</span>
         <span class="np-flow-card-title">CDR Analyzer</span>
-        <span class="np-flow-card-role">Queries call records via natural language.</span>
+        <span class="np-flow-card-role">Queries call records via parameterized SQL through MCP Toolbox.</span>
         <div class="np-flow-card-stack">
           <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">AlloyDB NL2SQL</span>
+          <span class="np-flow-tag">SQLite &middot; MCP</span>
         </div>
         <div class="np-flow-card-output">
           <span class="np-flow-card-output-label">&rarr; emits</span>
@@ -225,7 +227,7 @@
         <span class="np-flow-card-role">Synthesises &amp; persists the incident ticket.</span>
         <div class="np-flow-card-stack">
           <span class="np-flow-tag"><span class="np-flow-tag-dot"></span>Gemini</span>
-          <span class="np-flow-tag">AlloyDB &middot; INSERT</span>
+          <span class="np-flow-tag">SQLite &middot; INSERT</span>
         </div>
         <div class="np-flow-card-output">
           <span class="np-flow-card-output-label">&rarr; emits</span>
@@ -238,7 +240,7 @@
       <div class="np-flow-bookend np-flow-out" role="listitem">
         <span class="np-flow-bookend-eyebrow">OUT</span>
         <span class="np-flow-bookend-title">Incident ticket</span>
-        <span class="np-flow-bookend-meta">AlloyDB &middot; NOC dispatch</span>
+        <span class="np-flow-bookend-meta">SQLite &middot; NOC dispatch</span>
         <div class="np-flow-card-output">
           <span class="np-flow-card-output-label">&rarr; persists</span>
           <span class="np-flow-card-output-value">incident_report</span>
@@ -272,9 +274,9 @@
 
     <div class="np-card-grid">
       <a href="{{ url_for('network_events') }}" class="np-card">
-        <span class="np-card-eyebrow">BigQuery &middot; partitioned</span>
+        <span class="np-card-eyebrow">SQLite &middot; indexed</span>
         <h3>Network Events</h3>
-        <p>Outage and maintenance events across 10 cities, day-partitioned and clustered by region/severity.</p>
+        <p>Outage and maintenance events across 10 cities, indexed on region, severity, and started_at for time-windowed lookups.</p>
         <span class="np-card-meta">
           <span class="np-card-pill">50,000 rows</span>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 10 L10 4 M5 4h5v5"/></svg>
@@ -282,7 +284,7 @@
       </a>
 
       <a href="{{ url_for('call_records') }}" class="np-card">
-        <span class="np-card-eyebrow">AlloyDB &middot; NL2SQL</span>
+        <span class="np-card-eyebrow">SQLite &middot; SQL</span>
         <h3>Call Records</h3>
         <p>Call Detail Records with anchor-clustered drop and failure events around outage windows.</p>
         <span class="np-card-meta">
@@ -292,7 +294,7 @@
       </a>
 
       <a href="{{ url_for('tickets') }}" class="np-card">
-        <span class="np-card-eyebrow">AlloyDB &middot; write</span>
+        <span class="np-card-eyebrow">SQLite &middot; write</span>
         <h3>Incident Tickets</h3>
         <p>The agents&rsquo; output destination &mdash; every saved ticket lives here with category, severity and recommended action.</p>
         <span class="np-card-meta">
@@ -363,7 +365,7 @@
     <div class="grid">
       <div class="foot-brand">
         {% include "_brand.html" %}
-        <p>Telecom incident ticketing in seconds &mdash; a multi-agent assistant built on Google ADK and Vertex AI Gemini. APAC GenAI Academy 2026.</p>
+        <p>Multi-agent telecom incident ticketing in seconds. APAC GenAI Academy 2026.</p>
       </div>
 
       <div class="foot-col">

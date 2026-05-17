@@ -1,8 +1,9 @@
 """NetPulse AI Flask web UI.
 
 Wraps the existing telecom_ops ADK SequentialAgent in a streaming chat UI plus
-three read-only data viewer tabs (BigQuery network events, AlloyDB call records,
-AlloyDB incident tickets). Loads telecom_ops/.env via stdlib (no python-dotenv).
+three read-only data viewer tabs that read the bundled SQLite store at
+``data/netpulse.sqlite`` (network events, call records, incident tickets).
+Loads telecom_ops/.env via stdlib (no python-dotenv).
 """
 
 import json
@@ -21,19 +22,18 @@ from flask import (
 
 from agent_runner import run_agent
 from data_queries import (
-    AL_CALL_TABLE,
-    AL_TICKET_TABLE,
     ALLOWED_CALL_STATUSES,
     ALLOWED_CALL_TYPES,
     ALLOWED_EVENT_TYPES,
     ALLOWED_REGIONS,
     ALLOWED_SEVERITIES,
-    BQ_DATASET,
-    BQ_NETWORK_TABLE,
-    GCP_PROJECT,
-    alloydb_call_records,
-    alloydb_incident_tickets,
-    bq_network_events,
+    CALL_RECORDS_TABLE,
+    NETWORK_EVENTS_TABLE,
+    SQLITE_PATH,
+    TICKET_TABLE,
+    read_call_records,
+    read_incident_tickets,
+    read_network_events,
 )
 
 logging.basicConfig(
@@ -73,18 +73,16 @@ app = Flask(__name__)
 
 @app.context_processor
 def inject_dataset_names() -> dict[str, str]:
-    """Expose env-driven project + dataset + table names to every template.
+    """Expose the SQLite file path + table names to every template.
 
-    Lets data-source banners and lineage labels render the current target
-    instead of hardcoded `plated-complex-491512-n6.telecom_network.*` strings,
-    so a fork pointing at a different GCP project shows the right path.
+    Lets data-source banners and lineage labels render the current SQLite
+    layout (`data/netpulse.sqlite` + per-table names) for every page.
     """
     return {
-        "gcp_project": GCP_PROJECT,
-        "bq_dataset": BQ_DATASET,
-        "bq_network_table": BQ_NETWORK_TABLE,
-        "al_call_table": AL_CALL_TABLE,
-        "al_ticket_table": AL_TICKET_TABLE,
+        "sqlite_db_path": str(SQLITE_PATH),
+        "network_events_table": NETWORK_EVENTS_TABLE,
+        "call_records_table": CALL_RECORDS_TABLE,
+        "ticket_table": TICKET_TABLE,
         # Mirrors telecom_ops/agent.py:MODEL_FAST. Hardcoded here to avoid
         # the heavy ADK import chain at Flask boot — keep in sync if the
         # primary model changes.
@@ -156,16 +154,25 @@ def api_query():
     )
 
 
+def _form_or_arg(field: str) -> str:
+    """Read a value from POST form first, then GET query string. Empty string if neither."""
+    return request.form.get(field) or request.args.get(field) or ""
+
+
 @app.route("/network-events", methods=["GET", "POST"])
 def network_events():
     """Render network events tab; POST applies filters."""
-    region = request.form.get("region") or request.args.get("region") or ""
-    severity = request.form.get("severity") or request.args.get("severity") or ""
-    event_type = (
-        request.form.get("event_type") or request.args.get("event_type") or ""
-    )
-    result = bq_network_events(
-        region or None, severity or None, event_type or None
+    region = _form_or_arg("region")
+    severity = _form_or_arg("severity")
+    event_type = _form_or_arg("event_type")
+    started_after = _form_or_arg("started_after")
+    started_before = _form_or_arg("started_before")
+    result = read_network_events(
+        region or None,
+        severity or None,
+        event_type or None,
+        started_after or None,
+        started_before or None,
     )
     return render_template(
         "network_events.html",
@@ -178,6 +185,8 @@ def network_events():
             "region": region,
             "severity": severity,
             "event_type": event_type,
+            "started_after": started_after,
+            "started_before": started_before,
         },
     )
 
@@ -185,15 +194,17 @@ def network_events():
 @app.route("/call-records", methods=["GET", "POST"])
 def call_records():
     """Render call records tab; POST applies filters."""
-    region = request.form.get("region") or request.args.get("region") or ""
-    call_status = (
-        request.form.get("call_status") or request.args.get("call_status") or ""
-    )
-    call_type = (
-        request.form.get("call_type") or request.args.get("call_type") or ""
-    )
-    result = alloydb_call_records(
-        region or None, call_status or None, call_type or None
+    region = _form_or_arg("region")
+    call_status = _form_or_arg("call_status")
+    call_type = _form_or_arg("call_type")
+    started_after = _form_or_arg("started_after")
+    started_before = _form_or_arg("started_before")
+    result = read_call_records(
+        region or None,
+        call_status or None,
+        call_type or None,
+        started_after or None,
+        started_before or None,
     )
     return render_template(
         "call_records.html",
@@ -206,17 +217,28 @@ def call_records():
             "region": region,
             "call_status": call_status,
             "call_type": call_type,
+            "started_after": started_after,
+            "started_before": started_before,
         },
     )
 
 
-@app.route("/tickets")
+@app.route("/tickets", methods=["GET", "POST"])
 def tickets():
     """Render incident tickets tab (newest first)."""
+    started_after = _form_or_arg("started_after")
+    started_before = _form_or_arg("started_before")
+    result = read_incident_tickets(
+        started_after or None, started_before or None
+    )
     return render_template(
         "tickets.html",
         active_tab="tickets",
-        result=alloydb_incident_tickets(),
+        result=result,
+        selected={
+            "started_after": started_after,
+            "started_before": started_before,
+        },
     )
 
 
