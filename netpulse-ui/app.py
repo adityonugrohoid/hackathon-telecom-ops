@@ -154,16 +154,25 @@ def api_query():
     )
 
 
+def _form_or_arg(field: str) -> str:
+    """Read a value from POST form first, then GET query string. Empty string if neither."""
+    return request.form.get(field) or request.args.get(field) or ""
+
+
 @app.route("/network-events", methods=["GET", "POST"])
 def network_events():
     """Render network events tab; POST applies filters."""
-    region = request.form.get("region") or request.args.get("region") or ""
-    severity = request.form.get("severity") or request.args.get("severity") or ""
-    event_type = (
-        request.form.get("event_type") or request.args.get("event_type") or ""
-    )
+    region = _form_or_arg("region")
+    severity = _form_or_arg("severity")
+    event_type = _form_or_arg("event_type")
+    started_after = _form_or_arg("started_after")
+    started_before = _form_or_arg("started_before")
     result = read_network_events(
-        region or None, severity or None, event_type or None
+        region or None,
+        severity or None,
+        event_type or None,
+        started_after or None,
+        started_before or None,
     )
     return render_template(
         "network_events.html",
@@ -176,6 +185,8 @@ def network_events():
             "region": region,
             "severity": severity,
             "event_type": event_type,
+            "started_after": started_after,
+            "started_before": started_before,
         },
     )
 
@@ -183,15 +194,17 @@ def network_events():
 @app.route("/call-records", methods=["GET", "POST"])
 def call_records():
     """Render call records tab; POST applies filters."""
-    region = request.form.get("region") or request.args.get("region") or ""
-    call_status = (
-        request.form.get("call_status") or request.args.get("call_status") or ""
-    )
-    call_type = (
-        request.form.get("call_type") or request.args.get("call_type") or ""
-    )
+    region = _form_or_arg("region")
+    call_status = _form_or_arg("call_status")
+    call_type = _form_or_arg("call_type")
+    started_after = _form_or_arg("started_after")
+    started_before = _form_or_arg("started_before")
     result = read_call_records(
-        region or None, call_status or None, call_type or None
+        region or None,
+        call_status or None,
+        call_type or None,
+        started_after or None,
+        started_before or None,
     )
     return render_template(
         "call_records.html",
@@ -204,17 +217,28 @@ def call_records():
             "region": region,
             "call_status": call_status,
             "call_type": call_type,
+            "started_after": started_after,
+            "started_before": started_before,
         },
     )
 
 
-@app.route("/tickets")
+@app.route("/tickets", methods=["GET", "POST"])
 def tickets():
     """Render incident tickets tab (newest first)."""
+    started_after = _form_or_arg("started_after")
+    started_before = _form_or_arg("started_before")
+    result = read_incident_tickets(
+        started_after or None, started_before or None
+    )
     return render_template(
         "tickets.html",
         active_tab="tickets",
-        result=read_incident_tickets(),
+        result=result,
+        selected={
+            "started_after": started_after,
+            "started_before": started_before,
+        },
     )
 
 

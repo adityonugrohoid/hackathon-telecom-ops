@@ -10,6 +10,7 @@ import logging
 import os
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,8 @@ class QueryResult:
     total_count: int = 0
     limit: int = 0
     error: str | None = None
+    visible_min: str = ""
+    visible_max: str = ""
 
 
 def _connect() -> sqlite3.Connection | None:
@@ -84,10 +87,45 @@ def _stringify(v: Any) -> Any:
     return v
 
 
+def _iso_date(s: str | None) -> str | None:
+    """Validate a YYYY-MM-DD string and return it, else None.
+
+    Uses ``datetime.fromisoformat`` so any malformed input (e.g., the user
+    pasting non-ISO text into the date field) is rejected cleanly. The SQLite
+    columns are TEXT in ISO-8601, so string comparisons on a validated
+    YYYY-MM-DD bound are chronologically correct.
+    """
+    if not s:
+        return None
+    try:
+        datetime.fromisoformat(s)
+        return s
+    except ValueError:
+        return None
+
+
+def _row_range(rows: list[dict[str, Any]], col: str) -> tuple[str, str]:
+    """Return the min/max value of ``col`` across rows (already stringified).
+
+    Used to surface the visible date window in the dv-meta pill so the user
+    sees which slice of the underlying table is on screen (the SQL is
+    ``ORDER BY <col> DESC LIMIT N``, so ``rows[-1]`` is the oldest and
+    ``rows[0]`` the newest, but min/max is robust to either ordering).
+    """
+    if not rows:
+        return ("", "")
+    values = [r.get(col, "") for r in rows if r.get(col)]
+    if not values:
+        return ("", "")
+    return (min(values), max(values))
+
+
 def read_network_events(
     region: str | None = None,
     severity: str | None = None,
     event_type: str | None = None,
+    started_after: str | None = None,
+    started_before: str | None = None,
     limit: int = 200,
 ) -> QueryResult:
     """Reads filtered network events from the bundled SQLite file.
@@ -96,6 +134,11 @@ def read_network_events(
         region: Optional region filter; ignored if not in ALLOWED_REGIONS.
         severity: Optional severity filter; ignored if not in ALLOWED_SEVERITIES.
         event_type: Optional event_type filter; ignored if not in ALLOWED_EVENT_TYPES.
+        started_after: Optional ISO-8601 date (YYYY-MM-DD) lower bound on
+            started_at (inclusive). Invalid input is silently ignored.
+        started_before: Optional ISO-8601 date upper bound on started_at
+            (exclusive of the next day so the whole picked day is included).
+            Invalid input is silently ignored.
         limit: Max rows to return.
 
     Returns:
@@ -116,6 +159,15 @@ def read_network_events(
     if event_type in ALLOWED_EVENT_TYPES:
         where_parts.append("event_type = ?")
         params.append(event_type)
+    after = _iso_date(started_after)
+    if after:
+        where_parts.append("started_at >= ?")
+        params.append(after)
+    before = _iso_date(started_before)
+    if before:
+        # Include the entire picked day by comparing against next-day 00:00.
+        where_parts.append("started_at < datetime(?, '+1 day')")
+        params.append(before)
 
     where_clause = " AND ".join(where_parts)
     cols = [
@@ -135,12 +187,15 @@ def read_network_events(
             {c: _stringify(row[c]) for c in cols}
             for row in conn.execute(select_sql, params)
         ]
+        vmin, vmax = _row_range(rows, "started_at")
         return QueryResult(
             columns=cols,
             rows=rows,
             row_count=len(rows),
             total_count=int(total),
             limit=int(limit),
+            visible_min=vmin,
+            visible_max=vmax,
         )
     except sqlite3.Error as exc:
         logger.exception("network_events query failed")
@@ -153,6 +208,8 @@ def read_call_records(
     region: str | None = None,
     call_status: str | None = None,
     call_type: str | None = None,
+    started_after: str | None = None,
+    started_before: str | None = None,
     limit: int = 200,
 ) -> QueryResult:
     """Reads filtered call_records from the bundled SQLite file.
@@ -161,6 +218,9 @@ def read_call_records(
         region: Optional region filter.
         call_status: Optional call_status filter.
         call_type: Optional call_type filter.
+        started_after: Optional ISO-8601 date lower bound on call_date.
+        started_before: Optional ISO-8601 date upper bound on call_date
+            (inclusive of the picked day).
         limit: Max rows to return.
 
     Returns:
@@ -186,6 +246,14 @@ def read_call_records(
     if call_type in ALLOWED_CALL_TYPES:
         where_parts.append("call_type = ?")
         params.append(call_type)
+    after = _iso_date(started_after)
+    if after:
+        where_parts.append("call_date >= ?")
+        params.append(after)
+    before = _iso_date(started_before)
+    if before:
+        where_parts.append("call_date < datetime(?, '+1 day')")
+        params.append(before)
     where_clause = " AND ".join(where_parts)
 
     count_sql = f"SELECT COUNT(*) FROM {CALL_RECORDS_TABLE} WHERE {where_clause}"
@@ -201,12 +269,15 @@ def read_call_records(
             {c: _stringify(row[c]) for c in cols}
             for row in conn.execute(select_sql, params)
         ]
+        vmin, vmax = _row_range(rows, "call_date")
         return QueryResult(
             columns=cols,
             rows=rows,
             row_count=len(rows),
             total_count=int(total),
             limit=int(limit),
+            visible_min=vmin,
+            visible_max=vmax,
         )
     except sqlite3.Error as exc:
         logger.exception("call_records query failed")
@@ -215,8 +286,19 @@ def read_call_records(
         conn.close()
 
 
-def read_incident_tickets(limit: int = 100) -> QueryResult:
-    """Reads recent rows from incident_tickets ordered by ticket_id desc."""
+def read_incident_tickets(
+    started_after: str | None = None,
+    started_before: str | None = None,
+    limit: int = 100,
+) -> QueryResult:
+    """Reads recent rows from incident_tickets ordered by ticket_id desc.
+
+    Args:
+        started_after: Optional ISO-8601 date lower bound on created_at.
+        started_before: Optional ISO-8601 date upper bound on created_at
+            (inclusive of the picked day).
+        limit: Max rows to return.
+    """
     conn = _connect()
     if conn is None:
         return QueryResult(error=f"SQLite database not found at {SQLITE_PATH}")
@@ -226,24 +308,39 @@ def read_incident_tickets(limit: int = 100) -> QueryResult:
         "related_events", "cdr_findings", "recommendation",
         "status", "created_at",
     ]
-    count_sql = f"SELECT COUNT(*) FROM {TICKET_TABLE}"
+    where_parts = ["1=1"]
+    params: list[str] = []
+    after = _iso_date(started_after)
+    if after:
+        where_parts.append("created_at >= ?")
+        params.append(after)
+    before = _iso_date(started_before)
+    if before:
+        where_parts.append("created_at < datetime(?, '+1 day')")
+        params.append(before)
+    where_clause = " AND ".join(where_parts)
+
+    count_sql = f"SELECT COUNT(*) FROM {TICKET_TABLE} WHERE {where_clause}"
     select_sql = (
-        f"SELECT {', '.join(cols)} FROM {TICKET_TABLE} "
+        f"SELECT {', '.join(cols)} FROM {TICKET_TABLE} WHERE {where_clause} "
         f"ORDER BY ticket_id DESC LIMIT {int(limit)}"
     )
 
     try:
-        total = conn.execute(count_sql).fetchone()[0]
+        total = conn.execute(count_sql, params).fetchone()[0]
         rows = [
             {c: _stringify(row[c]) for c in cols}
-            for row in conn.execute(select_sql)
+            for row in conn.execute(select_sql, params)
         ]
+        vmin, vmax = _row_range(rows, "created_at")
         return QueryResult(
             columns=cols,
             rows=rows,
             row_count=len(rows),
             total_count=int(total),
             limit=int(limit),
+            visible_min=vmin,
+            visible_max=vmax,
         )
     except sqlite3.Error as exc:
         logger.exception("incident_tickets query failed")

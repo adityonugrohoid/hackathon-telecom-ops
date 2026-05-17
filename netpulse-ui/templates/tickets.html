@@ -46,6 +46,7 @@
       <span class="dv-meta-pill"><b>access</b> agent &middot; INSERT</span>
       <span class="dv-meta-pill"><b>ordering</b> ticket_id desc</span>
       <span class="dv-meta-pill"><b>rows</b> {{ result.total_count }}</span>
+      {% if result.visible_min %}<span class="dv-meta-pill"><b>showing</b> {{ result.visible_min[:10] }} &rarr; {{ result.visible_max[:10] }}</span>{% endif %}
     </div>
   </div>
 </section>
@@ -57,14 +58,31 @@
     <p>The Response Formatter agent calls a single native ADK tool, <code>save_incident_ticket</code>, which assembles the prior agents&rsquo; session state into one <code>INSERT INTO incident_tickets</code> against the bundled SQLite store. AUTOINCREMENT picks up from the seed&rsquo;s MAX(ticket_id)+1; the workspace card the operator sees is rendered from the same row you&rsquo;re looking at here.</p>
   </div>
 
+  <form class="dv-filter" method="POST" action="" aria-label="Filter incident tickets">
+    <span class="dv-cross-eyebrow" style="flex-basis:100%">filters</span>
+    <div class="dv-field">
+      <label for="started_after">From</label>
+      <input type="date" id="started_after" name="started_after" value="{{ selected.started_after }}">
+    </div>
+    <div class="dv-field">
+      <label for="started_before">To</label>
+      <input type="date" id="started_before" name="started_before" value="{{ selected.started_before }}">
+    </div>
+    <div class="dv-filter-actions">
+      <button type="submit" class="dv-btn">Apply</button>
+      <a href="{{ url_for('tickets') }}" class="dv-btn dv-btn-ghost" role="button">Reset</a>
+    </div>
+  </form>
+
+  {% set any_filter = selected.started_after or selected.started_before %}
   <div class="dv-table-card" role="region" aria-label="Result rows">
     <div class="dv-table-meta">
       {% if result.error %}
         <span>Query error</span>
       {% elif result.row_count == 0 %}
-        <span>No tickets yet</span>
+        <span>No tickets{% if any_filter %} match the selected window{% endif %}</span>
       {% else %}
-        <span>Showing <b>{{ result.row_count }}</b> of <b>{{ result.total_count }}</b> tickets{% if result.total_count > result.row_count %} &middot; newest first &mdash; older tickets not displayed{% endif %}</span>
+        <span>Showing <b>{{ result.row_count }}</b> of <b>{{ result.total_count }}</b> tickets{% if any_filter %} (filtered){% endif %}{% if result.total_count > result.row_count %} &middot; newest first &mdash; older tickets not displayed{% endif %}</span>
       {% endif %}
       <span>last loaded &middot; just now</span>
     </div>

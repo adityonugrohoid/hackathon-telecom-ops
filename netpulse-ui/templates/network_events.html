@@ -45,6 +45,7 @@
       <span class="dv-meta-pill"><b>sqlite</b> {{ sqlite_db_path }} &middot; {{ network_events_table }}</span>
       <span class="dv-meta-pill"><b>index</b> region, severity, started_at</span>
       <span class="dv-meta-pill"><b>rows</b> {{ result.total_count }}</span>
+      {% if result.visible_min %}<span class="dv-meta-pill"><b>showing</b> {{ result.visible_min[:10] }} &rarr; {{ result.visible_max[:10] }}</span>{% endif %}
     </div>
   </div>
 </section>
@@ -79,13 +80,21 @@
         {% for t in event_types %}<option value="{{ t }}" {% if selected.event_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
       </select>
     </div>
+    <div class="dv-field">
+      <label for="started_after">From</label>
+      <input type="date" id="started_after" name="started_after" value="{{ selected.started_after }}">
+    </div>
+    <div class="dv-field">
+      <label for="started_before">To</label>
+      <input type="date" id="started_before" name="started_before" value="{{ selected.started_before }}">
+    </div>
     <div class="dv-filter-actions">
       <button type="submit" class="dv-btn">Apply</button>
       <a href="{{ url_for('network_events') }}" class="dv-btn dv-btn-ghost" role="button">Reset</a>
     </div>
   </form>
 
-  {% set any_filter = selected.region or selected.severity or selected.event_type %}
+  {% set any_filter = selected.region or selected.severity or selected.event_type or selected.started_after or selected.started_before %}
   <div class="dv-table-card" role="region" aria-label="Result rows">
     <div class="dv-table-meta">
       {% if result.error %}
