@@ -43,6 +43,10 @@ docs/deck-rewrite.txt
 # SQLite-bundled reconstitution: the materialized DB file is regenerated
 # from docs/seed-data/*.csv via scripts/build_sqlite.py; not committed.
 data/
+# scripts/deploy_toolbox.sh stages the SQLite file here for the Cloud Run
+# build context, then cleans it up on exit. Belt-and-suspenders rule in
+# case a deploy fails midway through.
+toolbox-service/data/
 
 # Cached genai-toolbox binary for local development (downloaded by
 # scripts/run_toolbox_local.sh; ~30 MB, regenerable from upstream).

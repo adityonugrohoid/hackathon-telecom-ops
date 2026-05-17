@@ -9,7 +9,7 @@ sources:
     database: data/netpulse.sqlite
 
 tools:
-  # --- Network-events tools (formerly BigQuery, now SQLite) ----------------
+  # --- Network-events tools ------------------------------------------------
 
   query_network_events:
     kind: sqlite-sql
@@ -134,10 +134,9 @@ tools:
         default: 100
         description: "Max rows to return (default 100, max 500)."
 
-  # --- CDR tools (formerly AlloyDB postgres, now SQLite) -------------------
-  # The two parameterized tools fully replace the AlloyDB AI NL2SQL fallback
-  # (query_cdr_nl) — there is no equivalent in SQLite, and the two structured
-  # shapes cover every demo prompt.
+  # --- CDR tools -----------------------------------------------------------
+  # Two parameterized tools cover every demo prompt: summary by
+  # (call_type, call_status), and worst-tower ranking by bad-call percentage.
 
   query_cdr_summary:
     kind: sqlite-sql

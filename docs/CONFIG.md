@@ -9,85 +9,84 @@ parser. Anything already in the shell wins over the file (`os.environ.setdefault
 
 | Variable | Purpose | Default / example |
 |---|---|---|
-| `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI + BQ + AlloyDB (required) | `plated-complex-491512-n6` |
+| `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI (required) | `velvety-transit-493310-q0` |
 | `GOOGLE_CLOUD_LOCATION` | Vertex AI inference region | `global` |
 | `GOOGLE_GENAI_USE_VERTEXAI` | Force Vertex AI (vs Google AI Studio API key) | `TRUE` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to ADC JSON for local runs | `~/.config/gcloud/legacy_credentials/<account>/adc.json` |
-| `DATABASE_URL` | AlloyDB SQLAlchemy URL (required) | `postgresql+pg8000://postgres:<pwd>@<host>:5432/postgres` |
-| `TOOLBOX_URL` | MCP Toolbox endpoint (required by the ADK agent) | `https://network-toolbox-486319900424.us-central1.run.app` |
-| `BQ_DATASET` | BigQuery dataset that owns `network_events` | `telecom_network` |
-| `BQ_NETWORK_TABLE` | BigQuery table the network investigator reads | `network_events` |
-| `AL_CALL_TABLE` | AlloyDB table the CDR analyzer reads | `call_records` |
-| `AL_TICKET_TABLE` | AlloyDB table the response formatter writes | `incident_tickets` |
-| `NL_READER_PASSWORD` | Password for the read-only `netpulse_nl_reader` role (only required when running `setup_alloydb_nl.py` or `setup_byo.sh --nl-setup`) | strong password meeting AlloyDB complexity rules |
+| `TOOLBOX_URL` | MCP Toolbox endpoint (required by the ADK agent) | `http://127.0.0.1:5000` (local) / `https://network-toolbox-<n>.<region>.run.app` (Cloud Run) |
+| `SQLITE_PATH` | Override the bundled SQLite path (optional) | `<repo>/data/netpulse.sqlite` |
+| `NETWORK_EVENTS_TABLE` | Override the network-events table name (optional) | `network_events` |
+| `CALL_RECORDS_TABLE` | Override the call-records table name (optional) | `call_records` |
+| `TICKET_TABLE` | Override the incident-tickets table name (optional) | `incident_tickets` |
 
-The `BQ_*` and `AL_*` overrides exist so a fork can point NetPulse at any
-GCP project + AlloyDB cluster that matches the [data contract in
-`SCHEMA.md`](SCHEMA.md). Defaults preserve the hackathon wiring.
-
-For local development, use the AlloyDB instance's public IP. For Cloud
-Run, override `DATABASE_URL` with the private IP and add VPC connector
-flags so the container can reach AlloyDB through the VPC.
+The only paid runtime dependency is Vertex AI. Everything else is local
+(SQLite file, MCP Toolbox container, Flask app) or scale-to-zero on Cloud
+Run.
 
 ## Bring your own data
 
 NetPulse is dataset-driven. Match the [data contract in
-`SCHEMA.md`](SCHEMA.md), override the `BQ_*` / `AL_*` env vars, and the
-agents work against your infrastructure with no code changes.
-
-The repo ships with the canonical schema in code
-(`scripts/setup_bigquery.py` for BigQuery, `scripts/setup_alloydb.py` for
-AlloyDB) and the original hackathon sample data in
-`docs/seed-data/{network_events,call_records,incident_tickets}.csv` so a
-fresh clone can stand up an end-to-end working demo against any GCP
-project + AlloyDB instance.
-
-### Bootstrap a fresh project
+`SCHEMA.md`](SCHEMA.md), replace the CSVs under `docs/seed-data/`, and
+rebuild the SQLite file:
 
 ```bash
-export GOOGLE_CLOUD_PROJECT=your-project
-export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/legacy_credentials/<account>/adc.json
-export DATABASE_URL='postgresql+pg8000://postgres:<pwd>@<alloydb-host>:5432/postgres'
-export NL_READER_PASSWORD='<strong-password-meeting-complexity>'  # only for --nl-setup
-bash scripts/setup_byo.sh --seed --nl-setup
+python3 scripts/build_sqlite.py --recreate
 ```
 
-What each flag does:
+The three CSVs the script reads:
 
-- **No flags** — creates the dataset + tables only (idempotent, safe to
-  re-run on an existing deployment).
-- **`--seed`** — also TRUNCATE+RELOADs the seeded tables from the CSVs,
-  restoring the canonical demo state.
-- **`--nl-setup`** — installs the AlloyDB AI NL2SQL stack: the
-  `alloydb_ai_nl` extension, an LLM model registration, the
-  `netpulse_cdr_config` configuration with `call_records` registered,
-  schema-context generation (blocking 3–5 min), and the
-  `netpulse_nl_reader` read-only role used by the MCP Toolbox.
+- `docs/seed-data/network_events.csv` — outage / maintenance / degradation
+  / restoration rows, 8 columns matching the schema.
+- `docs/seed-data/call_records.csv` — CDR rows, 10 columns.
+- `docs/seed-data/incident_tickets.csv` — seed tickets the demo starts
+  with; AUTOINCREMENT picks up from `MAX(ticket_id)+1`.
 
-The NL setup requires the `alloydb_ai_nl.enabled=on` instance flag on
-AlloyDB:
+Indexes are created automatically after the bulk INSERT — `(region,
+severity, started_at)` on events, `(region, call_date)` on CDRs, and
+`created_at DESC` on tickets.
+
+## Local development
+
+Two terminals at the repo root:
 
 ```bash
-gcloud alloydb instances update <instance> \
-  --cluster=<cluster> --region=<region> \
-  --database-flags=password.enforce_complexity=on,alloydb_ai_nl.enabled=on
+# Terminal A — MCP Toolbox (downloads v0.23.0 binary on first run)
+scripts/run_toolbox_local.sh
+
+# Terminal B — Flask UI
+cd netpulse-ui
+TOOLBOX_URL=http://127.0.0.1:5000 \
+GOOGLE_CLOUD_PROJECT=<your-project-with-vertex-enabled> \
+GOOGLE_CLOUD_LOCATION=global \
+GOOGLE_GENAI_USE_VERTEXAI=TRUE \
+  ../.venv/bin/python app.py
 ```
 
-### Run the chained orchestrator manually
+`data/netpulse.sqlite` is built on first run of `run_toolbox_local.sh`
+if missing; manual rebuild is `python3 scripts/build_sqlite.py --recreate`.
 
-If you don't want the orchestrator, the underlying scripts are idempotent
-and can be run directly:
+ADC must be authenticated:
 
 ```bash
-python scripts/setup_bigquery.py --seed              # BQ table + load 50 000 rows
-python scripts/setup_alloydb.py --seed               # AlloyDB tables + load CDRs/tickets
-python scripts/setup_alloydb_nl.py                   # NL2SQL config (3–5 min blocking)
+gcloud auth application-default login
 ```
 
-Pass `--recreate` to `setup_bigquery.py` if you need to reapply the
-DAY-partition + `(region, severity)` cluster spec to an existing
-unpartitioned table — BigQuery does not allow partition changes in
-place, so the flag is destructive.
+## Cloud Run deploy
+
+Two services: the Flask UI and the MCP Toolbox. The SQLite file is baked
+into both images at build time, so cold starts have data immediately and
+nothing reaches outside the container at runtime except Vertex AI.
+
+```bash
+# UI service (root Dockerfile bakes SQLite during pip-install stage)
+gcloud run deploy netpulse-ui \
+  --source . \
+  --region asia-southeast2 \
+  --set-env-vars GOOGLE_CLOUD_PROJECT=<your-project>,GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=TRUE,TOOLBOX_URL=<toolbox-cloud-run-url>
+
+# Toolbox service (script stages SQLite into the build context, then deploys)
+scripts/deploy_toolbox.sh asia-southeast2
+```
 
 ## Observability
 

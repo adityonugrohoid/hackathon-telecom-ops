@@ -265,7 +265,7 @@ def generate_events() -> list[NetworkEvent]:
 
 
 def write_csv(events: list[NetworkEvent], path: Path) -> None:
-    """Write the events to CSV in the schema setup_bigquery.py expects."""
+    """Write the events to CSV in the schema scripts/build_sqlite.py expects."""
     path.parent.mkdir(parents=True, exist_ok=True)
     header = [
         "event_id", "event_type", "region", "severity", "description",

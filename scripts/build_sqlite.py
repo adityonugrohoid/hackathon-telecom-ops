@@ -1,11 +1,10 @@
 """Build the bundled NetPulse SQLite file from the canonical seed CSVs.
 
-Replaces the AlloyDB + BigQuery setup scripts. Produces a single
-SQLite file at ``data/netpulse.sqlite`` (relative to repo root) that holds
-all three tables the agent and UI talk to:
+Produces a single SQLite file at ``data/netpulse.sqlite`` (relative to
+repo root) that holds all three tables the agent and UI talk to:
 
-  - ``network_events``    (read by the BigQuery-era tools, now SQLite)
-  - ``call_records``      (read by the AlloyDB-era CDR tools, now SQLite)
+  - ``network_events``    (read by the network-investigator tools)
+  - ``call_records``      (read by the CDR analyzer tools)
   - ``incident_tickets``  (written by ``save_incident_ticket``)
 
 Idempotent: if the target file already exists, the script is a no-op.

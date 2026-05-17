@@ -86,6 +86,21 @@ in order: classifier, network investigator, CDR analyzer, response
 formatter. Each one reads the shared session state, queries its data
 store through the MCP toolbox, and enriches the state for the next.
 The fourth writes a structured ticket to the bundled SQLite store and the run ends.</p>
+
+<div class="dv-source-banner" role="note">
+  <span class="dv-source-banner-eyebrow">two substrates, one design</span>
+  <p>The original hackathon architecture ran on <strong>BigQuery</strong>
+  (<code>network_events</code>) plus <strong>AlloyDB</strong>
+  (<code>call_records</code> and <code>incident_tickets</code>) &mdash; managed,
+  durable, and partition-aware. The deployment you&rsquo;re reading about here is
+  the <strong>simplified low-cost demo mode</strong>: the same three tables
+  collapsed onto a single bundled <strong>SQLite</strong> file, served through
+  the same MCP Toolbox tools. The agent code is identical between the two; only
+  <code>toolbox-service/tools.yaml</code>&rsquo;s <code>sources:</code> block
+  flips between <code>kind: sqlite</code>, <code>kind: alloydb-postgres</code>,
+  and <code>kind: bigquery</code>.</p>
+</div>
+
 <div class="docs-arch-figure">
   <img src="{{ url_for('static', filename='architecture.png') }}" alt="NetPulse AI architecture diagram">
   <div class="docs-arch-caption">User &rarr; UI &rarr; SequentialAgent (4 LlmAgents on Gemini) &rarr; MCP Toolbox &rarr; SQLite</div>

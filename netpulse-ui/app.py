@@ -1,8 +1,9 @@
 """NetPulse AI Flask web UI.
 
 Wraps the existing telecom_ops ADK SequentialAgent in a streaming chat UI plus
-three read-only data viewer tabs (BigQuery network events, AlloyDB call records,
-AlloyDB incident tickets). Loads telecom_ops/.env via stdlib (no python-dotenv).
+three read-only data viewer tabs that read the bundled SQLite store at
+``data/netpulse.sqlite`` (network events, call records, incident tickets).
+Loads telecom_ops/.env via stdlib (no python-dotenv).
 """
 
 import json
@@ -75,8 +76,7 @@ def inject_dataset_names() -> dict[str, str]:
     """Expose the SQLite file path + table names to every template.
 
     Lets data-source banners and lineage labels render the current SQLite
-    layout (`data/netpulse.sqlite` + per-table names) instead of the
-    BigQuery / AlloyDB lineage that preceded the substrate change.
+    layout (`data/netpulse.sqlite` + per-table names) for every page.
     """
     return {
         "sqlite_db_path": str(SQLITE_PATH),

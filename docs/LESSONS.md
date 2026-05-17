@@ -3,6 +3,17 @@
 A handful of non-obvious decisions worth surfacing for anyone reading the
 code or forking the project.
 
+> **Phase 13 — SQLite reconstitution.** The substrate was BigQuery
+> (network events) + AlloyDB (CDR + ticket sink) through Phase 12. Phase
+> 13 collapsed both onto a single bundled SQLite file at
+> `data/netpulse.sqlite`, read via MCP Toolbox `kind: sqlite-sql` and
+> written via stdlib `sqlite3`. The sections below describe the
+> BigQuery / AlloyDB era — the design lessons stand even though the
+> active substrate is now SQLite. The MCP-Toolbox-as-intermediary pattern
+> means flipping `tools.yaml`'s `sources:` block back to
+> `kind: alloydb-postgres` or `kind: bigquery` restores the original wiring
+> with no agent-code change.
+
 ## MCP Toolbox vs direct BigQuery MCP
 
 The endpoint `https://bigquery.googleapis.com/mcp` returns 403 /

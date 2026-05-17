@@ -496,9 +496,9 @@ function npComputeImpact(rows) {
   var sevCounts = {critical: 0, high: 0, major: 0, medium: 0, minor: 0, low: 0, info: 0};
   rows.forEach(function (r) {
     if (!r) return;
-    // BigQuery INT64 sometimes serializes as a string — coerce both.
-    // Also handle aggregate-summary rows that use total_affected instead of
-    // affected_customers (query_affected_customers_summary tool output).
+    // affected_customers is INTEGER in SQLite but can arrive as a string
+    // through the toolbox JSON envelope — coerce both shapes. Aggregate
+    // rollup rows use total_affected (query_affected_customers_summary).
     var raw = r.affected_customers;
     if (raw === undefined || raw === null || raw === '') raw = r.total_affected;
     var n = (typeof raw === 'number') ? raw : parseInt(raw, 10);

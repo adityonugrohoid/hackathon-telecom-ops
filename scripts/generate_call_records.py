@@ -227,7 +227,7 @@ def generate_records() -> list[CallRecord]:
 
 
 def write_csv(records: list[CallRecord], path: Path) -> None:
-    """Write the CDRs in the schema setup_alloydb.py expects."""
+    """Write the CDRs in the schema scripts/build_sqlite.py expects."""
     path.parent.mkdir(parents=True, exist_ok=True)
     header = [
         "call_id", "caller_number", "receiver_number", "call_type",

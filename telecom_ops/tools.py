@@ -1,9 +1,9 @@
 """Native ADK tools and module-level singletons for the telecom_ops agent.
 
-The SQLite reconstitution replaces the AlloyDB SQLAlchemy engine with a
-stdlib ``sqlite3`` connection-per-write. SQLite's single-writer model is
-fine here — ``save_incident_ticket`` is the only writer, and the agent
-chain is serialized end-to-end, so contention never materializes.
+The ticket write path uses stdlib ``sqlite3`` with one connection per write
+against the bundled SQLite store. SQLite's single-writer model is fine here
+— ``save_incident_ticket`` is the only writer, and the agent chain is
+serialized end-to-end, so contention never materializes.
 """
 
 import logging
