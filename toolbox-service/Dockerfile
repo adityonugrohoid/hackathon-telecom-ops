@@ -16,5 +16,9 @@ COPY tools.yaml /app/tools.yaml
 # SQLite file into toolbox-service/data/ before this COPY runs.
 COPY data/netpulse.sqlite /app/data/netpulse.sqlite
 
-EXPOSE 5000
-CMD ["/app/toolbox", "--tools-file", "/app/tools.yaml", "--address", "0.0.0.0", "--port", "5000"]
+# Cloud Run injects PORT (default 8080) and expects the process to listen on
+# it. Locally, scripts/run_toolbox_local.sh runs the binary directly and pins
+# port 5000 for back-compat with telecom_ops/.env and TOOLBOX_URL conventions.
+# Shell form so ${PORT} expands at runtime; defaults to 8080 if unset.
+EXPOSE 8080
+CMD exec /app/toolbox --tools-file /app/tools.yaml --address 0.0.0.0 --port "${PORT:-8080}"
