@@ -223,7 +223,7 @@ PAGE = f"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Documentation — NetPulse AI</title>
+<title>Documentation - NetPulse AI</title>
 <meta name="description" content="The build behind NetPulse AI — architecture, stack, data, BYOD." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
