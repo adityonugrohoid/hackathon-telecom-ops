@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top 100 / Google Cloud Gen AI Academy APAC 2026 · NetPulse AI · Adityo Nugroho</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='netpulse-logo-only.svg') }}">
+<meta name="description" content="Independently citable mirror of the official Top 100 announcement for the Google Cloud Gen AI Academy APAC Edition Cohort 1 (2026). NetPulse AI, a multi-agent telecom operations assistant by Adityo Nugroho, was among the Top 100 teams selected.">
+<meta property="og:title" content="Top 100 / APAC Google Cloud Gen AI Academy 2026 · NetPulse AI">
+<meta property="og:description" content="NetPulse AI was selected for the Top 100 of the Google Cloud Gen AI Academy APAC 2026 (Cohort 1) out of thousands of submissions across the Asia-Pacific region.">
+<meta property="og:type" content="article">
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+
+<style>
+  /* ============================================================
+     Press-kit body — Google-styled citation surface, scoped to
+     `.top100-paper` so it does not bleed into the NetPulse chrome
+     (header.nav + footer.foot use site.css tokens unchanged).
+     ============================================================ */
+  .top100-paper {
+    --google-blue: #1a73e8;
+    --google-blue-dark: #1557b0;
+    --google-red: #ea4335;
+    --google-yellow: #fbbc04;
+    --google-green: #34a853;
+    --gink: #202124;
+    --gink-soft: #3c4043;
+    --gink-mute: #5f6368;
+    --gink-faint: #80868b;
+    --gline: #dadce0;
+    --gline-soft: #e8eaed;
+    --gbg: #ffffff;
+    --gbg-soft: #f8f9fa;
+    --gbg-tint: #f1f3f4;
+    --gaccent-blue: #e8f0fe;
+    --gaccent-blue-line: #d2e3fc;
+    --gaccent-green: #e6f4ea;
+    --gaccent-green-line: #ceead6;
+    --gaccent-amber: #fef7e0;
+    --gaccent-amber-line: #fde293;
+
+    font-family: "Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--gink-soft);
+    background: var(--gbg-tint);
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+  }
+  .top100-paper *, .top100-paper *::before, .top100-paper *::after { box-sizing: border-box; }
+
+  .top100-paper .google-ribbon { display: flex; height: 4px; }
+  .top100-paper .google-ribbon > div { flex: 1; }
+  .top100-paper .google-ribbon > div:nth-child(1) { background: var(--google-blue); }
+  .top100-paper .google-ribbon > div:nth-child(2) { background: var(--google-red); }
+  .top100-paper .google-ribbon > div:nth-child(3) { background: var(--google-yellow); }
+  .top100-paper .google-ribbon > div:nth-child(4) { background: var(--google-green); }
+
+  .top100-paper .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 56px 32px 96px;
+  }
+  @media (max-width: 600px) { .top100-paper .container { padding: 40px 20px 64px; } }
+
+  .top100-paper .gk-eyebrow {
+    display: inline-block;
+    background: var(--gaccent-amber);
+    border: 1px solid var(--gaccent-amber-line);
+    color: #b06000;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+  .top100-paper h1 {
+    font-size: 40px;
+    line-height: 1.18;
+    color: var(--gink);
+    margin: 18px 0 16px;
+    letter-spacing: -0.6px;
+    font-weight: 700;
+  }
+  @media (max-width: 600px) { .top100-paper h1 { font-size: 30px; } }
+  .top100-paper .lede {
+    font-size: 18px;
+    color: var(--gink-soft);
+    margin: 0 0 28px;
+  }
+  .top100-paper .lede strong { color: var(--gink); font-weight: 600; }
+
+  .top100-paper h2 {
+    font-size: 24px;
+    color: var(--gink);
+    margin: 56px 0 18px;
+    letter-spacing: -0.3px;
+    font-weight: 700;
+  }
+  .top100-paper h2 .num {
+    display: inline-block;
+    width: 32px; height: 32px;
+    line-height: 32px; text-align: center;
+    background: var(--gaccent-blue);
+    color: var(--google-blue);
+    border-radius: 999px;
+    font-size: 14px; font-weight: 700;
+    margin-right: 12px;
+    vertical-align: 4px;
+  }
+  .top100-paper h3 { font-size: 16px; color: var(--gink); margin: 24px 0 10px; font-weight: 700; }
+
+  .top100-paper p { margin: 0 0 16px; }
+  .top100-paper a { color: var(--google-blue); text-decoration: none; }
+  .top100-paper a:hover { text-decoration: underline; }
+
+  .top100-paper .card {
+    background: var(--gbg);
+    border: 1px solid var(--gline-soft);
+    border-radius: 20px;
+    padding: 28px;
+    margin: 20px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .top100-paper .card.accent { background: var(--gaccent-blue); border-color: var(--gaccent-blue-line); }
+  .top100-paper .card.success { background: var(--gaccent-green); border-color: var(--gaccent-green-line); }
+
+  .top100-paper .provenance {
+    background: var(--gbg);
+    border: 1px dashed var(--gline);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 32px 0;
+    font-size: 14px;
+    color: var(--gink-mute);
+  }
+  .top100-paper .provenance dl { margin: 0; display: grid; grid-template-columns: 160px 1fr; gap: 8px 16px; }
+  .top100-paper .provenance dt { font-weight: 700; color: var(--gink-soft); }
+  .top100-paper .provenance dd { margin: 0; word-break: break-all; }
+  @media (max-width: 600px) {
+    .top100-paper .provenance dl { grid-template-columns: 1fr; gap: 4px 0; }
+    .top100-paper .provenance dt { margin-top: 8px; }
+  }
+
+  .top100-paper table.facts {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 15px;
+  }
+  .top100-paper table.facts th,
+  .top100-paper table.facts td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--gline-soft);
+    vertical-align: top;
+  }
+  .top100-paper table.facts th {
+    background: var(--gbg-soft);
+    color: var(--gink-mute);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+  }
+  .top100-paper table.facts td:first-child { font-weight: 600; color: var(--gink); white-space: nowrap; }
+
+  .top100-paper .credentials-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 16px 0 8px;
+  }
+  @media (max-width: 720px) { .top100-paper .credentials-grid { grid-template-columns: 1fr; } }
+  .top100-paper .cred-card {
+    background: var(--gbg);
+    border: 1px solid var(--gline-soft);
+    border-left: 4px solid var(--google-blue);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .top100-paper .cred-card .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gink-mute); font-weight: 700; margin-bottom: 8px;
+  }
+  .top100-paper .cred-card .name { font-size: 16px; font-weight: 600; color: var(--gink); margin-bottom: 12px; }
+  .top100-paper .cred-card .id {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    background: var(--gbg-tint);
+    color: var(--gink);
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+  .top100-paper .cred-card .cert-thumb {
+    display: block;
+    border: 1px solid var(--gline);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 18px;
+    background: var(--gbg-soft);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .top100-paper .cred-card .cert-thumb:hover { border-color: var(--google-blue); box-shadow: 0 4px 16px rgba(26,115,232,0.18); }
+  .top100-paper .cred-card .cert-thumb img { width: 100%; height: auto; display: block; }
+  .top100-paper .cred-card .cert-reason {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--gink-soft);
+    border-left: 3px solid var(--gaccent-blue-line);
+    padding: 4px 0 4px 14px;
+    margin: 14px 0;
+  }
+  .top100-paper .cred-card .cert-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .top100-paper .cred-card .verify,
+  .top100-paper .cred-card .download {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+  }
+  .top100-paper .cred-card .verify { background: var(--google-blue); color: white; }
+  .top100-paper .cred-card .verify:hover { background: var(--google-blue-dark); text-decoration: none; }
+  .top100-paper .cred-card .download { background: var(--gbg); color: var(--google-blue); border: 1px solid var(--gline); }
+  .top100-paper .cred-card .download:hover { border-color: var(--google-blue); text-decoration: none; }
+
+  .top100-paper ol.roster {
+    margin: 8px 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: roster;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 24px;
+  }
+  @media (max-width: 700px) { .top100-paper ol.roster { grid-template-columns: 1fr; } }
+  .top100-paper ol.roster li {
+    counter-increment: roster;
+    padding: 8px 12px 8px 56px;
+    position: relative;
+    font-size: 14px;
+    color: var(--gink-soft);
+    border-radius: 6px;
+  }
+  .top100-paper ol.roster li::before {
+    content: counter(roster);
+    position: absolute;
+    left: 12px; top: 8px;
+    width: 32px;
+    color: var(--gink-faint);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .top100-paper ol.roster li.netpulse {
+    background: var(--gaccent-blue);
+    border: 1px solid var(--gaccent-blue-line);
+    color: var(--gink);
+    font-weight: 700;
+  }
+  .top100-paper ol.roster li.netpulse::before { color: var(--google-blue); }
+  .top100-paper ol.roster li.netpulse::after {
+    content: "this submission";
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: var(--google-blue);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 999px;
+    vertical-align: 2px;
+  }
+  .top100-paper ol.roster li.podium {
+    background: var(--gaccent-green);
+    border: 1px solid var(--gaccent-green-line);
+  }
+  .top100-paper ol.roster li.podium::after {
+    content: attr(data-rank);
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    background: var(--google-green);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 999px;
+    vertical-align: 2px;
+  }
+
+  .top100-paper .quote {
+    border-left: 4px solid var(--google-blue);
+    padding: 4px 0 4px 18px;
+    margin: 16px 0;
+    color: var(--gink-soft);
+    font-style: italic;
+  }
+  .top100-paper .quote cite { display: block; font-style: normal; font-size: 13px; color: var(--gink-mute); margin-top: 6px; }
+
+  .top100-paper .screenshot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
+  @media (max-width: 720px) { .top100-paper .screenshot-grid { grid-template-columns: 1fr; } }
+  .top100-paper .screenshot {
+    background: var(--gbg-soft);
+    border: 1px dashed var(--gline);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--gink-mute);
+    font-size: 13px;
+  }
+  .top100-paper .screenshot img { width: 100%; height: auto; border-radius: 8px; display: block; border: 1px solid var(--gline-soft); }
+  .top100-paper .screenshot .caption { margin-top: 10px; }
+  .top100-paper .screenshot .placeholder {
+    font-family: "JetBrains Mono", monospace;
+    background: var(--gbg-tint);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  .top100-paper .footer-meta {
+    margin-top: 64px;
+    padding-top: 32px;
+    border-top: 1px solid var(--gline-soft);
+    color: var(--gink-mute);
+    font-size: 13px;
+  }
+  .top100-paper .footer-meta a { color: var(--google-blue); }
+
+  .top100-paper .links-bar {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin: 18px 0;
+  }
+  .top100-paper .links-bar a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 16px;
+    background: var(--gbg);
+    border: 1px solid var(--gline);
+    color: var(--google-blue);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .top100-paper .links-bar a:hover { border-color: var(--google-blue); text-decoration: none; }
+
+  .top100-paper .toc {
+    background: var(--gbg);
+    border: 1px solid var(--gline-soft);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 24px 0 8px;
+    font-size: 14px;
+  }
+  .top100-paper .toc ol { margin: 8px 0 0; padding-left: 18px; }
+  .top100-paper .toc li { margin: 4px 0; }
+
+  .top100-paper .snapshot-card {
+    background: var(--gbg);
+    border: 1px solid var(--gline-soft);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin: 16px 0;
+  }
+  .top100-paper .snapshot-card h3 { margin: 0 0 8px; color: var(--gink); font-size: 16px; }
+  .top100-paper .snapshot-card dl { margin: 12px 0 0; display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; font-size: 14px; }
+  .top100-paper .snapshot-card dt { color: var(--gink-mute); font-weight: 600; }
+  .top100-paper .snapshot-card dd { margin: 0; }
+  .top100-paper .snapshot-card code,
+  .top100-paper .mono {
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    background: var(--gbg-tint);
+    padding: 2px 6px;
+    border-radius: 4px;
+    word-break: break-all;
+  }
+  .top100-paper .snapshot-extract {
+    margin-top: 16px;
+    background: var(--gbg-soft);
+    border: 1px solid var(--gline-soft);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--gink-soft);
+    white-space: pre-wrap;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .top100-paper .snapshot-extract .hl { background: var(--gaccent-blue); color: var(--gink); font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+  @media (max-width: 600px) {
+    .top100-paper .snapshot-card dl { grid-template-columns: 1fr; gap: 2px 0; }
+    .top100-paper .snapshot-card dt { margin-top: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap row">
+    {% include "_brand.html" %}
+
+    <nav class="nav-links">
+      <a href="{{ url_for('landing') }}#how-it-works">How it works</a>
+      <a href="{{ url_for('landing') }}#data-viewer">Data Viewer</a>
+      <a href="{{ url_for('landing') }}#resources">Resources</a>
+      <a href="{{ url_for('app_workspace') }}">Workspace</a>
+      <a href="{{ url_for('top100') }}">Press Kit</a>
+      <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+
+    <div class="nav-cta">
+      <a href="{{ url_for('app_workspace') }}" class="btn btn-primary">
+        Try NetPulse AI
+        <svg class="arrow" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 7h8M7 3l4 4-4 4"/>
+        </svg>
+      </a>
+      <button class="menu-toggle" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M3 6h14M3 10h14M3 14h14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="top100-paper">
+
+  <div class="google-ribbon"><div></div><div></div><div></div><div></div></div>
+
+  <div class="container">
+
+    <span class="gk-eyebrow">Independently citable mirror · captured 2026-05-20</span>
+    <h1>Top 100 / Google Cloud Gen AI Academy APAC 2026 (Cohort 1)</h1>
+    <p class="lede"><strong>NetPulse AI</strong>, a multi-agent telecom operations assistant by <strong>Adityo Nugroho</strong>, was selected among the <strong>Top 100 teams</strong> announced for the prototype refinement round on 23 April 2026, out of thousands of submissions across the Asia-Pacific region.</p>
+
+    <div class="links-bar">
+      <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops">Source code</a>
+      <a href="https://youtu.be/tPrxqHku4Lw" target="_blank" rel="noopener">Demo video</a>
+      <a href="https://certificate.hack2skill.com/verify/2026H2S04GCGENAIAPACC1-P00901">Verify Academy certificate</a>
+      <a href="https://certificate.hack2skill.com/verify/2026H2S05GCGENAIAPACC1-P00543">Verify Hackathon certificate</a>
+    </div>
+
+    <div class="provenance">
+      <dl>
+        <dt>Page purpose</dt>
+        <dd>Self-hosted defensible mirror of the official Top 100 announcement, so the citation survives if the original document is unpublished. This page is not an official Google or Hack2skill communication; it reproduces publicly published content for archival reference.</dd>
+        <dt>Original source</dt>
+        <dd><a href="https://docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub">docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub</a></dd>
+        <dt>Self-hosted snapshot</dt>
+        <dd><a href="#snapshot">Raw HTML, extracted text, and SHA-256 manifest</a>, captured 2026-05-20 (see &sect;5)</dd>
+        <dt>Independent witness</dt>
+        <dd><a href="https://web.archive.org/web/20260520070455/https://docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub">archive.org / Wayback Machine snapshot captured 2026-05-20 07:04:55 UTC</a> (HTTP 200, 169 KB, full roster present)</dd>
+        <dt>Original announcement</dt>
+        <dd>Hack2skill, "on behalf of Google Cloud", 23 April 2026</dd>
+        <dt>Captured by</dt>
+        <dd>Adityo Nugroho, 2026-05-20</dd>
+      </dl>
+    </div>
+
+    <div class="toc">
+      <strong>On this page</strong>
+      <ol>
+        <li><a href="#announcement">The Top 100 announcement (verbatim)</a></li>
+        <li><a href="#credentials">Verifiable credentials</a></li>
+        <li><a href="#program">Program facts &amp; selection funnel</a></li>
+        <li><a href="#roster">Full Top 100 roster</a></li>
+        <li><a href="#snapshot">Source-of-record snapshot</a></li>
+      </ol>
+    </div>
+
+    <h2 id="announcement"><span class="num">1</span>The Top 100 announcement (verbatim)</h2>
+
+    <div class="card accent">
+      <p style="margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:1.4px; font-weight:700; color: var(--google-blue);">Milestone Update &middot; 23 April 2026</p>
+      <p style="margin:0 0 12px; font-size:18px; color: var(--gink); font-weight:600;">The wait is over.</p>
+      <p>After an extensive evaluation of all the innovative prototypes submitted, we are excited to announce the <strong>Top 100 teams</strong> moving forward for prototype refinement phase in the Google Cloud Gen AI Academy APAC Edition.</p>
+      <p style="margin-bottom:0;"><strong>Phase II: Selection Results</strong> &mdash; The Top 100 teams have been officially shortlisted. Shortlisted teams will receive <strong>$100 in Google Cloud credits</strong>. Refinement window is open until <strong>30th April</strong> for final prototype submissions. Following the refinement phase, the Top 10 finalists will be selected to present at the <strong>Virtual Grand Finale on 11th May 2026</strong>.</p>
+      <p style="font-size:13px; color: var(--gink-mute); margin-top:18px; margin-bottom:0;">&mdash; Team Hack2skill (on behalf of Google Cloud)</p>
+    </div>
+
+    <h2 id="credentials"><span class="num">2</span>Verifiable credentials</h2>
+    <p>Two distinct certificates were issued for Cohort 1: an Academy Completion certificate and a Hackathon Participation certificate. Both are <strong>co-branded by Google Cloud and Hack2skill</strong> on the certificate face itself, both name the holder, both carry a unique certificate ID with a public verification endpoint, and the original signed PDFs are mirrored here.</p>
+
+    <div class="credentials-grid">
+      <div class="cred-card">
+        <a href="{{ url_for('static', filename='top100/certificates/academy-completion-P00901.pdf') }}" class="cert-thumb" aria-label="Open the full Certificate of Completion PDF">
+          <img src="{{ url_for('static', filename='top100/img/cert-academy-P00901.png') }}" alt="Certificate of Completion for Google Cloud Gen AI Academy APAC 2026, Cohort 1. Awarded to Adityo Nugroho on 28 April 2026. Certificate ID 2026H2S04GCGENAIAPACC1-P00901. Co-branded by Google Cloud and Hack2skill.">
+        </a>
+        <div class="label">Certificate of Completion &middot; 28 April 2026</div>
+        <div class="name">Google Cloud Gen AI Academy APAC 2026, Cohort 1</div>
+        <p class="cert-reason">"For successfully completing Google Cloud Gen AI Academy APAC 2026 - Cohort 1, powered by Hack2skill, an initiative to empower developers to build, connect, and migrate AI-powered applications using modern cloud infrastructure, with hands-on learning focused on real-world, scalable, production-ready solutions."</p>
+        <div class="id">2026H2S04GCGENAIAPACC1-P00901</div>
+        <div class="cert-actions">
+          <a class="verify" href="https://certificate.hack2skill.com/verify/2026H2S04GCGENAIAPACC1-P00901">Verify online</a>
+          <a class="download" href="{{ url_for('static', filename='top100/certificates/academy-completion-P00901.pdf') }}">Download PDF</a>
+        </div>
+      </div>
+      <div class="cred-card">
+        <a href="{{ url_for('static', filename='top100/certificates/hackathon-participation-P00543.pdf') }}" class="cert-thumb" aria-label="Open the full Certificate of Participation PDF">
+          <img src="{{ url_for('static', filename='top100/img/cert-hackathon-P00543.png') }}" alt="Certificate of Participation for Google Cloud Gen AI Academy APAC 2026, Cohort 1 Hackathon. Awarded to Adityo Nugroho on 19 May 2026. Certificate ID 2026H2S05GCGENAIAPACC1-P00543. Co-branded by Google Cloud and Hack2skill.">
+        </a>
+        <div class="label">Certificate of Participation &middot; 19 May 2026</div>
+        <div class="name">Google Cloud Gen AI Academy APAC 2026, Cohort 1 Hackathon</div>
+        <p class="cert-reason">"For successfully participating in the Google Cloud Gen AI Academy APAC 2026 – Cohort 1 Hackathon, powered by Hack2skill, and building innovative, real-world AI solutions using Google Cloud technologies."</p>
+        <div class="id">2026H2S05GCGENAIAPACC1-P00543</div>
+        <div class="cert-actions">
+          <a class="verify" href="https://certificate.hack2skill.com/verify/2026H2S05GCGENAIAPACC1-P00543">Verify online</a>
+          <a class="download" href="{{ url_for('static', filename='top100/certificates/hackathon-participation-P00543.pdf') }}">Download PDF</a>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="program"><span class="num">3</span>Program facts &amp; selection funnel</h2>
+
+    <table class="facts">
+      <tr><th>Field</th><th>Detail</th></tr>
+      <tr><td>Program</td><td>Google Cloud Gen AI Academy, Asia-Pacific Edition, Cohort 1, 2026</td></tr>
+      <tr><td>Operator</td><td>Hack2skill, "on behalf of Google Cloud"</td></tr>
+      <tr><td>Region</td><td>Asia-Pacific (India, Singapore, Vietnam, Thailand, Indonesia, Philippines, Sri Lanka, Bangladesh, Nepal, South Korea, Hong Kong, Taiwan, Australia, New Zealand and others)</td></tr>
+      <tr><td>Format</td><td>"Learn, Challenge, Build". Multi-track workshops, codelabs, an MCQ assessment, and a prototype submission, culminating in a hackathon with a virtual finale.</td></tr>
+      <tr><td>Prize pool</td><td>Up to US$10,000 per cohort</td></tr>
+      <tr><td>Top 100 selection</td><td>Announced 23 April 2026, after evaluation of all prototype submissions. Each Top 100 team received US$100 in Google Cloud credits.</td></tr>
+      <tr><td>Top 10 selection</td><td>Announced 7 May 2026. Finalists selected from the Top 100 after the prototype refinement phase.</td></tr>
+      <tr><td>Virtual Grand Finale</td><td>11 May 2026. Top 10 teams presented to a panel of Google Cloud experts.</td></tr>
+      <tr><td>Winners (12 May 2026)</td><td>1st: Jangan Tanya Kapan Nikah &middot; 2nd: When I'm With You &middot; 3rd: Dheeraj Kumar Jayprakash Yadav. Several teams additionally received "Performance Excellence Awards".</td></tr>
+      <tr><td>Gen AI Elite Club</td><td>An "invite-only alumni network". Hack2skill stated 50 seats per cohort (25 students and 25 professionals), with access to Google Developer community programs, GDP newsletter recognition, and program feature stories.</td></tr>
+      <tr><td>Issuer's own framing</td><td>"Selected from thousands of submissions across APAC by a panel of Google Cloud experts" (Hack2skill, 12 May 2026 winners email).</td></tr>
+    </table>
+
+    <div class="quote">
+      "The wait is over. After an extensive evaluation of all the innovative prototypes submitted, we are excited to announce the Top 100 teams moving forward for prototype refinement phase in the Google Cloud Gen AI Academy APAC Edition."
+      <cite>&mdash; Hack2skill (on behalf of Google Cloud), 23 April 2026</cite>
+    </div>
+
+    <h2 id="roster"><span class="num">4</span>Full Top 100 roster</h2>
+    <p>Reproduced in the exact order published in the official Google Doc, which lists prototypes in the sequence the judges received them. NetPulse AI appears as <strong>entry 82</strong>, reflecting a submission timed near the end of the window rather than a competitive ranking.</p>
+
+    <ol class="roster">
+      <li>Team Penguin</li>
+      <li>Thomas Strand</li>
+      <li>Agent Alchemist</li>
+      <li>Carl Kho</li>
+      <li>Mahesh Chaudhary</li>
+      <li>Solo</li>
+      <li>Emmanuel Operania</li>
+      <li>saanay</li>
+      <li>AlphaMind</li>
+      <li>Team Agent</li>
+      <li>X247.AI</li>
+      <li>kumarpratyush</li>
+      <li>The Autodidact Project</li>
+      <li>Stat Mate</li>
+      <li>ArkAi</li>
+      <li>Limitless Minds</li>
+      <li>Sneha</li>
+      <li>sesmo</li>
+      <li>Bing Yi Lin</li>
+      <li>Vaibhav Mittal</li>
+      <li>KadeTeam</li>
+      <li>CharuAI</li>
+      <li>AlgoAlchemy</li>
+      <li>Muhammad Ku Sukry bin Muhammad Mustafa</li>
+      <li>RemitIQ Pro</li>
+      <li>SyncMaster AI</li>
+      <li>Kar Man Fong</li>
+      <li>VyaparAI</li>
+      <li>SG_Overwatch</li>
+      <li>proflead</li>
+      <li>Decidely.ai</li>
+      <li>Carlsson Studio</li>
+      <li>Kevin Vargas</li>
+      <li>Fireflies</li>
+      <li>Binary Coder</li>
+      <li>Phantom Ops</li>
+      <li>MeshMind</li>
+      <li>Pitlane Orchestrator</li>
+      <li>loop</li>
+      <li>Team xVakratund</li>
+      <li>Quant Agents</li>
+      <li class="podium" data-rank="2nd · finale">When I'm With You</li>
+      <li>ADK Pirates</li>
+      <li>R4131N</li>
+      <li>PETAL</li>
+      <li>Md. Bazlur Rahman Likhon</li>
+      <li>Telova</li>
+      <li>NeuroForge</li>
+      <li>Model Minds</li>
+      <li>let_me_solo_it</li>
+      <li>Team Alpha</li>
+      <li>Odyssey</li>
+      <li>ChexyAI</li>
+      <li>Agentic Flow</li>
+      <li>Vector Voyage</li>
+      <li>Vikrant Khaiwal</li>
+      <li>Aegis - Agentic Product OS</li>
+      <li>Nyi Phone Paing</li>
+      <li>Intelli-gents</li>
+      <li>PLAImakers</li>
+      <li>SEN</li>
+      <li>Auditrons</li>
+      <li>warp</li>
+      <li>Stock Manager</li>
+      <li>tfc</li>
+      <li>ERROR 404..!</li>
+      <li>The Null Pointers*</li>
+      <li>VEDA</li>
+      <li>Syed Naazim Hussain</li>
+      <li>Alfred</li>
+      <li>NovaOS</li>
+      <li>SponsorSync</li>
+      <li>Meredith Cheung</li>
+      <li>Zenith AI</li>
+      <li>SejalNKhimani</li>
+      <li class="podium" data-rank="3rd · finale">DHEERAJ KUMAR JAYPRAKASH YADAV</li>
+      <li>Roshan Rateria</li>
+      <li class="podium" data-rank="1st · winner">Jangan Tanya Kapan Nikah</li>
+      <li>Sage-SherlockGenAI.exe</li>
+      <li>Public Safety Section 9</li>
+      <li>Inference Engines</li>
+      <li class="netpulse">NetPulse AI</li>
+      <li>Faraz Shamim</li>
+      <li>Marketing Intelligence Agents</li>
+      <li>Dineth Hitihamu</li>
+      <li>Team Solo</li>
+      <li>Cortexflow</li>
+      <li>Namrata Srivastava</li>
+      <li>Gen Innovators</li>
+      <li>Team Sūtradhāra</li>
+      <li>ColdStart</li>
+      <li>KRaft</li>
+      <li>Prince Radadiya</li>
+      <li>Somen Sarkar</li>
+      <li>BIJAK</li>
+      <li>Cure Quest</li>
+      <li>NeurIPS</li>
+      <li>Tech wizard</li>
+      <li>HackNet AI</li>
+      <li>Bio developer</li>
+    </ol>
+
+    <h2 id="snapshot"><span class="num">5</span>Source-of-record snapshot</h2>
+    <p>Captured at <strong>2026-05-20</strong>, before any possibility of the original Google Doc being unpublished. Two artifacts are stored under <code>source-snapshot/</code> alongside this page: the raw HTML the live URL served, and the extracted plain-text roster. SHA-256 hashes are pinned in a manifest so the content cannot be quietly altered.</p>
+
+    <div class="snapshot-card">
+      <h3>Captured artifacts</h3>
+      <dl>
+        <dt>Live source</dt>
+        <dd><a href="https://docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub">docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub</a></dd>
+        <dt>Captured on</dt>
+        <dd>2026-05-20 (UTC)</dd>
+        <dt>Authoritative archive</dt>
+        <dd><a href="https://web.archive.org/web/20260520070455/https://docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub">archive.org / Wayback Machine, snapshot captured 2026-05-20 07:04:55 UTC</a>. The Internet Archive is a registered library and its captures are accepted in U.S. federal court as evidence of historical web content. The snapshot was independently captured and preserves the full roster.</dd>
+        <dt>Raw HTML snapshot</dt>
+        <dd><a href="{{ url_for('static', filename='top100/source-snapshot/google-doc-snapshot-2026-05-20.html') }}">source-snapshot/google-doc-snapshot-2026-05-20.html</a> &middot; 167 KB &middot; SHA-256 <code>49fd45f11fadc64f52b84450a1aa58270201abd0d876f3145d5a02c99ebd3f78</code> &middot; <span style="color: var(--gink-mute);">self-contained; the external CDN image has been localised to the sibling PNG below.</span></dd>
+        <dt>Embedded banner</dt>
+        <dd><a href="{{ url_for('static', filename='top100/source-snapshot/gen-ai-academy-banner.png') }}">source-snapshot/gen-ai-academy-banner.png</a> &middot; 940 KB &middot; 1600&times;587 PNG &middot; SHA-256 <code>7467b48f016ef5365e10c8287e85f567fb4b670966d44a1adc9f294c9d552b07</code></dd>
+        <dt>Extracted text</dt>
+        <dd><a href="{{ url_for('static', filename='top100/source-snapshot/google-doc-snapshot-2026-05-20.txt') }}">source-snapshot/google-doc-snapshot-2026-05-20.txt</a> &middot; 1.8 KB &middot; SHA-256 <code>416ba2e570d05c2a8856340e327fa4a249898335df7530eb1ac49f7a205f8acb</code></dd>
+        <dt>Hash manifest</dt>
+        <dd><a href="{{ url_for('static', filename='top100/source-snapshot/SHA256SUMS') }}">source-snapshot/SHA256SUMS</a></dd>
+      </dl>
+
+      <h3 style="margin-top:24px;">Excerpt of extracted text around position 82</h3>
+      <pre class="snapshot-extract">&hellip;
+77 · Roshan Rateria
+78 · Jangan Tanya Kapan Nikah          (later announced as Cohort 1 winner)
+79 · Sage-SherlockGenAI.exe
+80 · Public Safety Section 9
+81 · Inference Engines
+<span class="hl">82 · NetPulse AI</span>
+83 · Faraz Shamim
+84 · Marketing Intelligence Agents
+85 · Dineth Hitihamu
+86 · Team Solo
+87 · Cortexflow
+&hellip;</pre>
+      <p style="font-size:13px; color: var(--gink-mute); margin: 16px 0 0;">Anyone can independently verify the snapshot against the live source while it remains published, then re-verify against the SHA-256 hashes if a question of integrity ever arises. <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops/commits/main/docs/top100/source-snapshot">Git commit history</a> additionally proves the capture date.</p>
+    </div>
+
+    <div class="footer-meta">
+      <p><strong>About this page.</strong> An independently citable mirror, hosted by Adityo Nugroho, of the Top 100 announcement published by Hack2skill on behalf of Google Cloud on 23 April 2026. Names of teams, framing language and program facts are reproduced verbatim from the original document and from the official program emails. This page is not affiliated with Google, Google Cloud or Hack2skill; it exists so the citation survives if the original publication is taken offline.</p>
+      <p><strong>Archive layers.</strong> Three independent witnesses pin the captured content. (1) The integrity-verifiable self-hosted snapshot at <a href="#snapshot">&sect;5</a> with SHA-256 hashes. (2) The <a href="https://web.archive.org/web/20260520070455/https://docs.google.com/document/d/e/2PACX-1vT4mDtSeAgTKEjmhsXb1e9ssu-97ZN-bgkY2K8I8RpEvStXDDkaHLIVQ7zs6aAmelGR7xTg1r_Jy3iX/pub">archive.org / Wayback Machine snapshot</a> of the original Google Doc, captured 2026-05-20 07:04:55 UTC. (3) Git commit history of this directory, providing a content-addressed timestamp of when each file in the snapshot was first staged.</p>
+      <p>Last updated 2026-05-20 &middot; Adityo Nugroho &middot; adityo.nugroho.id@gmail.com</p>
+    </div>
+
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="grid">
+      <div class="foot-brand">
+        {% include "_brand.html" %}
+        <p>Multi-agent telecom incident ticketing in seconds. APAC GenAI Academy 2026.</p>
+      </div>
+
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="{{ url_for('landing') }}#how-it-works">How it works</a></li>
+          <li><a href="{{ url_for('app_workspace') }}">Try NetPulse AI</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Data Viewer</h5>
+        <ul>
+          <li><a href="{{ url_for('network_events') }}">Network Events</a></li>
+          <li><a href="{{ url_for('call_records') }}">Call Records</a></li>
+          <li><a href="{{ url_for('tickets') }}">Incident Tickets</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Resources</h5>
+        <ul>
+          <li><a href="{{ url_for('docs') }}">Documentation</a></li>
+          <li><a href="{{ url_for('docs') }}#architecture">Architecture</a></li>
+          <li><a href="{{ url_for('docs') }}#byod">Bring Your Own Data</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Project</h5>
+        <ul>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">README</a></li>
+          <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          <li><a href="https://hack2skill.com/event/apac-genaiacademy?tab=overview&utm_source=hack2skill&utm_medium=homepage" target="_blank" rel="noopener">APAC GenAI 2026</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Press Kit</h5>
+        <ul>
+          <li><a href="{{ url_for('top100') }}#announcement">Announcement</a></li>
+          <li><a href="{{ url_for('top100') }}#credentials">Credentials</a></li>
+          <li><a href="{{ url_for('top100') }}#roster">Full roster</a></li>
+          <li><a href="{{ url_for('top100') }}#snapshot">Source snapshot</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-base">
+      <span>&copy; 2026 Adityo Nugroho &middot; NetPulse AI</span>
+      <div class="foot-social">
+        <a href="https://github.com/adityonugrohoid" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-1.93c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.27-1.7-1.27-1.7-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.27-5.23-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.17a10.92 10.92 0 0 1 5.74 0c2.19-1.48 3.15-1.17 3.15-1.17.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='site.js') }}"></script>
+</body>
+</html>

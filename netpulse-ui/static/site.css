@@ -1326,34 +1326,36 @@
   }
   .foot .grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-    gap: 40px;
+    grid-template-columns: 1fr repeat(5, minmax(120px, max-content));
+    column-gap: 32px;
+    row-gap: 40px;
     margin-bottom: 64px;
+    align-items: start;
   }
   .foot-brand .brand { font-size: 28px; }
   .foot-brand .brand .mark { width: 36px; height: 36px; }
   .foot-brand p {
-    margin-top: 18px;
+    margin-top: 16px;
     font-family: 'Inter', sans-serif;
     font-style: normal;
-    font-size: 15px;
+    font-size: 13px;
     color: var(--ink-3);
-    max-width: 320px;
+    max-width: 280px;
     line-height: 1.55;
   }
   .foot-col h5 {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11.5px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     color: var(--ink-3);
-    margin-bottom: 18px;
+    margin-bottom: 14px;
     font-weight: 500;
   }
   .foot-col ul { list-style: none; }
-  .foot-col li { margin-bottom: 10px; }
+  .foot-col li { margin-bottom: 8px; }
   .foot-col a {
-    font-size: 14.5px;
+    font-size: 12.5px;
     color: var(--ink-2);
     transition: color var(--t-fast);
   }

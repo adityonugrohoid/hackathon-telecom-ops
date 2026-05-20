@@ -22,7 +22,7 @@ FOOTER = re.search(r'<footer class="foot">.*?</footer>', src, re.DOTALL).group(0
 PAGES: list[dict] = [
     {
         "file": "network-events.html",
-        "title": "Network events — NetPulse AI",
+        "title": "Network events - NetPulse AI",
         "source_short": "BigQuery",
         "h1_pre": "Network",
         "h1_em": "events.",
@@ -73,7 +73,7 @@ PAGES: list[dict] = [
     },
     {
         "file": "call-records.html",
-        "title": "Call records — NetPulse AI",
+        "title": "Call records - NetPulse AI",
         "source_short": "AlloyDB · NL2SQL",
         "h1_pre": "Call",
         "h1_em": "records.",
@@ -125,7 +125,7 @@ PAGES: list[dict] = [
     },
     {
         "file": "tickets.html",
-        "title": "Incident tickets — NetPulse AI",
+        "title": "Incident tickets - NetPulse AI",
         "source_short": "AlloyDB · Write",
         "h1_pre": "Incident",
         "h1_em": "tickets.",

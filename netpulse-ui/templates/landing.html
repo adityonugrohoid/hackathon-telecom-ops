@@ -25,6 +25,7 @@
       <a href="#data-viewer">Data Viewer</a>
       <a href="#resources">Resources</a>
       <a href="{{ url_for('app_workspace') }}">Workspace</a>
+      <a href="{{ url_for('top100') }}">Press Kit</a>
       <a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">GitHub</a>
     </nav>
 
@@ -397,6 +398,15 @@
           <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops" target="_blank" rel="noopener">README</a></li>
           <li><a href="https://github.com/adityonugrohoid/hackathon-telecom-ops/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
           <li><a href="https://hack2skill.com/event/apac-genaiacademy?tab=overview&utm_source=hack2skill&utm_medium=homepage" target="_blank" rel="noopener">APAC GenAI 2026</a></li>
+        </ul>
+      </div>
+      <div class="foot-col">
+        <h5>Press Kit</h5>
+        <ul>
+          <li><a href="{{ url_for('top100') }}#announcement">Announcement</a></li>
+          <li><a href="{{ url_for('top100') }}#credentials">Credentials</a></li>
+          <li><a href="{{ url_for('top100') }}#roster">Full roster</a></li>
+          <li><a href="{{ url_for('top100') }}#snapshot">Source snapshot</a></li>
         </ul>
       </div>
     </div>

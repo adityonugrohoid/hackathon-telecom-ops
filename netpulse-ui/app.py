@@ -248,6 +248,12 @@ def docs():
     return render_template("docs.html", active_tab="docs")
 
 
+@app.route("/top100")
+def top100():
+    """Render the Top 100 press-kit page (Cohort 1 outcome mirror)."""
+    return render_template("top100.html", active_tab="top100")
+
+
 if __name__ == "__main__":
     # Cloud Run injects PORT later; locally we hardcode 8080.
     app.run(host="0.0.0.0", port=8080, debug=True)
