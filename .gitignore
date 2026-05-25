@@ -27,18 +27,29 @@ _smoke_test.py
 # regenerable from the live site or static mockup; ~4 MB binary blobs)
 .playwright-mcp/
 
-# Internal-only docs (build journals, design spec, SSE wiring reference,
-# migration plan) — kept locally, not published to the public repo
+# Local working files, not published to the public repo
 docs/internal/
-
-# Iteration screenshots from the build process — not user-facing assets
+docs/boq/
+docs/plan-a/
+docs/plan-b/
+docs/plan-c/
+scripts/build_cloud_boq_xlsx.py
+scripts/build_cloud_boq_xlsx.md
 docs/screenshots/
 
-# Submission deck artifacts (large binaries + paste-prep notes, kept locally — not in git)
-*.pptx
-*.pptx.*
-docs/Prototype Submission Deck*.pdf
-docs/deck-rewrite.txt
+# Static site mockup: kept local only, not part of the published repo
+static-mockup-rebuild/
+
+# Large submission binaries kept local; represented in-repo by the PDF
+# deck and the demo video link in the README
+docs/*.pptx
+docs/*.mp4
+
+# adk-web local dev path: kept local, not deployed. The README documents
+# `adk web` as a local CLI; these two files only served a container deploy
+# we decided against, so they stay local-only.
+telecom_ops/Dockerfile
+telecom_ops/requirements.txt
 
 # SQLite-bundled reconstitution: the materialized DB file is regenerated
 # from docs/seed-data/*.csv via scripts/build_sqlite.py; not committed.
