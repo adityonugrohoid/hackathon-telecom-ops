@@ -49,18 +49,18 @@ falling over to those regions returned 404 NOT_FOUND on the preview model
 the upstream agents actually use, surfacing as a hard agent failure
 instead of a successful failover."""
 
-INTERMEDIATE_MODEL: str = "gemini-3-flash-preview"
-"""Sibling preview-tier flash model used as the second-to-last attempt.
-Bridges the primary preview pool (gemini-3.1-flash-lite-preview) and the
-GA fallback so a sustained 429 on the headline model gets a chance at
-another preview-tier model with its own independent quota bucket before
-swapping all the way down to GA. Biases the ladder toward "newer model
-preferred even under primary-pool load." Verified addressable on `global`
-for this project on 2026-04-29 via a generateContent probe; if a future
-probe returns 404, the wrapper would propagate that without retry (404
-is non-quota per `_is_quota_error`) and the agent would fail visibly —
-at that point swap this constant to a known-addressable preview model
-or remove the intermediate row from `ATTEMPT_SCHEDULE`."""
+INTERMEDIATE_MODEL: str = "gemini-3.5-flash-lite"
+"""Sibling flash model used as the second-to-last attempt. Bridges the
+primary pool (gemini-3.1-flash-lite) and the GA fallback so a sustained
+429 on the headline model gets a chance at another flash-tier model with
+its own independent quota bucket before swapping all the way down to the
+2.5 GA lane. Swapped 2026-07-23 from `gemini-3-flash-preview` to this GA
+id: the primary's preview lane had just been retired (404), and a GA
+intermediate removes the last preview id from the ladder so a future
+preview retirement cannot take out a failover hop. Verified addressable
+on `global` for this project on 2026-07-23 via a generateContent probe
+(HTTP 200). If a future probe 404s anyway, `_is_model_gone_error` now
+advances the ladder instead of hard-failing the agent."""
 
 FALLBACK_MODEL: str = "gemini-2.5-flash"
 """GA model used as the last-resort attempt. 2.5 Flash is multi-region,
@@ -126,6 +126,8 @@ Worst-case wall clock per agent: 10 + 0.5 + 20 + 20 + 30 = 80.5s,
 well under Cloud Run's 300s request timeout."""
 
 _QUOTA_MARKERS: tuple[str, ...] = ("RESOURCE_EXHAUSTED", " 429", "QUOTA")
+
+_MODEL_GONE_MARKERS: tuple[str, ...] = ("NOT_FOUND", " 404")
 
 AttemptCallback = Callable[[str, str, str, str | None], None]
 """(owner_name, model, outcome, error_message) — outcome is "ok" | "failover".
@@ -198,6 +200,29 @@ def _is_quota_error(exc: Exception) -> bool:
     """
     msg = str(exc).upper()
     return any(marker in msg for marker in _QUOTA_MARKERS)
+
+
+def _is_model_gone_error(exc: Exception) -> bool:
+    """Decide whether an exception means the target model id is unaddressable.
+
+    Vertex AI returns 404 NOT_FOUND ("Publisher model ... was not found or
+    your project does not have access to it") when a model id has been
+    retired or is gated off this project. Detection is a case-insensitive
+    substring match against `str(exc)` for `NOT_FOUND` or ` 404`. Treated
+    as a ladder-advance trigger (same as quota errors) so a retired model
+    degrades to a failover hop instead of halting the SequentialAgent —
+    this is exactly how the 2026-07-23 outage happened when Google retired
+    `gemini-3.1-flash-lite-preview` under a deployed image.
+
+    Args:
+        exc: The exception raised by the upstream Vertex AI call.
+
+    Returns:
+        True when the exception represents an unaddressable model id,
+        False otherwise.
+    """
+    msg = str(exc).upper()
+    return any(marker in msg for marker in _MODEL_GONE_MARKERS)
 
 
 class RegionFailoverGemini(Gemini):
@@ -298,7 +323,8 @@ class RegionFailoverGemini(Gemini):
             RuntimeError: When every entry in `ATTEMPT_SCHEDULE` has been
                 exhausted (quota or timeout).
             genai.errors.ClientError: When the upstream call raises a
-                non-quota client error (re-raised immediately, no retry).
+                client error that is neither quota (429) nor model-gone
+                (404) — re-raised immediately, no retry.
         """
         if stream:
             logger.info(
@@ -366,10 +392,11 @@ class RegionFailoverGemini(Gemini):
                 )
                 last_exc = exc
             except genai_errors.ClientError as exc:
-                if not _is_quota_error(exc):
+                if not (_is_quota_error(exc) or _is_model_gone_error(exc)):
                     raise
                 logger.warning(
-                    "Vertex AI 429 on model=%s; falling over. detail=%s",
+                    "Vertex AI %s on model=%s; falling over. detail=%s",
+                    "404" if _is_model_gone_error(exc) else "429",
                     active_model,
                     exc,
                 )
@@ -607,6 +634,87 @@ async def _self_test_persistent_429_swaps_to_fallback() -> None:
     )
 
 
+async def _self_test_retired_primary_404_swaps_to_intermediate() -> None:
+    """Verify a 404-retired primary walks the ladder instead of hard-failing.
+
+    Mocks `Gemini.generate_content_async` to raise 404 NOT_FOUND whenever
+    the request targets the primary (simulating Google retiring the model
+    id under a deployed image) and yield a sentinel for any other model.
+    Asserts the wrapper walked [primary, primary, INTERMEDIATE_MODEL],
+    yielded the sentinel from the intermediate, and the observer fired
+    three times (two failovers on the primary, one ok). This is the
+    2026-07-23 outage path: model retirement degrades to a failover hop.
+
+    Runtime: ~0.5s (inter-attempt sleep on attempt 2).
+    """
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    primary = "gemini-3.1-flash-lite"
+    call_log: list[str] = []
+    fake_request = SimpleNamespace(model=primary)
+
+    async def mock_parent_call(self, llm_request, _stream=False):
+        call_log.append(llm_request.model)
+        if llm_request.model == primary:
+            raise genai_errors.ClientError(
+                404,
+                {
+                    "error": {
+                        "code": 404,
+                        "status": "NOT_FOUND",
+                        "message": (
+                            f"Publisher Model `{llm_request.model}` was "
+                            "not found or your project does not have "
+                            "access to it."
+                        ),
+                    }
+                },
+            )
+        yield "FAKE_RESPONSE_FROM_INTERMEDIATE"
+
+    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "test-project")
+
+    observer_log: list[tuple[str, str, str, str | None]] = []
+
+    def observer(owner: str, model: str, outcome: str, err: str | None) -> None:
+        observer_log.append((owner, model, outcome, err))
+
+    set_attempt_observer(observer)
+    try:
+        with patch.object(Gemini, "generate_content_async", mock_parent_call):
+            wrapper = RegionFailoverGemini(model="gemini-2.5-flash")
+            wrapper.set_owner_name("test_agent_gone")
+            responses: list = []
+            async for response in wrapper.generate_content_async(
+                llm_request=fake_request
+            ):
+                responses.append(response)
+    finally:
+        set_attempt_observer(None)
+
+    assert call_log == [primary, primary, INTERMEDIATE_MODEL], (
+        f"expected primary x2 then intermediate, got {call_log}"
+    )
+    assert responses == ["FAKE_RESPONSE_FROM_INTERMEDIATE"], (
+        f"expected sentinel from intermediate, got {responses}"
+    )
+    assert len(observer_log) == 3, f"expected 3 observer calls, got {observer_log}"
+    assert (
+        observer_log[0][1] == primary and observer_log[0][2] == "failover"
+        and observer_log[1][1] == primary and observer_log[1][2] == "failover"
+        and "NOT_FOUND" in (observer_log[0][3] or "")
+    ), f"expected two 404 failovers on primary, got {observer_log[:2]}"
+    assert observer_log[2] == (
+        "test_agent_gone", INTERMEDIATE_MODEL, "ok", None
+    ), f"expected ok on intermediate, got {observer_log[2]}"
+    logger.info(
+        "OK: retired-primary 404 walked %s, fired observer %d times",
+        call_log,
+        len(observer_log),
+    )
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -617,6 +725,15 @@ if __name__ == "__main__":
     assert not _is_quota_error(Exception("PERMISSION_DENIED"))
     logger.info("OK: _is_quota_error matcher passes 5/5 cases")
 
+    assert _is_model_gone_error(Exception("404 NOT_FOUND: Publisher model"))
+    assert _is_model_gone_error(
+        Exception("Publisher Model `x` was not_found")
+    )
+    assert not _is_model_gone_error(Exception("INVALID_ARGUMENT: bad model"))
+    assert not _is_model_gone_error(Exception("HTTP 429 Too Many Requests"))
+    logger.info("OK: _is_model_gone_error matcher passes 4/4 cases")
+
     asyncio.run(_self_test_quota_retry_same_model())
     asyncio.run(_self_test_timeout_retry_same_model())
     asyncio.run(_self_test_persistent_429_swaps_to_fallback())
+    asyncio.run(_self_test_retired_primary_404_swaps_to_intermediate())
