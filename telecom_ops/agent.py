@@ -14,12 +14,15 @@ from .tools import (
 )
 from .vertex_failover import RegionFailoverGemini
 
-MODEL_FAST = "gemini-3.1-flash-lite-preview"
+MODEL_FAST = "gemini-3.1-flash-lite"
 """Speed-tier model for all four agents (classifier, network_investigator,
 cdr_analyzer, response_formatter). Each runs a tool call + small reasoning
 step (or, for the formatter, a save_incident_ticket call + synthesis),
-which Flash-Lite handles cheaply and quickly. Reverted 2026-04-29 from
-the 2.5 GA lane (`gemini-2.5-flash-lite`) back to the 3.1 preview after a
+which Flash-Lite handles cheaply and quickly. Moved 2026-07-23 from
+`gemini-3.1-flash-lite-preview` to this GA id after Google retired the
+preview lane (generateContent returned 404 NOT_FOUND on `global`; the GA
+successor probed 200). Earlier history: reverted 2026-04-29 from the 2.5
+GA lane (`gemini-2.5-flash-lite`) back to the 3.1 preview after a
 production trace showed the network_investigator stuck "running" with no
 final text event under 2.5-flash-lite — suspected to be a model behavior
 where the second LLM call after the toolbox SQL result emits only a
