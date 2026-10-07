@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Cloud Run](https://img.shields.io/badge/Cloud%20Run-live-34A853.svg)](https://netpulse-ui-670100779564.asia-southeast2.run.app/)
 
-**Multi-agent telecom ops assistant that turns a natural-language complaint into a structured incident ticket in 25 to 30 seconds**
+**Multi-agent telecom ops assistant that turns a natural-language complaint into a structured incident ticket**
 
 [Features](#features) | [Architecture](#architecture) | [Demo](#demo) | [Getting Started](#getting-started) | [Deployment](#deployment)
 
@@ -40,21 +40,20 @@ When a customer reports something like "Major dropped calls in Surabaya", a NOC 
 
 ### The Solution
 
-NetPulse AI does all of that in a single natural-language step. Built for the Google Cloud Gen AI Academy APAC 2026 hackathon, it runs the workflow as a Google ADK `SequentialAgent` orchestrating four `LlmAgent` sub-agents, each backed by Gemini on Vertex AI. End-to-end latency is 25 to 30 seconds including all four LLM calls and three live database round-trips.
+NetPulse AI does all of that in a single natural-language step. Built for the Google Cloud Gen AI Academy APAC 2026 hackathon, it runs the workflow as a Google ADK `SequentialAgent` orchestrating four `LlmAgent` sub-agents, each backed by Gemini on Vertex AI. Five preset runs measured 9.8 to 20.8 s end to end, including all four LLM calls (2026-04-29, before the move to the bundled SQLite store and the current GA models; see [docs/LESSONS.md](docs/LESSONS.md)).
 
 Selected Top 100 at Google Cloud Gen AI Academy APAC 2026 (Cohort 1, entry 82 of the published roster; the announcement, certificates and a hashed source snapshot are mirrored on the app's [/top100 page](https://netpulse-ui-670100779564.asia-southeast2.run.app/top100)). A private network-performance variant of this design, NetPulse Perf, runs on a tier-1 operator's real weekly performance data and was demoed to the operator's operations team; it stays private because of that data.
 
 ## Features
 
 - **Multi-agent orchestration.** Four specialized ADK `LlmAgent` sub-agents chained by a `SequentialAgent`, each owning one responsibility, one tool (or one toolset), and one `output_key` written into `session.state`. Downstream agents read upstream state via defensive `{key?}` substitution so a partial chain still produces a graceful report.
-- **Two parameterized SQL tools cover the CDR analyzer's prompt surface.** `query_cdr_summary(region, days_back)` returns the call_type by call_status breakdown; `query_cdr_worst_towers(region, days_back, limit)` ranks cell towers by (dropped + failed) / total. Both run as fixed-shape aggregations against the SQLite `call_records` table in under 50 ms. The agent's prompt encodes a window-mapping table ("last 7 days" maps to `days_back=7`) so dispatch is deterministic.
-- **Indexed lookups on the bundled SQLite store.** `network_events` is indexed on `(region, severity, started_at)` across 50,000 events, 10 cities, and 6 months of seed data; `call_records` is indexed on `(region, call_date)`. Time-windowed scans complete in under 50 ms end-to-end. The seed data is frozen, so every "last N days" window ends at the newest event in the store rather than at wall-clock now, and the workspace shows that date as "data as of".
+- **Two parameterized SQL tools cover the CDR analyzer's prompt surface.** `query_cdr_summary(region, days_back)` returns the call_type by call_status breakdown; `query_cdr_worst_towers(region, days_back, limit)` ranks cell towers by (dropped + failed) / total. Both run as fixed-shape aggregations against the SQLite `call_records` table. The agent's prompt encodes a window-mapping table ("last 7 days" maps to `days_back=7`) so dispatch is deterministic.
+- **Indexed lookups on the bundled SQLite store.** `network_events` is indexed on `(region, severity, started_at)` across 50,000 events, 10 cities, and 6 months of seed data; `call_records` is indexed on `(region, call_date)`. Measured 2026-10-08 on a laptop against the bundled store, five presets times ten repeats: each tool's SQL runs in under 7 ms, and a full call through a local MCP Toolbox takes 2 to 10 ms median (under 25 ms max). The seed data is frozen, so every "last N days" window ends at the newest event in the store rather than at wall-clock now, and the workspace shows that date as "data as of".
 - **Vertex AI failover that's visible in the UI.** Every LLM call routes through `RegionFailoverGemini`, which targets the single `global` Vertex endpoint and walks a 4-attempt model ladder on `RESOURCE_EXHAUSTED` 429 or `asyncio.TimeoutError`: primary `gemini-3.1-flash-lite` at a 10s timeout, then the primary again after a 0.5s sleep at 20s, then `gemini-3.5-flash-lite` intermediate at 20s, then `gemini-2.5-flash` fallback at 30s. Each model has its own quota bucket, so the fallback is a real escape hatch under primary-pool pressure. The chat workspace renders the walk as a per-model chip on each timeline entry, so failure shows as model-swap hops rather than a hard 500.
 - **Streaming SSE chat with collapsible per-agent terminal panels.** The Flask workspace renders the agent run as a four-card vertical timeline with a terminal panel inside each card (traffic-light bar plus populated mono output below). Each panel collapses by default and expands on click. Live timer, status pill, and model-failover chip stay visible without expanding.
 - **Persistent structured output.** Every run inserts an auditable row in the SQLite `incident_tickets` table with category, region, related events, CDR findings, and a NOC recommendation. AUTOINCREMENT picks up from the seed's MAX(ticket_id)+1 so agent-written rows don't collide with seeds. The workspace surfaces the saved ticket back to the operator with a category-keyed chip panel of recommended NOC actions.
 - **Two frontends, one engine.** A custom NetPulse UI (Flask + SSE) for the branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
 - **Boot-resilient by design.** The MCP Toolbox client is wrapped in `try/except` so the agent boots even when the toolbox is cold. SQLite reads from the data viewer tabs degrade to a friendly error if the file is missing rather than crashing the Flask process. The agent runner is lazy-loaded so frontend tabs that don't need the agent stay functional even if the toolbox is unreachable.
-- **Validated end-to-end.** 70+ incident tickets created across 5 Indonesian regions and 3 issue categories during pre-submission and refinement-phase testing. Zero unrecovered demo failures: every preview-model 429 either clears on the same-model retry (most cases) or surfaces visibly as a model-swap chip and still produces a complete ticket.
 
 ## Tech Stack
 
@@ -156,7 +155,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r netpulse-ui/requirements.txt
 
-# Build the bundled SQLite store from the seed CSVs (idempotent, under 2s)
+# Build the bundled SQLite store from the seed CSVs (idempotent; about 0.5 s on a laptop)
 python scripts/build_sqlite.py
 
 # Authenticate against a GCP project with Vertex AI enabled
@@ -269,7 +268,7 @@ gcloud run deploy netpulse-ui \
   --set-env-vars=GOOGLE_CLOUD_PROJECT=<your-project>,GOOGLE_CLOUD_LOCATION=global,GOOGLE_GENAI_USE_VERTEXAI=TRUE,TOOLBOX_URL=<toolbox-url-from-step-1>
 ```
 
-Scale-to-zero is intentional: no `--min-instances`, no `--no-cpu-throttling`. The only paid runtime line item is Vertex Gemini per query (about $0.001/run on Flash-Lite); Cloud Run and Artifact Registry sit inside the free tier for demo cadence. Cold starts are 2 to 3 s; warm with a `curl` 30 s before a live demo if first-question latency matters.
+Scale-to-zero is intentional: no `--min-instances`, no `--no-cpu-throttling`. The only paid runtime line item is Vertex Gemini per query; Cloud Run and Artifact Registry sit inside the free tier for demo cadence. The first request after idle pays a cold start; warm with a `curl` 30 s before a live demo if first-question latency matters.
 
 Tickets written by the agent persist for the container instance's lifetime. Cloud Run scale-to-zero loses them across cold starts, which is acceptable for the demo, not for production. The fix is a one-line `tools.yaml` substrate swap to a durable backend; see [Architecture](#architecture).
 
