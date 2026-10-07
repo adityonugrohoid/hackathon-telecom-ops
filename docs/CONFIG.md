@@ -9,7 +9,7 @@ parser. Anything already in the shell wins over the file (`os.environ.setdefault
 
 | Variable | Purpose | Default / example |
 |---|---|---|
-| `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI (required) | `velvety-transit-493310-q0` |
+| `GOOGLE_CLOUD_PROJECT` | GCP project for Vertex AI (required) | `<your-project>` |
 | `GOOGLE_CLOUD_LOCATION` | Vertex AI inference region | `global` |
 | `GOOGLE_GENAI_USE_VERTEXAI` | Force Vertex AI (vs Google AI Studio API key) | `TRUE` |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to ADC JSON for local runs | `~/.config/gcloud/legacy_credentials/<account>/adc.json` |
