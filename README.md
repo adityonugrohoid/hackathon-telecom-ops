@@ -238,7 +238,6 @@ hackathon-telecom-ops/
 ├── docs/                    # SCHEMA.md, CONFIG.md, LESSONS.md, architecture.png/.mmd
 │   └── seed-data/           # Canonical CSVs (network_events, call_records, incident_tickets)
 ├── data/                    # Generated SQLite file (gitignored; rebuilt by scripts/build_sqlite.py)
-├── static-mockup-rebuild/   # Locked design sandbox (6 HTML pages, shared CSS)
 ├── Dockerfile               # Cloud Run image for netpulse-ui (parent-level so both packages get copied)
 ├── CLAUDE.md                # Project context for AI assistants
 └── README.md

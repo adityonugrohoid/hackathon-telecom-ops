@@ -237,11 +237,6 @@ or docs unless explicitly requested.
   (5 000 CDRs), `incident_tickets.csv` (10 sample rows)
 - [`docs/SCHEMA.md`](docs/SCHEMA.md) — column-by-column data contract for
   the 3 tables
-- `docs/internal/` — phase journals, SSE wiring reference, design spec,
-  migration plan (build notes; gitignored — local-only)
-- [`static-mockup-rebuild/`](static-mockup-rebuild/) — locked design surface
-  (6 HTML pages + shared `css/site.css` + `js/site.js`);
-  `_canonical-reference.html` is the original anchor
 - [`toolbox-service/`](toolbox-service/) — MCP Toolbox image source:
   `tools.yaml` (5 SQLite-SQL tools split across `telecom_network_toolset`
   and `cdr_toolset`) and `Dockerfile` (genai-toolbox v0.23.0 binary on
