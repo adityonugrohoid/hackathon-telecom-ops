@@ -767,10 +767,10 @@ window.addEventListener('DOMContentLoaded', npOnLoad);
 // Dedupe is GLOBAL against every model already in the chip, so a primary
 // that appears in both walks (typical, since each fresh walk starts there)
 // renders once in first-encounter order:
-//   single ok                  → "via gemini-3.1-flash-lite-preview"
-//   primary 429-retry then ok  → "via gemini-3.1-flash-lite-preview" (same model collapses)
-//   primary swap to GA         → "via gemini-3.1-flash-lite-preview ↪ gemini-2.5-flash"
-//   full 4-attempt ladder walk → "via gemini-3.1-flash-lite-preview ↪ gemini-3-flash-preview ↪ gemini-2.5-flash"
+//   single ok                  → "via gemini-3.1-flash-lite"
+//   primary 429-retry then ok  → "via gemini-3.1-flash-lite" (same model collapses)
+//   primary swap to GA         → "via gemini-3.1-flash-lite ↪ gemini-2.5-flash"
+//   full 4-attempt ladder walk → "via gemini-3.1-flash-lite ↪ gemini-3.5-flash-lite ↪ gemini-2.5-flash"
 // Walk 1 fully + walk 2 succeeds on primary → chip still shows the full walk-1
 // chain (walk 2's primary is deduped by the existing entry). The chip is
 // fully reset between agent runs via npReset. The 'failover' modifier class

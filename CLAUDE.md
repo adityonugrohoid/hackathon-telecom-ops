@@ -29,10 +29,10 @@ read-only data viewer tabs and Server-Sent-Events streaming. Both deploy to
 Cloud Run; the SQLite file is baked into the container image. Each sub-agent
 picks its own model through the `RegionFailoverGemini` wrapper in
 `telecom_ops/vertex_failover.py` — all four currently share
-`MODEL_FAST = "gemini-3.1-flash-lite-preview"`. The wrapper targets the single
+`MODEL_FAST = "gemini-3.1-flash-lite"`. The wrapper targets the single
 `global` Vertex endpoint and walks a 4-attempt model ladder on
 `RESOURCE_EXHAUSTED` 429 or per-attempt `asyncio.TimeoutError`: primary 10s →
-primary +0.5s sleep 20s → `gemini-3-flash-preview` intermediate 20s →
+primary +0.5s sleep 20s → `gemini-3.5-flash-lite` intermediate 20s →
 `gemini-2.5-flash` GA fallback 30s. Each attempt cancels the prior in-flight
 call so only one HTTP request is ever live per agent.
 
@@ -105,15 +105,15 @@ These look optional but each one is load-bearing:
   |---|---------------------------|---------|-----------|
   | 1 | primary                   | 10s     | 0s        |
   | 2 | primary                   | 20s     | 0.5s      |
-  | 3 | `gemini-3-flash-preview`  | 20s     | 0s        |
+  | 3 | `gemini-3.5-flash-lite`   | 20s     | 0s        |
   | 4 | `gemini-2.5-flash`        | 30s     | 0s        |
 
   Worst-case per agent: 80.5s. The 10s attempt-1 timeout is critical — without
   it a stuck TCP socket hangs the full Cloud Run 300s window. The ladder swaps
   **models**, not regions, because preview models are gated to specific
-  regions per project (`gemini-3.1-flash-lite-preview` is `global`-only here,
+  regions per project (`gemini-3.1-flash-lite-preview` was `global`-only here,
   so the previous region ladder always 404'd on the first failover hop). The
-  intermediate (`gemini-3-flash-preview`) gives a same-tier swap before
+  intermediate (`gemini-3.5-flash-lite`) gives a same-tier swap before
   collapsing to GA; each model has its own quota bucket so the GA fallback
   remains a real escape hatch. `agent.py` builds a fresh wrapper per
   `LlmAgent` so the four agents own independent failover state. Streaming
@@ -121,7 +121,7 @@ These look optional but each one is load-bearing:
   cannot be safely replayed; NetPulse uses `stream=False`.
 
 - **Per-agent model selection** in `telecom_ops/agent.py`. Two named
-  constants: `MODEL_FAST = "gemini-3.1-flash-lite-preview"` and
+  constants: `MODEL_FAST = "gemini-3.1-flash-lite"` and
   `MODEL_SYNTHESIS = MODEL_FAST` (currently collapsed). Re-splitting is safe
   under the model ladder since attempt 4's `gemini-2.5-flash` GA fallback
   covers any global-only primary. Revert option:
