@@ -12,8 +12,8 @@ Mix (chosen to look like real ops volume — most events are scheduled):
    3% restoration   (paired with each outage, marks resolution)
 
 Determinism: a single random.Random(20260426) is used for every roll,
-so re-running yields byte-identical output. The seed value matches the
-Phase 10 convention.
+so re-running yields byte-identical output. The seed value is shared with
+scripts/generate_call_records.py.
 
 Run:
     python scripts/generate_network_events.py

@@ -31,7 +31,7 @@ asks for. The failover ladder retains `gemini-2.5-flash` (GA standard) as
 the persistent-pressure fallback."""
 
 MODEL_SYNTHESIS = MODEL_FAST
-"""Synthesis tier collapsed onto MODEL_FAST. Phase 9 round 2 (2026-04-26)
+"""Synthesis tier collapsed onto MODEL_FAST. A 2026-04-26 trace review
 verified that Flash-Lite-preview produces clean incident-ticket synthesis
 on the response_formatter step, and keeping a single primary model means
 the failover ladder behaves identically across all four agents (no
