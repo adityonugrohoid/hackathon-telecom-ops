@@ -135,7 +135,7 @@ Demo video: **[youtu.be/tPrxqHku4Lw](https://youtu.be/tPrxqHku4Lw)**
 
 Two Cloud Run services backed by a single bundled SQLite file (no managed DB). The original hackathon architecture on BigQuery + AlloyDB is one [`tools.yaml`](toolbox-service/tools.yaml) `sources:` swap away. See [Architecture](#architecture).
 
-![Architecture](docs/architecture.png)
+![Architecture](netpulse-ui/static/architecture.png)
 
 ## Getting Started
 
@@ -236,7 +236,7 @@ hackathon-telecom-ops/
 ├── netpulse-ui/             # Flask UI + SSE chat + 3 data viewer tabs
 ├── toolbox-service/         # MCP Toolbox image: Go binary + tools.yaml + baked SQLite
 ├── scripts/                 # build_sqlite.py + deploy_toolbox.sh + run_toolbox_local.sh + seed generators
-├── docs/                    # SCHEMA.md, CONFIG.md, LESSONS.md, architecture.png/.mmd
+├── docs/                    # SCHEMA.md, CONFIG.md, LESSONS.md, architecture.mmd
 │   └── seed-data/           # Canonical CSVs (network_events, call_records, incident_tickets)
 ├── data/                    # Generated SQLite file (gitignored; rebuilt by scripts/build_sqlite.py)
 ├── Dockerfile               # Cloud Run image for netpulse-ui (parent-level so both packages get copied)
