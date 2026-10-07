@@ -34,6 +34,7 @@ from data_queries import (
     read_call_records,
     read_incident_tickets,
     read_network_events,
+    read_reference_timestamp,
 )
 
 logging.basicConfig(
@@ -111,9 +112,16 @@ def landing():
 
 @app.route("/app")
 def app_workspace():
-    """Render the chat workspace UI with example query chips."""
+    """Render the chat workspace UI with example query chips.
+
+    ``reference_ts`` is the demo clock (newest event in the bundled store),
+    shown as "data as of" and used for the impact card's "since onset".
+    """
     return render_template(
-        "chat.html", active_tab="chat", examples=EXAMPLE_COMPLAINTS
+        "chat.html",
+        active_tab="chat",
+        examples=EXAMPLE_COMPLAINTS,
+        reference_ts=read_reference_timestamp(),
     )
 
 

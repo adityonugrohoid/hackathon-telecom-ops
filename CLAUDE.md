@@ -70,7 +70,7 @@ These look optional but each one is load-bearing:
 
 - **`datetime()` arithmetic for time windows.** SQLite has no
   `TIMESTAMP_SUB` or `make_interval`. The toolbox SQL uses
-  `datetime('now', '-' || ?N || ' days')` to build a string modifier from
+  `datetime(<ref>, '-' || ?N || ' days')` to build a string modifier from
   the integer `days_back` parameter. String concatenation via `||` is the
   whole trick — SQLite auto-coerces the integer. Same pattern handles
   `weeks_back` via `(?N * 7)`.
@@ -90,11 +90,18 @@ These look optional but each one is load-bearing:
   single-writer model is fine here — the agent chain is serialized
   end-to-end.
 
-- **Seed-data window slides with `datetime.now()`.**
-  `scripts/generate_network_events.py` and `generate_call_records.py`
-  anchor `WINDOW_END` at today's date and `WINDOW_START` at today minus
-  180 days. So a regenerated CSV always covers the most recent 6 months
-  and the agent's "last 7 days" default lands on populated data. The seed
+- **Demo clock is the newest event in the bundled store, not wall-clock
+  now.** The committed seed CSVs are frozen (events 2025-11-18 to
+  2026-05-18), so `datetime('now')` windows went empty once the calendar
+  moved past them. Every toolbox window uses
+  `<ref> = (SELECT MAX(started_at) FROM network_events)`, CDR tools
+  included, so network and CDR evidence share one timeline; the lookup is a
+  single seek on `idx_events_started_at`. The workspace reads the same value
+  through `data_queries.read_reference_timestamp()`, shows it as "data as
+  of" in the toolbar, and measures the impact card's "since onset" from it.
+  The generators (`scripts/generate_network_events.py`,
+  `generate_call_records.py`) still anchor their 180-day window at
+  `datetime.now()`; that only matters when regenerating the CSVs. The seed
   is otherwise deterministic (fixed `SEED = 20260426`).
 
 - **Vertex AI model-ladder failover** in `telecom_ops/vertex_failover.py`. All
@@ -223,7 +230,8 @@ or docs unless explicitly requested.
   `127.0.0.1:5000` against the local `tools.yaml`
 - [`scripts/generate_network_events.py`](scripts/generate_network_events.py),
   [`scripts/generate_call_records.py`](scripts/generate_call_records.py) —
-  deterministic seed generators anchored at `datetime.now()`
+  deterministic seed generators anchored at `datetime.now()` (only used to
+  regenerate the CSVs; the bundled store's clock is its newest event)
 - [`docs/seed-data/`](docs/seed-data/) — canonical sample data:
   `network_events.csv` (50 000 events, 10 cities), `call_records.csv`
   (5 000 CDRs), `incident_tickets.csv` (10 sample rows)

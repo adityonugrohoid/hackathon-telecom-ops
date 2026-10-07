@@ -28,6 +28,10 @@
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: #4a8c5e; box-shadow: 0 0 0 2px rgba(74,140,94,.18);"></span>Vertex&nbsp;Gemini</span>
       <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
       <span aria-label="Active model" style="color: var(--ink-2);">{{ active_model }}</span>
+      {% if reference_ts %}
+      <span aria-hidden="true" style="width: 1px; height: 14px; background: var(--hairline);"></span>
+      <span id="np-reference" data-ts="{{ reference_ts }}" aria-label="Data reference date" title="Newest event in the bundled store; every 'last N days' window ends here">data as of {{ reference_ts[:10] }}</span>
+      {% endif %}
     </div>
 
     <div class="nav-cta">
@@ -473,11 +477,18 @@ function npFormatNum(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+// "Since onset" is measured against the demo clock (the newest event in the
+// bundled store, rendered by app.py into #np-reference), not wall-clock now:
+// the seed data is frozen, so Date.now() would read months past every event.
+// No reference date means no elapsed label.
 function npFormatElapsed(iso) {
   if (!iso) return '';
+  var ref = document.getElementById('np-reference');
+  if (!ref) return '';
+  var now = Date.parse(ref.dataset.ts);
   var t = Date.parse(iso);
-  if (isNaN(t)) return '';
-  var diff = Date.now() - t;
+  if (isNaN(t) || isNaN(now)) return '';
+  var diff = now - t;
   if (diff < 0) return 'just now';
   var mins = Math.floor(diff / 60000);
   if (mins < 1) return '<1m';
