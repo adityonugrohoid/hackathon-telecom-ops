@@ -5,7 +5,7 @@
    mappings, backend palettes) live in tokens.css and load FIRST. This file
    only consumes them via var(--*).
 
-   Refactor scope (Phase 2): dropped the :root block (moved to tokens.css),
+   Refactor scope (token migration): dropped the :root block (moved to tokens.css),
    swapped exact-match hardcoded values (4/8/12/16/24px spacing, matching
    border-radii, system font stacks, and the two recurring card/header
    shadows) to tokens. Off-grid values (10px, 14px, 18px, 22px, etc.) are

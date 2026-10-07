@@ -50,7 +50,7 @@
     <h1 class="display">The build behind <em>NetPulse AI</em></h1>
     <p class="lede">Architecture, data, and what it took to ship &mdash; from the four-agent SequentialAgent down to the indexes on the bundled SQLite store.</p>
     <div class="dv-meta-row">
-      <span class="dv-meta-pill"><b>phase</b> Top 100 &middot; refinement</span>
+      <span class="dv-meta-pill"><b>result</b> Top 100</span>
       <span class="dv-meta-pill"><b>due</b> 2026-04-30</span>
       <span class="dv-meta-pill"><b>stack</b> ADK &middot; Vertex &middot; MCP Toolbox &middot; SQLite</span>
       <span class="dv-meta-pill"><b>code</b> github / hackathon-telecom-ops</span>
@@ -60,7 +60,7 @@
 
 <div class="wrap">
   <div class="docs-shell">
-    <aside class="docs-toc"><div class="docs-toc-title">On this page</div><ol><li><a href="#about"><span class="num">01</span><span>About</span></a></li><li><a href="#architecture"><span class="num">02</span><span>Architecture</span></a></li><li><a href="#stack"><span class="num">03</span><span>Tech stack</span></a></li><li><a href="#data"><span class="num">04</span><span>Data schema</span></a></li><li><a href="#byod"><span class="num">05</span><span>Bring your own data</span></a></li><li><a href="#phases"><span class="num">06</span><span>Phase history</span></a></li><li><a href="#roadmap"><span class="num">07</span><span>Roadmap</span></a></li></ol></aside>
+    <aside class="docs-toc"><div class="docs-toc-title">On this page</div><ol><li><a href="#about"><span class="num">01</span><span>About</span></a></li><li><a href="#architecture"><span class="num">02</span><span>Architecture</span></a></li><li><a href="#stack"><span class="num">03</span><span>Tech stack</span></a></li><li><a href="#data"><span class="num">04</span><span>Data schema</span></a></li><li><a href="#byod"><span class="num">05</span><span>Bring your own data</span></a></li><li><a href="#phases"><span class="num">06</span><span>Build history</span></a></li><li><a href="#roadmap"><span class="num">07</span><span>Roadmap</span></a></li></ol></aside>
     <div class="docs-body">
 
 <section id="about" class="docs-section">
@@ -173,13 +173,13 @@ data, the region whitelist, and the parameterized-SQL bodies in
 
 
 <section id="phases" class="docs-section">
-  <span class="eyebrow accent">/ 06 &mdash; Phase history</span>
-  <h2 class="serif">Phase history <em>over time</em></h2>
+  <span class="eyebrow accent">/ 06 &mdash; Build history</span>
+  <h2 class="serif">Build history <em>over time</em></h2>
 
 <p>NetPulse AI was built through a series of timeboxed
-phases. Each phase landed in a single PR (in most cases) and was
+iterations. Each iteration landed in a single PR (in most cases) and was
 visually verified end-to-end before the next began.</p>
-<ul class="docs-news"><li><span class="date">May 17, 2026</span><span class="cat">Architecture</span><a class="title" href="#phases">Phase 13 &mdash; SQLite reconstitution: BigQuery + AlloyDB collapsed onto a single bundled SQLite file via MCP Toolbox <code>kind: sqlite-sql</code></a><span class="arrow">&rarr;</span></li><li><span class="date">April 29, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Phase 12 &mdash; Vertex model-ladder failover replaces region ladder</a><span class="arrow">&rarr;</span></li><li><span class="date">April 28, 2026</span><span class="cat">Architecture</span><a class="title" href="#phases">Phase 11 &mdash; AlloyDB AI NL2SQL replaces hand-written CDR SQL (later removed in Phase 13)</a><span class="arrow">&rarr;</span></li><li><span class="date">April 27, 2026</span><span class="cat">Refactor</span><a class="title" href="#phases">Phase 10 &mdash; MCP toolbox refactor 8 tools &rarr; 2 universal tools</a><span class="arrow">&rarr;</span></li><li><span class="date">April 26, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Phase 9 &mdash; Flash-Lite collapse + observer pill model unification</a><span class="arrow">&rarr;</span></li><li><span class="date">April 25, 2026</span><span class="cat">Ship</span><a class="title" href="#phases">Phase 8 &mdash; Single consolidated Cloud Run redeploy</a><span class="arrow">&rarr;</span></li><li><span class="date">April 24, 2026</span><span class="cat">Foundation</span><a class="title" href="#phases">Phases 1&ndash;7 &mdash; Refinement runway: audit &rarr; tokens &rarr; region failover &rarr; visual redesign &rarr; UX fixes &rarr; reproducibility &rarr; story polish</a><span class="arrow">&rarr;</span></li><li><span class="date">April 23, 2026</span><span class="cat">Milestone</span><a class="title" href="#phases">Top 100 &mdash; APAC GenAI Academy 2026 selection</a><span class="arrow">&rarr;</span></li></ul>
+<ul class="docs-news"><li><span class="date">May 17, 2026</span><span class="cat">Architecture</span><a class="title" href="#phases">SQLite reconstitution: BigQuery + AlloyDB collapsed onto a single bundled SQLite file via MCP Toolbox <code>kind: sqlite-sql</code></a><span class="arrow">&rarr;</span></li><li><span class="date">April 29, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Vertex model-ladder failover replaces region ladder</a><span class="arrow">&rarr;</span></li><li><span class="date">April 28, 2026</span><span class="cat">Architecture</span><a class="title" href="#phases">AlloyDB AI NL2SQL replaces hand-written CDR SQL (later removed with the SQLite move)</a><span class="arrow">&rarr;</span></li><li><span class="date">April 27, 2026</span><span class="cat">Refactor</span><a class="title" href="#phases">MCP toolbox refactor: 8 tools to 2 universal tools</a><span class="arrow">&rarr;</span></li><li><span class="date">April 26, 2026</span><span class="cat">Engineering</span><a class="title" href="#phases">Flash-Lite collapse + observer pill model unification</a><span class="arrow">&rarr;</span></li><li><span class="date">April 25, 2026</span><span class="cat">Ship</span><a class="title" href="#phases">Single consolidated Cloud Run redeploy</a><span class="arrow">&rarr;</span></li><li><span class="date">April 24, 2026</span><span class="cat">Foundation</span><a class="title" href="#phases">Refinement runway: audit, tokens, region failover, visual redesign, UX fixes, reproducibility, story polish</a><span class="arrow">&rarr;</span></li><li><span class="date">April 23, 2026</span><span class="cat">Milestone</span><a class="title" href="#phases">Top 100 &mdash; APAC GenAI Academy 2026 selection</a><span class="arrow">&rarr;</span></li></ul>
 
 </section>
 

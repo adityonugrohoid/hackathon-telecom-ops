@@ -16,7 +16,7 @@ spreading uniformly.
 
 Determinism: a single random.Random(20260426) is used for every roll,
 so re-running yields byte-identical output. The seed value matches the
-Phase 10 convention and the network-events generator (so anchor windows
+network-events generator (so anchor windows
 land on the same rolled timestamps if both seeds are the same).
 
 Run:
