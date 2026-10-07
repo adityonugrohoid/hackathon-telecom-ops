@@ -120,6 +120,37 @@ def _row_range(rows: list[dict[str, Any]], col: str) -> tuple[str, str]:
     return (min(values), max(values))
 
 
+def read_reference_timestamp() -> str | None:
+    """Return the newest ``started_at`` in network_events (the demo clock).
+
+    The bundled seed data is frozen at build time, so wall-clock "now" drifts
+    past it. The toolbox SQL in ``toolbox-service/tools.yaml`` anchors every
+    "last N days" window on this same ``MAX(started_at)``; the workspace
+    renders it as the "data as of" date and measures "since onset" from it.
+
+    Returns:
+        The ``started_at`` string of the newest event, or None (logged) when
+        the file is missing, the query fails, or the table is empty, so the
+        workspace hides the date instead of crashing.
+    """
+    conn = _connect()
+    if conn is None:
+        return None
+    try:
+        value = conn.execute(
+            f"SELECT MAX(started_at) FROM {NETWORK_EVENTS_TABLE}"
+        ).fetchone()[0]
+    except sqlite3.Error:
+        logger.exception("reference timestamp query failed")
+        return None
+    finally:
+        conn.close()
+    if value is None:
+        logger.warning("%s is empty; no reference timestamp", NETWORK_EVENTS_TABLE)
+        return None
+    return str(value)
+
+
 def read_network_events(
     region: str | None = None,
     severity: str | None = None,

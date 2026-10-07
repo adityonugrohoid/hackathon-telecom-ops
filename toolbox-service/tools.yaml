@@ -9,6 +9,14 @@ sources:
     database: data/netpulse.sqlite
 
 tools:
+  # Demo clock: every "last N days" window ends at the newest event in the
+  # bundled store, (SELECT MAX(started_at) FROM network_events), not at
+  # datetime('now'). The seed data is frozen at build time, so wall-clock
+  # now would leave every window empty once the calendar moves past it.
+  # One reference for all five tools (CDR windows too) keeps the network and
+  # CDR evidence on the same timeline. MAX(started_at) is a single seek on
+  # idx_events_started_at.
+
   # --- Network-events tools ------------------------------------------------
 
   query_network_events:
@@ -20,7 +28,7 @@ tools:
       WHERE (?1 = '*' OR region = ?1)
         AND (?2 = '*' OR severity = ?2)
         AND (?3 = '*' OR event_type = ?3)
-        AND started_at >= datetime('now', '-' || ?4 || ' days')
+        AND started_at >= datetime((SELECT MAX(started_at) FROM network_events), '-' || ?4 || ' days')
       ORDER BY started_at DESC
       LIMIT ?5
     description: |
@@ -68,7 +76,7 @@ tools:
              SUM(affected_customers) AS total_affected
       FROM network_events
       WHERE (?1 = '*' OR region = ?1)
-        AND started_at >= datetime('now', '-' || ?2 || ' days')
+        AND started_at >= datetime((SELECT MAX(started_at) FROM network_events), '-' || ?2 || ' days')
       GROUP BY region, event_type
       ORDER BY total_affected DESC
     description: |
@@ -105,7 +113,7 @@ tools:
         AVG((julianday(resolved_at) - julianday(started_at)) * 1440.0) AS avg_mttr_minutes
       FROM network_events
       WHERE event_type IN ('outage', 'degradation')
-        AND started_at >= datetime('now', '-' || (?1 * 7) || ' days')
+        AND started_at >= datetime((SELECT MAX(started_at) FROM network_events), '-' || (?1 * 7) || ' days')
         AND (?2 = '*' OR region = ?2)
       GROUP BY week_start, region
       ORDER BY week_start DESC, total_affected DESC
@@ -145,7 +153,7 @@ tools:
       SELECT call_type, call_status, COUNT(*) AS call_count
       FROM call_records
       WHERE (?1 = '*' OR region = ?1)
-        AND call_date >= datetime('now', '-' || ?2 || ' days')
+        AND call_date >= datetime((SELECT MAX(started_at) FROM network_events), '-' || ?2 || ' days')
       GROUP BY call_type, call_status
       ORDER BY call_count DESC
     description: |
@@ -184,7 +192,7 @@ tools:
              ) AS bad_call_pct
       FROM call_records
       WHERE (?1 = '*' OR region = ?1)
-        AND call_date >= datetime('now', '-' || ?2 || ' days')
+        AND call_date >= datetime((SELECT MAX(started_at) FROM network_events), '-' || ?2 || ' days')
       GROUP BY cell_tower_id
       ORDER BY bad_call_pct DESC, total_calls DESC
       LIMIT ?3
