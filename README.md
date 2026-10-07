@@ -40,7 +40,9 @@ When a customer reports something like "Major dropped calls in Surabaya", a NOC 
 
 ### The Solution
 
-NetPulse AI does all of that in a single natural-language step. Built for the Gen AI Academy APAC Edition 2026 hackathon, it runs the workflow as a Google ADK `SequentialAgent` orchestrating four `LlmAgent` sub-agents, each backed by Gemini on Vertex AI. End-to-end latency is 25 to 30 seconds including all four LLM calls and three live database round-trips.
+NetPulse AI does all of that in a single natural-language step. Built for the Google Cloud Gen AI Academy APAC 2026 hackathon, it runs the workflow as a Google ADK `SequentialAgent` orchestrating four `LlmAgent` sub-agents, each backed by Gemini on Vertex AI. End-to-end latency is 25 to 30 seconds including all four LLM calls and three live database round-trips.
+
+Selected Top 100 at Google Cloud Gen AI Academy APAC 2026 (Cohort 1, entry 82 of the published roster; the announcement, certificates and a hashed source snapshot are mirrored on the app's [/top100 page](https://netpulse-ui-670100779564.asia-southeast2.run.app/top100)). A private network-performance variant of this design, NetPulse Perf, runs on a tier-1 operator's real weekly performance data and was demoed to the operator's operations team; it stays private because of that data.
 
 ## Features
 
