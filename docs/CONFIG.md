@@ -118,5 +118,5 @@ diff). On a 429 or TimeoutError you'll see an extra event with
 `"outcome": "failover"` and the upstream error in `message`, immediately
 followed by another attempt. The 4-attempt schedule walks: primary
 (attempt 1) → primary again after 0.5s (attempt 2) →
-`gemini-3-flash-preview` intermediate (attempt 3) → `gemini-2.5-flash`
+`gemini-3.5-flash-lite` intermediate (attempt 3) → `gemini-2.5-flash`
 GA fallback (attempt 4).

@@ -59,7 +59,7 @@ The new shape: single `global` endpoint, 4-attempt schedule across
 |---|---------------------------|---------|-----------|
 | 1 | primary                   | 10s     | 0s        |
 | 2 | primary                   | 20s     | 0.5s      |
-| 3 | `gemini-3-flash-preview`  | 20s     | 0s        |
+| 3 | `gemini-3.5-flash-lite`   | 20s     | 0s        |
 | 4 | `gemini-2.5-flash`        | 30s     | 0s        |
 
 Worst-case per agent: 80.5s. Attempts 1–2 give the same-model retry a
@@ -114,7 +114,7 @@ custom joins).
 After the change, the same five preset runs land in 9.8–20.8 s with
 max-gap 1.1–2.0 s — pure SQL execution, no LLM-in-AlloyDB. The two slower
 runs are environmental (Vertex 429 storms hitting the agent's *own*
-`gemini-3.1-flash-lite-preview`), not CDR-related.
+`gemini-3.1-flash-lite-preview` primary at the time), not CDR-related.
 
 The lesson: when you rely on a managed AI service whose internal retry
 behavior is opaque, **measure the tail, not the median**. NL2SQL is a

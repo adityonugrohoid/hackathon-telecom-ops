@@ -47,7 +47,7 @@ NetPulse AI does all of that in a single natural-language step. Built for the Ge
 - **Multi-agent orchestration.** Four specialized ADK `LlmAgent` sub-agents chained by a `SequentialAgent`, each owning one responsibility, one tool (or one toolset), and one `output_key` written into `session.state`. Downstream agents read upstream state via defensive `{key?}` substitution so a partial chain still produces a graceful report.
 - **Two parameterized SQL tools cover the CDR analyzer's prompt surface.** `query_cdr_summary(region, days_back)` returns the call_type by call_status breakdown; `query_cdr_worst_towers(region, days_back, limit)` ranks cell towers by (dropped + failed) / total. Both run as fixed-shape aggregations against the SQLite `call_records` table in under 50 ms. The agent's prompt encodes a window-mapping table ("last 7 days" maps to `days_back=7`) so dispatch is deterministic.
 - **Indexed lookups on the bundled SQLite store.** `network_events` is indexed on `(region, severity, started_at)` across 50,000 events, 10 cities, and 6 months of seed data; `call_records` is indexed on `(region, call_date)`. Time-windowed scans complete in under 50 ms end-to-end. Seed data slides with `datetime.now()` so the demo never goes stale.
-- **Vertex AI failover that's visible in the UI.** Every LLM call routes through `RegionFailoverGemini`, which targets the single `global` Vertex endpoint and walks a 4-attempt model ladder on `RESOURCE_EXHAUSTED` 429 or `asyncio.TimeoutError`: primary `gemini-3.1-flash-lite-preview` at a 10s timeout, then the primary again after a 0.5s sleep at 20s, then `gemini-3-flash-preview` intermediate at 20s, then `gemini-2.5-flash` GA fallback at 30s. Each model has its own quota bucket, so the GA fallback is a real escape hatch under preview-pool pressure. The chat workspace renders the walk as a per-model chip on each timeline entry, so failure shows as model-swap hops rather than a hard 500.
+- **Vertex AI failover that's visible in the UI.** Every LLM call routes through `RegionFailoverGemini`, which targets the single `global` Vertex endpoint and walks a 4-attempt model ladder on `RESOURCE_EXHAUSTED` 429 or `asyncio.TimeoutError`: primary `gemini-3.1-flash-lite` at a 10s timeout, then the primary again after a 0.5s sleep at 20s, then `gemini-3.5-flash-lite` intermediate at 20s, then `gemini-2.5-flash` fallback at 30s. Each model has its own quota bucket, so the fallback is a real escape hatch under primary-pool pressure. The chat workspace renders the walk as a per-model chip on each timeline entry, so failure shows as model-swap hops rather than a hard 500.
 - **Streaming SSE chat with collapsible per-agent terminal panels.** The Flask workspace renders the agent run as a four-card vertical timeline with a terminal panel inside each card (traffic-light bar plus populated mono output below). Each panel collapses by default and expands on click. Live timer, status pill, and model-failover chip stay visible without expanding.
 - **Persistent structured output.** Every run inserts an auditable row in the SQLite `incident_tickets` table with category, region, related events, CDR findings, and a NOC recommendation. AUTOINCREMENT picks up from the seed's MAX(ticket_id)+1 so agent-written rows don't collide with seeds. The workspace surfaces the saved ticket back to the operator with a category-keyed chip panel of recommended NOC actions.
 - **Two frontends, one engine.** A custom NetPulse UI (Flask + SSE) for the branded demo, plus the built-in ADK Dev UI (`/events` + `/trace` tabs) for free observability. Both call the same `Runner + InMemorySessionService + root_agent`.
@@ -59,7 +59,7 @@ NetPulse AI does all of that in a single natural-language step. Built for the Ge
 | Component | Technology |
 |---|---|
 | Agent framework | Google ADK 1.14 (`SequentialAgent` + `LlmAgent`) |
-| LLM | Gemini 3.1 Flash-Lite preview (primary) + Gemini 2.5 Flash (GA fallback) on Vertex AI |
+| LLM | Gemini 3.1 Flash-Lite (primary), Gemini 3.5 Flash-Lite (intermediate), Gemini 2.5 Flash (fallback) on Vertex AI |
 | Tool gateway | MCP Toolbox for Databases (Cloud Run) |
 | Data store | SQLite bundled in the container (`data/netpulse.sqlite`): 3 tables, 5 indexes |
 | Driver | stdlib `sqlite3` (write path); MCP Toolbox `kind: sqlite-sql` (read path) |
@@ -94,7 +94,7 @@ flowchart TB
         SQ3[("incident_tickets<br/>stdlib sqlite3 INSERT")]
     end
 
-    Vertex["Vertex AI Gemini<br/>3.1 Flash-Lite + 2.5 Flash failover"]
+    Vertex["Vertex AI Gemini<br/>3.1 Flash-Lite, model-ladder failover"]
 
     User --> UI --> A1
     A2 --> MCP --> SQ1
@@ -213,7 +213,7 @@ The five read tools are split across two toolsets in `toolbox-service/tools.yaml
 
 **Decision:** Fail over across Gemini models at the single `global` Vertex endpoint rather than across regions.
 
-**Reasoning:** Preview models are gated to specific regions per project, so a region ladder always 404'd on the first failover hop. Each model has its own quota bucket, so the GA `gemini-2.5-flash` fallback is a real escape hatch under preview-pool pressure.
+**Reasoning:** Preview models are gated to specific regions per project, so a region ladder always 404'd on the first failover hop. Each model has its own quota bucket, so the `gemini-2.5-flash` fallback is a real escape hatch under primary-pool pressure.
 
 ### 3. MCP Toolbox as a substrate-agnostic data gateway
 
