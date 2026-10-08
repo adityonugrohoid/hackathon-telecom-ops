@@ -1,7 +1,7 @@
 """Deterministic generator for the AlloyDB call_records seed CSV.
 
 Produces ~5,000 call detail records (CDRs) over a 180-day window
-(2025-11-01 → 2026-04-30) for the 10 Indonesian cities NetPulse covers.
+(2025-11-01 to 2026-04-30) for the 10 Indonesian cities NetPulse covers.
 Output: docs/seed-data/call_records.csv (overwrites).
 
 Status mix (designed to give NL2SQL queries non-trivial answers):
@@ -11,7 +11,7 @@ Status mix (designed to give NL2SQL queries non-trivial answers):
 
 The clustering ensures NL questions like "Which towers in Denpasar had
 the most failed calls last week?" return statistically interesting
-answers — the failures concentrate on certain towers/dates rather than
+answers: the failures concentrate on certain towers/dates rather than
 spreading uniformly.
 
 Determinism: a single random.Random(20260426) is used for every roll,
@@ -68,7 +68,7 @@ STATUS_TARGETS: list[tuple[str, float]] = [
     ("failed", 0.15),
 ]
 ANCHORS_PER_CITY = 8  # outage / degradation centers seeded per city
-ANCHOR_WINDOW_HOURS = 4  # ± hours around an anchor where failures cluster
+ANCHOR_WINDOW_HOURS = 4  # +/- hours around an anchor where failures cluster
 
 
 @dataclass(slots=True)
@@ -142,7 +142,7 @@ def _call_attributes(
 def _pick_failure_time(
     rng: random.Random, anchors: list[datetime]
 ) -> datetime:
-    """Roll a timestamp clustered ±ANCHOR_WINDOW_HOURS around a random anchor."""
+    """Roll a timestamp clustered +/-ANCHOR_WINDOW_HOURS around a random anchor."""
     anchor = rng.choice(anchors)
     offset_min = int(rng.gauss(0, ANCHOR_WINDOW_HOURS * 30))
     candidate = anchor + timedelta(minutes=offset_min)
@@ -218,7 +218,7 @@ def generate_records() -> list[CallRecord]:
             rec.cell_tower_id = f"{TOWER_PREFIXES[region]}-{tower_idx:03d}"
         records.append(rec)
 
-    # Sort by call_date and renumber so call_id increases with time —
+    # Sort by call_date and renumber so call_id increases with time:
     # mirrors how a real CDR sequence would be issued.
     records.sort(key=lambda r: r.call_date)
     for i, rec in enumerate(records, start=1):

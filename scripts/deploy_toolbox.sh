@@ -33,7 +33,7 @@ echo "[deploy_toolbox] Staging data/netpulse.sqlite into $STAGE_DIR"
 mkdir -p "$STAGE_DIR"
 cp data/netpulse.sqlite "$STAGE_DIR/netpulse.sqlite"
 
-# Always clean the staged copy, even on failure — keeps the working tree pure.
+# Always clean the staged copy, even on failure: keeps the working tree pure.
 cleanup() { rm -rf "$STAGE_DIR"; }
 trap cleanup EXIT
 

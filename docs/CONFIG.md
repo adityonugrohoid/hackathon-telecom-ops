@@ -1,7 +1,7 @@
 # Configuration
 
 All NetPulse AI configuration is via environment variables. There is no
-`python-dotenv` dependency — the agent package auto-loads
+`python-dotenv` dependency: the agent package auto-loads
 `telecom_ops/.env` and the Flask app uses a stdlib `_load_dotenv_stdlib`
 parser. Anything already in the shell wins over the file (`os.environ.setdefault`).
 
@@ -35,13 +35,13 @@ python3 scripts/build_sqlite.py --recreate
 
 The three CSVs the script reads:
 
-- `docs/seed-data/network_events.csv` — outage / maintenance / degradation
+- `docs/seed-data/network_events.csv`: outage / maintenance / degradation
   / restoration rows, 8 columns matching the schema.
-- `docs/seed-data/call_records.csv` — CDR rows, 10 columns.
-- `docs/seed-data/incident_tickets.csv` — seed tickets the demo starts
+- `docs/seed-data/call_records.csv`: CDR rows, 10 columns.
+- `docs/seed-data/incident_tickets.csv`: seed tickets the demo starts
   with; AUTOINCREMENT picks up from `MAX(ticket_id)+1`.
 
-Indexes are created automatically after the bulk INSERT — `(region,
+Indexes are created automatically after the bulk INSERT: `(region,
 severity, started_at)` on events, `(region, call_date)` on CDRs, and
 `created_at DESC` on tickets.
 
@@ -50,10 +50,10 @@ severity, started_at)` on events, `(region, call_date)` on CDRs, and
 Two terminals at the repo root:
 
 ```bash
-# Terminal A — MCP Toolbox (downloads v0.23.0 binary on first run)
+# Terminal A: MCP Toolbox (downloads v0.23.0 binary on first run)
 scripts/run_toolbox_local.sh
 
-# Terminal B — Flask UI
+# Terminal B: Flask UI
 cd netpulse-ui
 TOOLBOX_URL=http://127.0.0.1:5000 \
 GOOGLE_CLOUD_PROJECT=<your-project-with-vertex-enabled> \
@@ -117,6 +117,6 @@ name is preserved from the prior region-failover design to minimize SSE
 diff). On a 429 or TimeoutError you'll see an extra event with
 `"outcome": "failover"` and the upstream error in `message`, immediately
 followed by another attempt. The 4-attempt schedule walks: primary
-(attempt 1) → primary again after 0.5s (attempt 2) →
-`gemini-3.5-flash-lite` intermediate (attempt 3) → `gemini-2.5-flash`
+(attempt 1), then primary again after 0.5s (attempt 2), then
+`gemini-3.5-flash-lite` intermediate (attempt 3), then `gemini-2.5-flash`
 GA fallback (attempt 4).

@@ -132,7 +132,7 @@ def _infer_failing_agent(runner, seen_authors: set[str]) -> str:
     agent reached the drain loop.
 
     For SequentialAgent runs, the failing agent is the first sub-agent in
-    pipeline order whose author hasn't yet appeared in `seen_authors` —
+    pipeline order whose author hasn't yet appeared in `seen_authors`,
     i.e. the agent the SequentialAgent was about to run when the
     exception fired. When every sub-agent has already produced at least
     one event, the failure is mid-flight on the last one in the pipeline.
@@ -145,7 +145,7 @@ def _infer_failing_agent(runner, seen_authors: set[str]) -> str:
 
     Returns:
         The inferred failing agent name. Empty string when the runner
-        isn't a SequentialAgent or `sub_agents` is otherwise unreadable —
+        isn't a SequentialAgent or `sub_agents` is otherwise unreadable;
         in that case the chat UI falls back to the global error card
         with no agent attribution.
     """

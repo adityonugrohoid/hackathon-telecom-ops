@@ -2,7 +2,7 @@
 
 All requests target the single `global` endpoint. On `RESOURCE_EXHAUSTED`
 429 or a per-attempt `asyncio.TimeoutError`, the wrapper walks
-`ATTEMPT_SCHEDULE` — a hybrid retry-then-swap ladder where the first
+`ATTEMPT_SCHEDULE`, a hybrid retry-then-swap ladder where the first
 two attempts retry the agent's primary model (the second after a brief
 sleep so Vertex's dynamic shared quota pool can replenish), the third
 attempt swaps to a sibling preview-tier flash model with its own quota
@@ -12,7 +12,7 @@ fallback so the demo never hard-fails under sustained pressure.
 The original design walked across regions on quota errors. That ladder
 became structurally unusable once preview models like
 `gemini-3.1-flash-lite-preview` shipped with per-project regional
-gating — global 429 → us-central1 always 404'd. Failing over across
+gating: global 429 to us-central1 always 404'd. Failing over across
 *models* at the same global endpoint sidesteps the gate: each model has
 its own quota bucket, and the GA fallback is universally addressable.
 
@@ -41,7 +41,7 @@ from pydantic import PrivateAttr
 logger = logging.getLogger(__name__)
 
 REGION: str = "global"
-"""Single Vertex AI endpoint. Google's multi-region routing pool — broadest
+"""Single Vertex AI endpoint. Google's multi-region routing pool: broadest
 preview-model coverage and the only region that addresses
 `gemini-3.1-flash-lite-preview` on this project. The legacy multi-region
 ladder (us-central1 / europe-west4 / asia-northeast1) is gone because
@@ -65,7 +65,7 @@ advances the ladder instead of hard-failing the agent."""
 FALLBACK_MODEL: str = "gemini-2.5-flash"
 """GA model used as the last-resort attempt. 2.5 Flash is multi-region,
 addressable everywhere, and carries its own quota bucket independent of
-both the 3.1-preview and 3-flash-preview pools — so a sustained 429 on
+both the 3.1-preview and 3-flash-preview pools, so a sustained 429 on
 either preview pool doesn't imply this fallback is throttled too. Quality
 is comparable for the NetPulse 4-agent telecom flow."""
 
@@ -107,17 +107,17 @@ ATTEMPT_SCHEDULE: tuple[Attempt, ...] = (
 | 4 | FALLBACK_MODEL     | 30s     | 0s        |
 
 Attempt 1 catches obvious silent hangs fast on the headline model.
-Attempt 2 retries the same preview model after 0.5s — most 429s on
+Attempt 2 retries the same preview model after 0.5s: most 429s on
 Vertex's shared global pool clear within a second, so the user gets
 the headline-model answer the vast majority of the time. Attempt 3
 swaps to a sibling preview-tier flash model with its own independent
-quota bucket — biases the ladder toward keeping a newer-model answer
+quota bucket; biases the ladder toward keeping a newer-model answer
 under sustained primary-pool pressure before falling all the way back
 to GA. Attempt 4 swaps to the GA fallback (universally addressable,
 quota independent of both preview pools) so the demo never hard-fails
 under sustained pressure on every preview lane simultaneously.
 
-`model=None` means "leave `llm_request.model` as-is" — i.e., the
+`model=None` means "leave `llm_request.model` as-is", i.e., the
 agent's configured primary. The wrapper mutates `llm_request.model`
 in-place per attempt because ADK's parent `Gemini.generate_content_async`
 reads from there, not from `self.model`.
@@ -130,7 +130,7 @@ _QUOTA_MARKERS: tuple[str, ...] = ("RESOURCE_EXHAUSTED", " 429", "QUOTA")
 _MODEL_GONE_MARKERS: tuple[str, ...] = ("NOT_FOUND", " 404")
 
 AttemptCallback = Callable[[str, str, str, str | None], None]
-"""(owner_name, model, outcome, error_message) — outcome is "ok" | "failover".
+"""(owner_name, model, outcome, error_message); outcome is "ok" | "failover".
 
 The `model` field carries the model name the attempt actually ran on (the
 fallback name when the schedule swapped, the primary name otherwise). The
@@ -153,8 +153,8 @@ def set_attempt_observer(callback: AttemptCallback | None) -> None:
     the upstream error string on `"failover"` and `None` on `"ok"`.
 
     Pass `None` to unregister. State is held in a `ContextVar` so concurrent
-    callers — e.g., separate Flask request threads, each spawning its own
-    `_agent_worker` asyncio loop — install isolated observers without racing.
+    callers (e.g., separate Flask request threads, each spawning its own
+    `_agent_worker` asyncio loop) install isolated observers without racing.
 
     Args:
         callback: Observer callable, or `None` to unregister.
@@ -210,7 +210,7 @@ def _is_model_gone_error(exc: Exception) -> bool:
     retired or is gated off this project. Detection is a case-insensitive
     substring match against `str(exc)` for `NOT_FOUND` or ` 404`. Treated
     as a ladder-advance trigger (same as quota errors) so a retired model
-    degrades to a failover hop instead of halting the SequentialAgent —
+    degrades to a failover hop instead of halting the SequentialAgent:
     this is exactly how the 2026-07-23 outage happened when Google retired
     `gemini-3.1-flash-lite-preview` under a deployed image.
 
@@ -239,8 +239,8 @@ class RegionFailoverGemini(Gemini):
     mid-stream would lose chunks. NetPulse uses `stream=False` for the
     SequentialAgent flow, so this is not a hot-path concern.
 
-    The retry happens before any tool execution — `generate_content_async`
-    is a single HTTP round-trip per attempt — so there is no duplicate-write
+    The retry happens before any tool execution (`generate_content_async`
+    is a single HTTP round-trip per attempt), so there is no duplicate-write
     risk for tools like `save_incident_ticket`.
 
     The class name is preserved from the prior region-failover design to
@@ -305,7 +305,7 @@ class RegionFailoverGemini(Gemini):
         applies the next attempt's `pre_sleep_s`, mutates `llm_request.model`
         if the attempt specifies a `model` override (else keeps the primary),
         and retries. `wait_for` cancels the in-flight coroutine on timeout
-        so the SDK's aiohttp client closes the socket — only one HTTP call
+        so the SDK's aiohttp client closes the socket; only one HTTP call
         is ever live per wrapper instance.
 
         Args:
@@ -324,7 +324,7 @@ class RegionFailoverGemini(Gemini):
                 exhausted (quota or timeout).
             genai.errors.ClientError: When the upstream call raises a
                 client error that is neither quota (429) nor model-gone
-                (404) — re-raised immediately, no retry.
+                (404): re-raised immediately, no retry.
         """
         if stream:
             logger.info(
@@ -419,7 +419,7 @@ async def _self_test_quota_retry_same_model() -> None:
     and the second yields a sentinel. Asserts the wrapper called the
     primary model twice, yielded the sentinel, and the observer fired
     twice (failover-on-primary then ok-on-primary). Verifies the no-swap
-    behavior of attempts 1 → 2.
+    behavior of attempts 1 to 2.
 
     Runtime: ~0.5s (the inter-attempt sleep on attempt 2).
     """

@@ -174,7 +174,7 @@ carried an explicit comment forbidding the `postgres` superuser bypass:
 that bypass would have defeated the protection and is the kind of "fix"
 that silently re-opens the door.
 
-## Async ADK Runner ↔ sync Flask
+## Async ADK Runner and sync Flask
 
 `runner.run_async()` is async-only, but Flask is sync. The naive
 `asyncio.run()` wrapper buffers all events into a list before yielding

@@ -46,7 +46,7 @@ class QueryResult:
             post-filters). Lets templates render "Showing N of TOTAL"
             so users know when LIMIT truncated the result.
         limit: The LIMIT applied to this query, surfaced for the same
-            "showing N of TOTAL — increase limit or refine filters" UX hint.
+            "showing N of TOTAL: increase limit or refine filters" UX hint.
         error: Populated only when the query failed; rows + counts are empty.
     """
 
@@ -64,7 +64,7 @@ def _connect() -> sqlite3.Connection | None:
     """Open a SQLite connection or return None if the DB file is missing.
 
     A missing file is treated as a soft failure so the data-viewer tabs
-    render a friendly error instead of crashing the Flask process — the
+    render a friendly error instead of crashing the Flask process; the
     rest of the app (chat / agent runs) still works as long as the
     toolbox-side data path is healthy.
     """

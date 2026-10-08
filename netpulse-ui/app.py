@@ -85,7 +85,7 @@ def inject_dataset_names() -> dict[str, str]:
         "call_records_table": CALL_RECORDS_TABLE,
         "ticket_table": TICKET_TABLE,
         # Mirrors telecom_ops/agent.py:MODEL_FAST. Hardcoded here to avoid
-        # the heavy ADK import chain at Flask boot — keep in sync if the
+        # the heavy ADK import chain at Flask boot; keep in sync if the
         # primary model changes.
         "active_model": "gemini-3.1-flash-lite",
     }
