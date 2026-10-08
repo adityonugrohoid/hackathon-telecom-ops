@@ -9,17 +9,17 @@ complaint goes in, a structured incident ticket comes out. Built for the APAC
 GenAI Academy 2026 hackathon. See [`README.md`](README.md) for the user-facing
 walkthrough.
 
-This repo was built with [Claude Code](https://claude.com/claude-code) — pairing
+This repo was built with [Claude Code](https://claude.com/claude-code); pairing
 notes for that work live in this file.
 
 ## Architecture in one paragraph
 
 The core ADK package `telecom_ops/` exposes a `SequentialAgent` that runs four
 `LlmAgent` sub-agents in order: classifier (native ADK `classify_issue` tool),
-network investigator (MCP Toolbox over the bundled SQLite store —
+network investigator (MCP Toolbox over the bundled SQLite store:
 `query_network_events`, `query_affected_customers_summary`,
 `weekly_outage_trend`), CDR analyzer (two parameterized SQL tools over the same
-SQLite store — `query_cdr_summary` for call_type × call_status breakdown,
+SQLite store: `query_cdr_summary` for call_type by call_status breakdown,
 `query_cdr_worst_towers` for per-tower failure ranking), and response formatter
 (native ADK `save_incident_ticket` tool that writes the final ticket back to
 the same SQLite file via stdlib `sqlite3`). The sibling Flask service
@@ -28,11 +28,11 @@ workspace (`/app`) that renders the agent run as a vertical timeline, with three
 read-only data viewer tabs and Server-Sent-Events streaming. Both deploy to
 Cloud Run; the SQLite file is baked into the container image. Each sub-agent
 picks its own model through the `RegionFailoverGemini` wrapper in
-`telecom_ops/vertex_failover.py` — all four currently share
+`telecom_ops/vertex_failover.py`; all four currently share
 `MODEL_FAST = "gemini-3.1-flash-lite"`. The wrapper targets the single
 `global` Vertex endpoint and walks a 4-attempt model ladder on
-`RESOURCE_EXHAUSTED` 429 or per-attempt `asyncio.TimeoutError`: primary 10s →
-primary +0.5s sleep 20s → `gemini-3.5-flash-lite` intermediate 20s →
+`RESOURCE_EXHAUSTED` 429 or per-attempt `asyncio.TimeoutError`: primary 10s, then
+primary +0.5s sleep 20s, then `gemini-3.5-flash-lite` intermediate 20s, then
 `gemini-2.5-flash` GA fallback 30s. Each attempt cancels the prior in-flight
 call so only one HTTP request is ever live per agent.
 
@@ -53,7 +53,7 @@ These look optional but each one is load-bearing:
   bakes the file into the image; runtime opens it via stdlib `sqlite3` (for
   the `save_incident_ticket` write path) and via `genai-toolbox v0.23.0`'s
   `kind: sqlite` source (for the 5 read tools). One file holds all three
-  tables — `network_events`, `call_records`, `incident_tickets` — and the
+  tables (`network_events`, `call_records`, `incident_tickets`), and the
   toolbox-as-intermediary pattern keeps the agent code agnostic of the
   substrate (swap `tools.yaml` `sources:` from `kind: sqlite` to
   `kind: alloydb-postgres` / `kind: bigquery` and the agent code does not
@@ -72,7 +72,7 @@ These look optional but each one is load-bearing:
   `TIMESTAMP_SUB` or `make_interval`. The toolbox SQL uses
   `datetime(<ref>, '-' || ?N || ' days')` to build a string modifier from
   the integer `days_back` parameter. String concatenation via `||` is the
-  whole trick — SQLite auto-coerces the integer. Same pattern handles
+  whole trick: SQLite auto-coerces the integer. Same pattern handles
   `weeks_back` via `(?N * 7)`.
 
 - **`network_events` is indexed on `(region, severity, started_at)`.**
@@ -87,7 +87,7 @@ These look optional but each one is load-bearing:
   round-trip and makes ticket persistence transactional with the rest of
   `response_formatter`. AUTOINCREMENT on `ticket_id` picks up past the
   seed's MAX so agent-written rows don't collide with seed rows. SQLite's
-  single-writer model is fine here — the agent chain is serialized
+  single-writer model is fine here: the agent chain is serialized
   end-to-end.
 
 - **Demo clock is the newest event in the bundled store, not wall-clock
@@ -115,7 +115,7 @@ These look optional but each one is load-bearing:
   | 3 | `gemini-3.5-flash-lite`   | 20s     | 0s        |
   | 4 | `gemini-2.5-flash`        | 30s     | 0s        |
 
-  Worst-case per agent: 80.5s. The 10s attempt-1 timeout is critical — without
+  Worst-case per agent: 80.5s. The 10s attempt-1 timeout is critical: without
   it a stuck TCP socket hangs the full Cloud Run 300s window. The ladder swaps
   **models**, not regions, because preview models are gated to specific
   regions per project (`gemini-3.1-flash-lite-preview` was `global`-only here,
@@ -145,7 +145,7 @@ These look optional but each one is load-bearing:
   degrades to `[]`.
 
 - **Toolbox parameters use sentinel defaults, not nullable binds.** Every
-  param declares `required: true` with a `default:` sentinel — strings
+  param declares `required: true` with a `default:` sentinel: strings
   default to `"*"`, `days_back` defaults to `36500`, `limit` defaults to
   `50`. The SQL uses sentinel comparison (`?N = '*' OR region = ?N`) not
   nullable binds. `required: false` + `default:` doesn't work because
@@ -169,10 +169,10 @@ These look optional but each one is load-bearing:
 Two terminals at the repo root:
 
 ```bash
-# Terminal A — MCP Toolbox (downloads v0.23.0 binary on first run, caches at .toolbox/)
+# Terminal A: MCP Toolbox (downloads v0.23.0 binary on first run, caches at .toolbox/)
 scripts/run_toolbox_local.sh
 
-# Terminal B — Flask UI
+# Terminal B: Flask UI
 cd netpulse-ui
 TOOLBOX_URL=http://127.0.0.1:5000 \
 GOOGLE_CLOUD_PROJECT=<your-project-with-vertex-enabled> \
@@ -197,47 +197,47 @@ or docs unless explicitly requested.
 
 ## Where to look
 
-- [`README.md`](README.md) — project overview, features, deployment
-- [`telecom_ops/agent.py`](telecom_ops/agent.py) — the four sub-agents and
+- [`README.md`](README.md): project overview, features, deployment
+- [`telecom_ops/agent.py`](telecom_ops/agent.py): the four sub-agents and
   the SequentialAgent root
-- [`telecom_ops/tools.py`](telecom_ops/tools.py) — `classify_issue` +
+- [`telecom_ops/tools.py`](telecom_ops/tools.py): `classify_issue` +
   `save_incident_ticket` (native ADK tools); toolset loaders for the MCP
   Toolbox; stdlib `sqlite3` write path
-- [`telecom_ops/prompts.py`](telecom_ops/prompts.py) — sub-agent instruction
+- [`telecom_ops/prompts.py`](telecom_ops/prompts.py): sub-agent instruction
   templates
-- [`telecom_ops/vertex_failover.py`](telecom_ops/vertex_failover.py) —
+- [`telecom_ops/vertex_failover.py`](telecom_ops/vertex_failover.py):
   `RegionFailoverGemini` model ladder + escalating timeouts
-- [`netpulse-ui/agent_runner.py`](netpulse-ui/agent_runner.py) —
+- [`netpulse-ui/agent_runner.py`](netpulse-ui/agent_runner.py):
   async-to-sync bridge for the SSE chat
-- [`netpulse-ui/data_queries.py`](netpulse-ui/data_queries.py) — read-only
+- [`netpulse-ui/data_queries.py`](netpulse-ui/data_queries.py): read-only
   stdlib `sqlite3` queries for the three data-viewer tabs
-- [`netpulse-ui/app.py`](netpulse-ui/app.py) — Flask routes (`/` landing,
+- [`netpulse-ui/app.py`](netpulse-ui/app.py): Flask routes (`/` landing,
   `/app` workspace, three data-viewer tabs), SSE plumbing, stdlib `.env`
   loader
-- [`netpulse-ui/templates/landing.html`](netpulse-ui/templates/landing.html)
-  — hero, "How it works" 4-step grid, launch chips
-- [`netpulse-ui/templates/chat.html`](netpulse-ui/templates/chat.html) —
+- [`netpulse-ui/templates/landing.html`](netpulse-ui/templates/landing.html):
+  hero, "How it works" 4-step grid, launch chips
+- [`netpulse-ui/templates/chat.html`](netpulse-ui/templates/chat.html):
   workspace timeline, impact card, badges, NOC action chips, streaming SSE
   handler
-- [`Dockerfile`](Dockerfile) — Cloud Run image for the Flask UI; copies
+- [`Dockerfile`](Dockerfile): Cloud Run image for the Flask UI; copies
   both packages so the cross-package import resolves; runs `build_sqlite.py`
   at image build time to bake the data file
-- [`scripts/build_sqlite.py`](scripts/build_sqlite.py) — idempotent build of
+- [`scripts/build_sqlite.py`](scripts/build_sqlite.py): idempotent build of
   `data/netpulse.sqlite` from `docs/seed-data/*.csv`; `--recreate` wipes +
   rebuilds. Replaces the deleted AlloyDB / BigQuery setup scripts.
-- [`scripts/run_toolbox_local.sh`](scripts/run_toolbox_local.sh) — downloads
+- [`scripts/run_toolbox_local.sh`](scripts/run_toolbox_local.sh): downloads
   genai-toolbox v0.23.0 binary on first run, launches it bound to
   `127.0.0.1:5000` against the local `tools.yaml`
 - [`scripts/generate_network_events.py`](scripts/generate_network_events.py),
-  [`scripts/generate_call_records.py`](scripts/generate_call_records.py) —
+  [`scripts/generate_call_records.py`](scripts/generate_call_records.py):
   deterministic seed generators anchored at `datetime.now()` (only used to
   regenerate the CSVs; the bundled store's clock is its newest event)
-- [`docs/seed-data/`](docs/seed-data/) — canonical sample data:
+- [`docs/seed-data/`](docs/seed-data/): canonical sample data:
   `network_events.csv` (50 000 events, 10 cities), `call_records.csv`
   (5 000 CDRs), `incident_tickets.csv` (10 sample rows)
-- [`docs/SCHEMA.md`](docs/SCHEMA.md) — column-by-column data contract for
+- [`docs/SCHEMA.md`](docs/SCHEMA.md): column-by-column data contract for
   the 3 tables
-- [`toolbox-service/`](toolbox-service/) — MCP Toolbox image source:
+- [`toolbox-service/`](toolbox-service/): MCP Toolbox image source:
   `tools.yaml` (5 SQLite-SQL tools split across `telecom_network_toolset`
   and `cdr_toolset`) and `Dockerfile` (genai-toolbox v0.23.0 binary on
   debian-slim). Deploy: `gcloud run deploy network-toolbox --source

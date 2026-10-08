@@ -1,11 +1,11 @@
 """Deterministic generator for the BigQuery network_events seed CSV.
 
 Produces ~50,000 telecom network events over a 180-day window
-(2025-11-01 → 2026-04-30) with a realistic outage / maintenance /
+(2025-11-01 to 2026-04-30) with a realistic outage / maintenance /
 degradation / restoration mix for the 10 Indonesian cities the demo
 covers. Output: docs/seed-data/network_events.csv (overwrites).
 
-Mix (chosen to look like real ops volume — most events are scheduled):
+Mix (chosen to look like real ops volume; most events are scheduled):
   70% maintenance   (overnight window, 1-3 h, affected_customers=0)
   22% degradation   (random across the day, 30 min - 6 h, medium impact)
    5% outage        (clustered around regional anchor windows, 2-12 h)

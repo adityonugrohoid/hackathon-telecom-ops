@@ -2,7 +2,7 @@
 
 NetPulse is dataset-driven. Drop your CSVs into `docs/seed-data/`, run
 `python scripts/build_sqlite.py --recreate`, and the agents work against
-your data — no code changes required.
+your data; no code changes required.
 
 The contract surface is **three tables inside a single bundled SQLite file**
 (`data/netpulse.sqlite`): one of network events (read by the network
@@ -58,7 +58,7 @@ Call-detail records the CDR analyzer agent reads. Indexed on
 | `data_usage_mb` | REAL | yes | `0` for voice/sms calls |
 | `call_date` | TEXT (ISO 8601) | yes | When the call started |
 | `region` | TEXT | yes | Must use the same vocabulary as `network_events.region` so the agents can correlate |
-| `cell_tower_id` | TEXT | yes | E.g. `JKT-001` — used in the response formatter's NOC ticket |
+| `cell_tower_id` | TEXT | yes | E.g. `JKT-001`, used in the response formatter's NOC ticket |
 | `call_status` | TEXT | yes | One of: `completed`, `dropped`, `failed` |
 
 Loaded from `docs/seed-data/call_records.csv` via `scripts/build_sqlite.py`.
@@ -111,5 +111,5 @@ python scripts/build_sqlite.py --recreate
 ```
 
 The script wipes any existing `data/netpulse.sqlite`, creates the three tables
-plus all five indexes, and bulk-inserts your rows. Idempotent — re-running
+plus all five indexes, and bulk-inserts your rows. Idempotent: re-running
 without `--recreate` is a no-op when the file already exists.

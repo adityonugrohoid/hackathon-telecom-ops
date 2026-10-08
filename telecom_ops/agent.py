@@ -24,7 +24,7 @@ preview lane (generateContent returned 404 NOT_FOUND on `global`; the GA
 successor probed 200). Earlier history: reverted 2026-04-29 from the 2.5
 GA lane (`gemini-2.5-flash-lite`) back to the 3.1 preview after a
 production trace showed the network_investigator stuck "running" with no
-final text event under 2.5-flash-lite — suspected to be a model behavior
+final text event under 2.5-flash-lite, suspected to be a model behavior
 where the second LLM call after the toolbox SQL result emits only a
 function_call (or empty text) rather than the bulleted summary the prompt
 asks for. The failover ladder retains `gemini-2.5-flash` (GA standard) as
@@ -44,7 +44,7 @@ def _failover_model(owner_name: str, model_name: str) -> RegionFailoverGemini:
     """Build a fresh failover-enabled Gemini wrapper tagged with its owner.
 
     Each LlmAgent gets its own instance so the per-instance failover state
-    (active region, cached genai.Client) is isolated — one agent's failover
+    (active region, cached genai.Client) is isolated: one agent's failover
     does not bind the others to the same region. The wrapper is tagged with
     the owning agent's name so the region-attempt observer in
     `netpulse-ui/agent_runner.py` can route per-attempt telemetry back to

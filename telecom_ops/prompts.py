@@ -1,8 +1,8 @@
 """Long-form instructions for each sub-agent in the telecom_ops SequentialAgent.
 
 Cross-agent state references use ADK's optional `{key?}` substitution syntax
-(see google.adk.utils.instructions_utils._replace_match) so a partial chain —
-e.g. an upstream sub-agent that errors out before populating its output_key —
+(see google.adk.utils.instructions_utils._replace_match) so a partial chain
+(e.g. an upstream sub-agent that errors out before populating its output_key)
 still produces a graceful report instead of crashing the next agent's
 instruction formatter with KeyError.
 """

@@ -4,7 +4,7 @@ sources:
     # Path is relative to the working directory the toolbox binary is launched
     # from. Local dev: scripts/run_toolbox_local.sh `cd`s to the repo root,
     # so this resolves to <repo>/data/netpulse.sqlite. Container build: the
-    # Dockerfile bakes the file at /data/netpulse.sqlite — override via the
+    # Dockerfile bakes the file at /data/netpulse.sqlite; override via the
     # toolbox CLI working dir if the path differs.
     database: data/netpulse.sqlite
 
