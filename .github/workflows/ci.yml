@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: netpulse-ui/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r netpulse-ui/requirements.txt pytest==9.1.1
+
+      - name: Compile every Python file
+        run: python -m py_compile $(git ls-files '*.py')
+
+      # Gemini is mocked inside the tests: no network, no Vertex credentials.
+      - name: Failover ladder tests
+        run: python -m pytest -q tests
