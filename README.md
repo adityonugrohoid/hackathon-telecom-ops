@@ -133,9 +133,13 @@ Live on Cloud Run: **[netpulse-ui-670100779564.asia-southeast2.run.app](https://
 
 Demo video: **[youtu.be/tPrxqHku4Lw](https://youtu.be/tPrxqHku4Lw)**
 
-Two Cloud Run services backed by a single bundled SQLite file (no managed DB). The original hackathon architecture on BigQuery + AlloyDB is one [`tools.yaml`](toolbox-service/tools.yaml) `sources:` swap away. See [Architecture](#architecture).
+Screenshots of the live workspace on the "Major dropped calls in Makassar" preset, bundled seed data, taken 2026-10-10:
 
-![Architecture](netpulse-ui/static/architecture.png)
+![The workspace mid-run: Classifier and Network Investigator done, CDR Analyzer running, Response Formatter waiting, and the customer-impact card already showing 47,236 customers affected](docs/figures/workspace-run.png)
+
+![The result: the impact card and incident ticket 11, with its classification, region, network and CDR findings, recommendation, and the suggested NOC actions](docs/figures/ticket.png)
+
+Two Cloud Run services backed by a single bundled SQLite file (no managed DB). The original hackathon architecture on BigQuery + AlloyDB is one [`tools.yaml`](toolbox-service/tools.yaml) `sources:` swap away. See [Architecture](#architecture).
 
 ## Getting Started
 
@@ -237,6 +241,7 @@ hackathon-telecom-ops/
 ├── toolbox-service/         # MCP Toolbox image: Go binary + tools.yaml + baked SQLite
 ├── scripts/                 # build_sqlite.py + deploy_toolbox.sh + run_toolbox_local.sh + seed generators
 ├── docs/                    # SCHEMA.md, CONFIG.md, LESSONS.md, architecture.mmd
+│   ├── figures/             # Screenshots of the live workspace for the README
 │   └── seed-data/           # Canonical CSVs (network_events, call_records, incident_tickets)
 ├── data/                    # Generated SQLite file (gitignored; rebuilt by scripts/build_sqlite.py)
 ├── Dockerfile               # Cloud Run image for netpulse-ui (parent-level so both packages get copied)
