@@ -1,4 +1,4 @@
-%%{init: {"flowchart": {"htmlLabels": true, "curve": "basis"}, "themeVariables": {"fontSize": "15px", "fontFamily": "Inter, -apple-system, Segoe UI, sans-serif"}}}%%
+%%{init: {"flowchart": {"htmlLabels": true, "curve": "basis", "wrappingWidth": 360, "nodeSpacing": 60, "rankSpacing": 55}, "themeVariables": {"fontSize": "15px", "fontFamily": "Inter, -apple-system, Segoe UI, sans-serif"}}}%%
 flowchart TB
     User([NOC Operator])
     UI["NetPulse UI<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>Flask + SSE chat &middot; Cloud Run</span>"]
@@ -23,7 +23,7 @@ flowchart TB
         SQ3[("incident_tickets<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>stdlib sqlite3 INSERT</span>")]
     end
 
-    Vertex["Vertex AI Gemini<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>3.1 Flash-Lite + 2.5 Flash failover</span>"]
+    Vertex["Vertex AI Gemini<br/><span style='font-size:11px;font-weight:400;font-family:JetBrains Mono,monospace'>3.1 Flash-Lite &middot; model-ladder failover</span>"]
 
     User --> UI --> A1
     A2 --> MCP --> SQ1
